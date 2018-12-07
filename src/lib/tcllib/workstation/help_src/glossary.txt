@@ -1,0 +1,26 @@
+
+/**
+
+  @page glossary Glossary
+
+
+@section _project_ project
+
+  The project is a BSV design (set of .bsv files) and settings concerned with it.
+
+@section _search_paths_ search paths
+
+  The directories where .bsv files are located.
+
+@section _module_ module
+
+@section _bsc_ bsc
+
+@section _project_file_ project file
+   The project file is a regular file with .bspec extension. The project specific information(represented via Tcl commands) is written in it. It can be edited if necessary.
+
+@section _project_files_ project files
+
+Files with .bsv extension.
+
+  */

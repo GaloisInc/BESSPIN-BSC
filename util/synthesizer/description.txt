@@ -1,0 +1,197 @@
+
+              Description of the RTL QoR regression test system
+          ---------------------------------------------------------
+
+Adjusting design parameters:
+  - The parameters for e.g. the Pong design are all written down in clear text
+    in bs/bsc/trunk/util/synthesizer/DESIGNS/Pong/synth-params. Edit the file,
+    (substituting Pong for the name of the design you want to change, duh)
+    commit your changes, have the synthesizer system do a svn update (can be
+    done through the web interface), and you're set to go. 
+
+Adding a new design:
+  - Log in as synthesizer. Alternatively, you can do these modifications in the
+    repository (bs/bsc/trunk/util/synthesizer/DESIGNS/), check them in and have
+    the synthesizer system do an svn update (can be done through synthesizer web
+    page). If you log in as synthesizer, make sure to add and commit the files
+    to svn.
+  - Create a subdirectory to ~/DESIGNS/. Give it a short name that identifies 
+    the design. To save some work, copy all the files from the Pong design, and
+    just modify them slightly. Normally, the following changes should be enough:
+      - Update Makefile to check out the source code of your design, and compile
+        it to verilog. The references to kbscan.v, Ball2.bsv, Island2.bsv, 
+	Toplevel2.bsv are specific to the Pong design, and can safely be 
+	removed.
+      - Find the reference to mkTopLevel in synthesize_magma, and replace it
+        with the name of the verilog file containing top level module (do not 
+	include .v)
+      - Modify the parameters in synth-params. The period is given in 
+        picoseconds and the utilization in percent.
+      - Make sure that synth-notes.txt contains useful information for anybody
+        that needs to understand how your design works.
+
+    If this doesn't work out for you, here is a general description of how to
+    set up designs. Create a subdirectory under DESIGNS with a short (typically
+    less than 10 chars) name. In the directory, create the following files:
+
+      - A Makefile that supports:
+         - make (which produces a synthesizable file)
+	 - make clean (since we want to recompile the entire design with the
+	   latest version of bsc)
+	If you always want to test the latest version of the design, then write
+	your makefile in such a way that make checks out the latest version. 
+        Otherwise it's safe to leave the source code in this directory too. 
+
+      - An executable file, called synthesize_magma, that will be called by the
+        script with a command line similar to the following:
+	  synthesize_magma 1500.0p 75 /foo/bar.volcano /bar/temp4711 /baz/out4711.txt
+        You can assume that the script is called in the directory of your 
+	design. The script synthesize_magma must do the following:
+	  - Run magma to synthesize the design, with the parameters given on
+	    the command line (in this example a period of 1500ps, 75% 
+	    utilization, using the volcano found in /foo/bar.volcano). In most
+	    cases, the make_mantle_script will help you do this, but there may 
+	    be cases where it doesn't work. If you cannot use that script, be 
+	    aware that you have to copy all necessary .v files from the bluespec
+	    standard library, located at $BLUESPECDIR/Verilog. Note that you
+	    must copy the files from that directory, since the user can set the
+	    $BLUESPECDIR variable to select any version of the standard library.
+	    Also note that if you want the script to do this for you, you must
+	    invoke bsc with the flag -show-module-use.
+	  - Store the result in the output file (in the example 
+	    /baz/out4711.txt).
+	      - On success, only the line "OK: -1.88077e-09 1.44782e-07 966.72" 
+	        should be appended to the output file (if magma reports a slack
+		of -1.88077ns, area of 1.44782e-07 m^2, and takes 966.72 seconds
+		of CPU time to run).
+	      - On failure, the line "FAIL: synthesis" should be appended to the
+	        output file, followed by any error messages you like (I'd 
+		suggest	the full output from magma).
+          - The second to last argument (/bar/temp4711 in the example) is the
+	    path of a temporary directory that is created just before 
+	    synthesize_magma is invoked, and removed immediately thereafter. It 
+	    is recommended to store all files used during the synthesis in that
+	    directory, since they usually occupy lots of space. Another option
+	    is to make sure that "make clean" removes all leftovers from the
+	    synthesis (make clean will also be invoked immediately after 
+	    synthesis).
+
+      - A text file called synth-params, with parameters of the design. The file
+        should contain the following lines (use your imagination to change the
+	parameters)
+
+         TITLE: Pong with oscillating island
+	 PERIOD: 3300
+	 UTIL: 75
+	 VOLCANO: /tools/magma/lib/csm13rvt_8lm.volcano/
+	 
+      - A text file called synth-notes.txt, that contains a description of how
+        this particular design is set up. The system will never look at this
+	file, or verify that it's there, but do yourself and your colleagues a 
+	favor and write such a file.
+
+      - The following two files are not at all mandatory, but are used to 
+        implement synthesize_magma in most existing designs:
+        - make_mantle_script:  This perl script creates a TCL script that guides
+	  mantle through the synthesis. It is based on a script found in svn, 
+	  but has the following modifications:
+	  - any volcano can be used
+	  - the synthesis files are created directly in the specified 
+	    directory, and not in a subdirectory
+	  - after synthesis, a line with the results (beginning with "RSLT-123")
+	    is printed
+	  - probably something else that I've forgotten all about
+        - dropfirstarg: A minimal bash script that simply outputs all its 
+	  arguments except the first one. Used to drop "RSLT-123" from the line
+	  with the results, so that it can be written immediately to the results
+	  file.
+
+A few minor notes:
+  - If the results page takes long time to load, maybe you should remove some
+    batches. There are certainly a number of runs of custom versions that nobody
+    needs to remember anyway. A faster way of deleting batches (than to do it 
+    through the web interface) is to delete the corresponding subdirectories of
+    ~synthesizer/DATABASE/BATCHES/ (afterwards you need to force a database 
+    reload by clicking the topmost link on the results page)
+  - Do you want to know more about a batch? On the bottom of the batch page, 
+    there is a link to the script file that runs the batch. If a custom bsc is 
+    used, you can figure out which one by studying the part of the scripts that 
+    creates a small bash script call bsc, that only calls to the specified 
+    binary (and supplies any extra arguments). If you want to know who ran the 
+    batch, you might be able to find that out by looking for invokations of 
+    mail.
+  - The haskell CGI scripts are currently run by runhugs, which is installed on 
+    the web server. If you need to change this in the future, it should be easy 
+    to compile them with ghc as well. Just remember that the binaries that are 
+    to be run at bluejay must be compiled on bluejay (the cgi scripts are run on
+    lapis).
+  - Running several batches simultaneously is possible in theory, but has the 
+    folowing two problems:
+    * If the first batch uses the bsc that is found in the synthesizer home 
+      directory, and the second one requests a new revision to be checked out 
+      and compiled, then that will affect the first batch aswell.
+    * Since the designs are always built in the same place, the same design 
+      cannot be synthesized simultaneously in two different batches. So either 
+      the second branch has to be started at least a couple of hours after the 
+      first one is started, or you must select different designs. 
+    However, since all batches run on the same machine, and we only have a very 
+    limited number of magma licenses, there's very little point in running 
+    several batches at a time.
+
+Outline of the synthesizer system:
+  Part I: Running the benchmarks
+    - A batch is a number of benchmarks, run on one occation. 
+    - Upon creating and running a batch, the system reads the settings from the
+      DESIGNS directory, and stores the result in DATABASE/BATCHES.
+    - Batches are started in two ways:
+      - Automatically, by the crontab on bluejay. The crontab starts the script
+        StartBatchAuto (source: StartBatchAuto.hs)
+      - Manually through the CGI script named start on the synthesizer home page
+        (source: StartBatchCGI.hs)
+    - Both StartBatchAuto and StartBatchCGI use the module BatchConfig,
+      to generate a new batch. BatchConfig does the following:
+        1. Creates a directory for the batch to run in
+	   (e.g. ~/synthesizer/BATCHES/4711)
+	2. Stores a file configuration.txt in the batch directory,
+	   so that it is possible later to find out what settings that were used
+        3. Creates a file run-batch, that runs the entire batch. In more
+	   detail, run-batch does the following:
+
+	     1. Sets environment variables (local, $BLUESPECDIR, 
+	        $LM_LICENSE_FILE)
+	     2. Creates temporary directory (subdir of ~/TEMP/)
+	     3. Calls the script ~/SCRIPTS/update-bsc, to check out and
+		build bsc (if the user requested this)
+		Alternatively, if a custom version of bsc is used, the script
+		creates a file called bsc in the batch directory. This file is a
+		one line bash script that invokes the requested binary with the
+		requested arguments (plus any arguments given to this scripts).
+		Furthermore, the directory containing this script is added to
+		the beginning of $PATH, and $BLUESPECDIR is set as requested.
+	     4. Adds one more line to configuration.txt, with the revision
+	        number of the bsc compiler that svn info says. 
+             5. For each design:
+	        5a. Calls ~/SCRIPTS/run-design
+		5b. Updates the database for the homepage
+		5c. Sends progress notification email (if requested)
+             6. Removes the temporary directory
+
+  Part II: Presenting the results
+    - The part of the system that presents the results only reads from the 
+      DATABASE directory. Everything that is presented is in there. We can not
+      rely on the configurations in DESIGNS, since they may have been changed
+      since the batch ran.
+    - The system can read through all the subdirectories of DATABASE/BATCHES,
+      but to save time this is only done when batches are run or upon request.
+      The result of reading these directories is stored in a data structure
+      which is saved in DATABASE/all_batches.txt using the standard derived show
+      function. This file is read by the cgi-script that generates the results
+      page.
+    - Two haskell files are mainly responsible for showing the results:
+      - ShowResultsCGI.hs contains all html related functions. It uses the
+        standard CGI and HTML libraries distributed with both Hugs and GHC.
+      - BatchResults.hs contains the interface to the database. 
+
+  
+
+

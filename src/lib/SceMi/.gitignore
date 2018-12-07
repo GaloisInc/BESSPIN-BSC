@@ -1,0 +1,13 @@
+# Ignore the generated file used to test that the header files compile
+# before releasing them
+test_hdr.cxx
+test_hdr_c.c
+
+readback/obj-linux32
+readback/obj-linux64
+readback/y.dot
+readback/y.tab.c
+readback/y.tab.h
+readback/edif.c
+readback/y.output
+

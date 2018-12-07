@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# This script runs one design. Essentially it just calls make and synthesize_magma
+# (and creates and deletes temporary subdirectory)
+
+# Arguments
+#
+#   $1  Path to design (not ending with /)
+#   $2  Period (e.g. 1500p)
+#   $3  Utilization (e.g. 75)
+#   $4  Path to volcano, not ending with /
+#   $5  Path to temporary directory (not ending with /)
+#   $6  Path to result file
+#   $7  Path to progress file
+
+#######################################################
+# Initialize
+
+if [ "$#" != "7" ]; then
+  echo "Syntax: run-design design period utl volc temp rslt progr"
+  echo "   where design is the absolute path to the design directory"
+  echo "         period is the clock period (e.g. 1500p)"
+  echo "         utl is the utilization (e.g. 75)"
+  echo "         volc is the absolute path to the volcano"
+  echo "         temp is the absolute path to a temporary directory"
+  echo "         rslt is the absolute path to a file to store the result in"
+  echo "         progr is the absolute path to a file to store progress in"
+  exit 1
+fi
+
+DESIGNPATH=$1
+PERIOD=$2
+UTIL=$3
+VOLCANO=$4
+TEMPDIR=$5
+RSLTFILE=$6
+PROGFILE=$7
+CURRDIR=`pwd`
+LOCALTEMPDIR=$TEMPDIR/$$
+TEMPFILE=$TEMPDIR/$$.txt
+
+#######################################################
+# Run the scripts in the design directory
+
+cd $DESIGNPATH
+echo `date` Retrieving and building design >> $PROGFILE
+if make &> $TEMPFILE ; then
+  rm $TEMPFILE
+else
+  echo "`date` Compilation failed" >> $PROGFILE
+  echo "FAIL: compilation" >> $RSLTFILE
+  cat $TEMPFILE >> $RSLTFILE
+  rm $TEMPFILE
+  make clean
+  exit 1
+fi
+  
+echo `date` Running synthesis >> $PROGFILE
+mkdir $LOCALTEMPDIR 
+cd $DESIGNPATH 
+./synthesize_magma $PERIOD $UTIL $VOLCANO $LOCALTEMPDIR $RSLTFILE 
+echo `date` "Synthesis complete, cleaning up" >> $PROGFILE
+cd $DESIGNPATH
+if make clean ; then
+  echo asdf > /dev/null
+else
+  echo "Warning: make clean failed for design $DESIGNPATH" >> $PROGFILE
+fi
+rm -rf $LOCALTEMPDIR 
+cd $CURRDIR 
+
+

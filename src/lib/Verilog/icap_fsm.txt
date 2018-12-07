@@ -1,0 +1,57 @@
+600000000 // addr = X00 <ICapInputs RDWR=1 CSB=1 00000000 > (default value)
+// Code: Bit#(7) read_ctl_first  = 'h01;
+200000000 // addr = X01 <ICapInputs RDWR=0 CSB=1 00000000 > (change to WRITE)
+000000000 // addr = X02 <ICapInputs RDWR=0 CSB=0 00000000 >
+0ffffffff // addr = X03 <ICapInputs RDWR=0 CSB=0 ffffffff > (DUMMY)
+0aa995566 // addr = X04 <ICapInputs RDWR=0 CSB=0 aa995566 > (SYNC)
+020000000 // addr = X05 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+020000000 // addr = X06 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+02800a001 // addr = X07 <ICapInputs RDWR=0 CSB=0 2800a001 > (Read from X0005)
+020000000 // addr = X08 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+// Code: Bit#(7) read_ctl_last   = 'h08;
+// Code: Bit#(7) write_ctl_first = 'h09;
+200000000 // addr = X09 <ICapInputs RDWR=0 CSB=1 00000000 > (change to WRITE)
+000000000 // addr = X0a <ICapInputs RDWR=0 CSB=0 00000000 >
+0ffffffff // addr = X0b <ICapInputs RDWR=0 CSB=0 ffffffff > (DUMMY)
+0aa995566 // addr = X0c <ICapInputs RDWR=0 CSB=0 aa995566 > (SYNC)
+020000000 // addr = X0d <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+020000000 // addr = X0e <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+03000a001 // addr = X0f <ICapInputs RDWR=0 CSB=0 3000a001 > (Write to X0005)
+1aaaaaaaa // addr = X10 <ICapInputs RDWR=0 CSB=0 REG >
+020000000 // addr = X11 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+// Code: Bit#(7) write_ctl_last  = 'h11;
+// Code: Bit#(7) capture_first   = 'h12;
+200000000 // addr = X12 <ICapInputs RDWR=0 CSB=1 00000000 > (change to WRITE)
+000000000 // addr = X13 <ICapInputs RDWR=0 CSB=0 00000000 >
+0ffffffff // addr = X14 <ICapInputs RDWR=0 CSB=0 ffffffff > (DUMMY)
+0aa995566 // addr = X15 <ICapInputs RDWR=0 CSB=0 aa995566 > (SYNC)
+020000000 // addr = X16 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+020000000 // addr = X17 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+030008001 // addr = X18 <ICapInputs RDWR=0 CSB=0 30008001 > (Write to X0004)
+00000000c // addr = X19 <ICapInputs RDWR=0 CSB=0 0000000c >
+020000000 // addr = X1a <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+// Code: Bit#(7) capture_last    = 'h1a;
+// Code: Bit#(7) read_first      = 'h1b;
+200000000 // addr = X1b <ICapInputs RDWR=0 CSB=1 00000000 > (change to WRITE)
+000000000 // addr = X1c <ICapInputs RDWR=0 CSB=0 00000000 >
+0ffffffff // addr = X1d <ICapInputs RDWR=0 CSB=0 ffffffff > (DUMMY)
+0aa995566 // addr = X1e <ICapInputs RDWR=0 CSB=0 aa995566 > (SYNC)
+020000000 // addr = X1f <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+020000000 // addr = X20 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+030008001 // addr = X21 <ICapInputs RDWR=0 CSB=0 30008001 > (Write to X0004)
+000000004 // addr = X22 <ICapInputs RDWR=0 CSB=0 00000004 >
+020000000 // addr = X23 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+020000000 // addr = X24 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+030002001 // addr = X25 <ICapInputs RDWR=0 CSB=0 30002001 > (Write to X0001)
+1aaaaaaaa // addr = X26 <ICapInputs RDWR=0 CSB=0 REG >
+020000000 // addr = X27 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+020000000 // addr = X28 <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+0280060a3 // addr = X29 <ICapInputs RDWR=0 CSB=0 280060a3 > (Read from X0003)
+020000000 // addr = X2a <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+// Code: Bit#(7) read_last       = 'h2a;
+// Code: Bit#(7) post_first      = 'h2b;
+020000000 // addr = X2b <ICapInputs RDWR=0 CSB=0 20000000 > (noOp)
+200000000 // addr = X2c <ICapInputs RDWR=0 CSB=1 00000000 >
+600000000 // addr = X2d <ICapInputs RDWR=1 CSB=1 00000000 > (change to READ)
+600000000 // addr = X2e <ICapInputs RDWR=1 CSB=1 00000000 >
+// Code: Bit#(7) post_last       = 'h2e;

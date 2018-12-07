@@ -1,0 +1,28 @@
+#!/bin/bash
+
+echo "Content-type: text/html"
+echo
+echo "<html><head><title>Install crontab</title></head></body>"
+echo "<h1>Install crontab</h1>"
+
+echo "<p>Trying to install crontab. Here is the output (empty usually means success):</p><table border=0 bgcolor=#f0f0f0 width=100%><tr><td><code>"
+
+/export/home/synthesizer/SCRIPTS/set-crontab-remote | ./addBR
+
+echo "</code></td></tr></table>"
+echo "<p>To allow you to verify that it worked, I now do a <code>crontab -l</code> for synthesizer on bluetinder:</p><table bgcolor=#f0f0f0 width=100%><tr><td><code>"
+
+if ssh -l synthesizer bluetinder "crontab -l" | /export/home/synthesizer/public_html/cgi-bin/addBR ; then
+  echo '</code>'
+else
+  echo 
+  echo '</code><i>ssh returned failure</i>'
+fi
+
+echo '</td></tr></table>'
+
+echo '<p><a href="https://svn.bluespec.com:8080/~synthesizer">Back to synthesizer main page</a></p>'
+
+echo "</body></html>"
+
+

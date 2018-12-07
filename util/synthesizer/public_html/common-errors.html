@@ -1,0 +1,40 @@
+<html><head><title>Synthesizer errors</title></head>
+<body>
+
+<h1>Synthesizer errors</h1>
+
+<p>If the synthesizer is not working, then here are a number of suggestions of how to look for and fix the errors:</p>
+
+<p><b>Cannot create temporary directory.</b> The most likely explanation is that somebody killed a batch in progress, deleted it from the database, but didn't clean the TEMP directory. <a href="cgi-bin/check-running">Clean the TEMP directory</a> and try again. </p>
+
+<p><b>Were there problems in the last batch that the system failed to detect?</b> Then <a href="errors.txt">click here</a> to see the unpiped output from the last batch. If you're lucky, there is some error message in there.</p>
+
+<p><b>Do some designs work while others don't?</b> Then you need to check the designs that don't work. Maybe the compiler has changed and won't accept the code anymore, or perhaps paths have changed. Try to run the design manually and see what happens. Do this in the following way:</p>
+
+  <ol>
+    <li>log in on bluetinder as synthesizer
+    <li>do a <code>source ~synthesizer/SCRIPTS/bsc_setup</code> to set the <code>$BLUESPECDIR</code> and <code>$PATH</code>
+    <li>go to the directory of the design that doesn't work (a subdirectory of ~synthesizer/DESIGNS)
+    <li>do a <code>make</code>. This should check out the source for the design (if it is not permanently stored in the design directory) and compile it. If you need to enter the password to check the code out, then that's probably the problem.
+    <li>do a <code>synthesize_magma 1000p 75 /tools/magma/lib/tsmc18gl.volcano/ /export/home/synthesizer/TEMP/ /export/home/synthesizer/TEMP/results.txt</code>. Change the three first parameters to correspond to period, utilization and volcano (the settings used by the system can be found in the file synth-params). All output should now be in the ~/TEMP directory, and specifically the result in ~/TEMP/results.txt. You should have found the error by now, and should be able to correct it by updating <code>Makefile</code>, <code>synthesize_magma</code>, <code>synth-params</code>, or even the source code of the project. For your help, there should be a file called synth-notes.txt in the directory of each design, taht explains the set up of that particular design.
+    <li>If you haven't found the problem yet, then you may have to go into the directory of the batch that failed (~SYNTHESIZER/DATABASE/BATCHES/nnnn, where nnnn is the number of the batch), and step through <code>run-batch</code> to see where it failed.
+    <li>finally, do a <code>rm -rf /export/home/synthesizer/TEMP/*</code> and a <code>make clean</code> (in the design directory).
+  </ol>
+
+<p><b>Does the system fail to check out bsc?</b> First, try to <a href="cgi-bin/start">start a batch manually</a> and ask it to do a full <code>svn checkout</code>. If that doesn't work, then maybe svn asks for a password (the system cannot enter the password). Log in as synthesizer and try this. Otherwise, step through ~synthesizer/SCRIPTS/update-bsc, and see where it fails.</p>
+
+<p><b>Does the system check out bsc but fail to build it?</b> Then <a href="cgi-bin/start">start a batch manually</a>, and ask it to do a full <code>svn checkout</code>, and not just a <code>svn update</code>. If this doesn't work, step through ~synthesizer/SCRIPTS/update-bsc to find the error.</p>
+
+<p><b>If you can't start batches manually or use the page that checks whether the synthesizer is running,</b> then maybe the synthesizer cannot do an ssh from the web server to bluetinder without entering passwords. <a href="cgi-bin/check-ssh">Click here to check this</a>.</p>
+
+<p><b>Are the weekly batches not executed?</b> <a href="cgi-bin/check-crontab">Click here to check if crontab is installed properly on bluetinder.</a> </p>
+
+<p><b>Is bluetinder operational?</b> If you need to migrate from bluetinder to another machine, I'd do a grep bluetinder SCRIPTS/*; grep bluetinder SCRIPTS/*/*; grep bluetinder DESIGNS/*/* to find all files that refer to bluetinder.</p>
+
+<p><b>Is the synthesizer home account still located</b> at <code>/export/home/synthesizer/</code>? If not, do a grep similar to the one described above to find all places you need to update. </p>
+
+
+
+<a href="index.html">Back to main page</a>
+
+</body></html>

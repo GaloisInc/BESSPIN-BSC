@@ -1,0 +1,13 @@
+#!/usr/bin/env xdg-open
+
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=false
+Icon[en_US]=/home/bluespec/bsc/semu-baby.png
+Name[en_US]=Semu
+Exec=/home/bluespec/bin/semu
+Comment[en_US]=Bluespec Semu
+Name=Semu
+Comment=Bluespec Semu
+Icon=/

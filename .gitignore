@@ -1,0 +1,27 @@
+# Note: Only the most general ignore patterns are in this file.
+#       There are area-specific .gitignore files for the testsuite, source
+#       areas, doc directory, etc.
+
+# Ignore editor backup files
+*~
+
+# Ignore the inst directory
+inst
+
+# And the build directory
+build/
+
+# Ignore the link to bsc
+bsc
+
+# Ignore TAGS files
+TAGS
+tags
+
+# Ignore ghc outputs
+*.hi
+*.o
+
+
+model_sys*.h
+model_sys*.cxx

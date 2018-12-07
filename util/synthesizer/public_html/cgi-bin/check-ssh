@@ -1,0 +1,39 @@
+#!/bin/bash
+
+echo "Content-type: text/html"
+echo
+echo "<html><head><title>Checking ssh</title></head></body>"
+echo "<h1>Checking ssh</h1>"
+
+echo '<p>If you can see the text <code>It works!</code> below, then the synthesizer can log in to bluetinder as it should:</p>'
+
+echo '<table border=0 bgcolor=#f0f0f0 width=100%><tr><td><code>'
+
+if ssh -l synthesizer bluetinder echo "It works!" ; then
+  echo '<br>ssh returns success'
+else
+  echo '<br>ssh returns failure'
+fi
+
+echo '</code></td></tr></table>'
+
+
+echo "<p>The text in the gray rectangle above is the output of the following bash script:</p>"
+echo '<table border=0 bgcolor=#f0f0ff width=100%><tr><td><code>'
+echo 'if ssh -l synthesizer bluetinder echo "It works!" ; then<br>'
+echo '&nbsp;&nbsp;echo "&lt;br&gt;ssh returns success"<br>'
+echo 'else<br>'
+echo '&nbsp;&nbsp;echo "&lt;br&gt;ssh returns failure"<br>'
+echo 'fi<br>'
+
+echo '</code></td></tr></table>'
+
+echo "<p>If it didn't work, then try to log in manually as synthesizer on bluetinder. If you cannot login, then you've found the problem, and I have no further ideas. If you can login as synthesizer, you probably need to set up the automatic authentication again. The synthesizer user must be able to log in from the webserver (which used to be <code>lapis</code>, and is now reported to be <code>$HOSTNAME</code>) without entering passwords. If you don't know how to do this, just google for <i>ssh without password</i> and follow any of the instructions.</p>"
+
+echo '<p><a href="../common-errors.html">Back to error page</a></p>'
+
+echo '<p><a href="https://svn.bluespec.com:8080/~synthesizer">Back to synthesizer main page</a></p>'
+
+echo "</body></html>"
+
+

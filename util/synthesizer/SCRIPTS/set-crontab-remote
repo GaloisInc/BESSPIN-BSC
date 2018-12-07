@@ -1,0 +1,3 @@
+#!/bin/bash
+
+ssh -i /export/home/synthesizer/.ssh/id_dsa bluetinder /export/home/synthesizer/SCRIPTS/set-crontab

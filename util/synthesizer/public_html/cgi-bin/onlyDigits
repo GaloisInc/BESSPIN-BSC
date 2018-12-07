@@ -1,0 +1,7 @@
+#!/usr/bin/runhugs
+
+-- Filters out all digits from stdin and prints them on stdout.
+
+main = getContents >>= putStr . filter (`elem` "0123456789")
+
+

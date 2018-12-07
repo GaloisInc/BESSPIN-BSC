@@ -1,0 +1,446 @@
+
+/**
+        @mainpage Bluespec Workstation
+
+@section _main_page_toc_ Contents
+
+        - @ref _main_page_introduction_
+        - @ref _main_page_windows_
+
+@section _main_page_introduction_ Introduction
+
+
+Bluespec workstation is a launching point for creating/editing, compiling, simulating and analysing Bluespec SystemVerilog (BSV) specifications. Please refer to the Bluespec reference guide, style guide, and tutorials for information on how to design and write specifications in the Bluespec SystemVerilog environment.
+This covers all three steps in the life of a BSV file.
+First,a designer can prepare a BSV design, the BSV is then compiled into a 
+Verilog or Bluesim specification, and ultimately this output is either 
+linked into a simulation environment or processed by a synthesis tool.
+
+
+@section _main_page_windows_  Windows
+
+Following is the set of Bluespec Workstation windows :
+ 
+       - @ref _main_window_ 
+       - @ref _editor_window_ 
+       - @ref _project_files_window_ 
+       - @ref _package_window_ 
+       - @ref _type_browser_window_ 
+       - @ref _module_browser_window_ 
+       - @ref _schedule_analysis_window_ 
+
+
+@section _main_window_  Main Window
+        The main window consists of the following parts:
+
+                - menu-bar where all actions can be found 
+                  (see @ref _main_window_menu_)
+
+                - tool-bar where frequently-used actions can be found
+
+                - status-bar where the short help and diagnostic info is 
+                  provided
+
+                - status/log window, where @ref _project_ status and output 
+                  information for commands is shown
+
+                - command-line, where TCL commands can be entered: almost all
+                  actions available in Bluespec Workstation GUI have analogous 
+                  TCL commands. (see @ref _tcl_commands_usage_ for full list of                   supported commands with their explanations)
+
+This window is the central window of the Bluespec Workstation.
+
+Using this window the user can @ref _create_open_project_, @ref _set_project_settings_ and @ref _build_projects_ .\n
+Using the @ref _window_menu_ menu of the Main Window the user can 
+@ref _manipulate_with_windows_ .\n
+Using the @ref _message_menu_ menu the user can @ref _manage_log_window_ .\n
+
+@subsection _create_open_project_ Create/Open a Project
+
+        To create a new project, the user should:
+                - Select the @b New action from the 
+                  @ref _main_project_menu_ menu
+                - Specify the project name and directory
+                - Specify @ref _search_paths_ for the project
+                - Click on the OK button
+
+        To open a project, the user should:
+                - Select the @b Open action from the 
+                  @ref _main_project_menu_ menu
+                - Select a @ref _project_file_ from the opened Select File 
+                  dialog window
+                - Double click on the selected file or click the OK button
+
+@subsection _set_project_settings_ Set/Change Project Settings
+
+        To set/change the compiler settings, the user should:
+                - Select the @b Options action from the 
+                  @ref _main_project_menu_ menu
+                - Select the @b Compiler tab from the opened 
+                  Project Options dialog
+                - Select @b bsc or @b make in the @b Compilation @b type
+                  section of the @b Compiler tab
+                - If @b bsc is chosen then select @b Bluesim or @b Verilog in 
+                  the @b Compile @b to section and set appropriate compilation 
+                  result directories 
+                - If @b make is chosen then set the Makefile and appropriate 
+                  targets
+                - Click on the OK or Apply button
+
+        To set/remove @ref _search_paths_, the user should:
+                - Select the @b Options action from the 
+                  @ref _main_project_menu_ menu
+                - Select the @b Search @b Path tab from the opened 
+                  Project Options dialog
+                - Add/Remove @ref _search_paths_ using Add/Remove buttons
+                - Click on the OK or Apply button
+
+        To set/change simulator settings, the user should:
+                - Select the @b Options action from the 
+                  @ref _main_project_menu_ menu
+                - Select the @b Simulator tab from the opened 
+                  Project Options dialog
+                - Select one of given simulators (iverilog, modelsim, ncsim)
+                - Specify path to the simulator if necessary
+                - Click on the OK or Apply button
+
+        To set/change editor settings, the user should:
+                - Select the @b Options action from the 
+                  @ref _main_project_menu_ menu
+                - Select the @b Editor tab from the opened 
+                  Project Options dialog
+                - Select one of given editors (emacs or gvim)
+                - Specify path to the editor if necessary
+                - Click on the OK or Apply button
+
+        To set/change the top file for the project, the user should:
+                - Select the @b Top @b File action from the 
+                  @ref _main_project_menu_ menu
+                - Click on the Browse button in the opened 
+                  Top File dialog
+                - In the opened Project Files dialog select the top file 
+                - Click on the OK button
+
+        To set/change the top module for the project, the user should:
+                - Select the @b Top @b File action from the 
+                  @ref _main_project_menu_ menu
+                - Specify the top module in the "op module" entryfield of the 
+                  Top File dialog
+                - Click on the OK button
+
+@subsection _build_projects_ Build the Project
+
+        To compile the project, the user should:
+                - @ref _set_project_settings_
+                - Specify the top file for the project if it is not  
+                - Select the @b Compile action from the @ref _build_menu_ menu
+
+        To link the project, the user should:
+                - @ref _set_project_settings_
+                - Compile the project via selecting the @b Compile 
+                  action from the @ref _build_menu_ menu
+                - Select the @b Link action from the @ref _build_menu_ menu
+
+        To simulate the project, the user should:
+                - @ref _set_project_settings_
+                - If the project is not compiled then compile it via 
+                  selecting the @b Compile action from the 
+                  @ref _build_menu_ menu 
+                - If the project is not linked then link it via 
+                  selecting the @b Link action from the 
+                  @ref _build_menu_ menu 
+                - Select the @b Simulate action from the @ref _build_menu_ menu
+
+        To stop the simulation compile the project, the user should:
+                - @ref _set_project_settings_
+                - Select the @b Stop @b Simulation action from the 
+                  @ref _build_menu_ menu
+
+        To clean the compilation/link results, the user should:
+                - Select the @b Clean action from the @ref _build_menu_ menu
+
+        To clean all log files and compilation/link results, the user should:
+                - Select the @b Full @b Clean action from the 
+                  @ref _build_menu_ menu
+
+@subsection _manipulate_with_windows_ Manipulate Workstation Windows
+
+        To launch the editor, the user should:
+                - Select the @b Editor @b Window action from the 
+                  @ref _window_menu_ menu 
+
+        To open/unminimize the @ref _project_files_window_, the user should:
+                - Select the @b Project @b Files action from the 
+                @ref _window_menu_ menu 
+
+        To open/unminimize the @ref _package_window_, the user should:
+                - Select the @b Package @b Window action from the 
+                  @ref _window_menu_ menu 
+
+        To open/unminimize the @ref _type_browser_window_, the user should:
+                - Select the @b Type @b Browser action from the 
+                  @ref _window_menu_ menu 
+
+        To open/unminimize the @ref _module_browser_window_, the user should:
+                - Select the @b Module @b Browser action from the 
+                  @ref _window_menu_ menu
+
+        To open/unminimize the @ref _schedule_analysis_window_, the user should:
+                - Select the @b Schedule @b  Analysis action from the 
+                  @ref _window_menu_ menu 
+
+        To minimize all currently open windows, the user should:
+                - Select the @b Minimize @b All action from the 
+                  @ref _window_menu_ menu 
+
+        To close all currently open windows, the user should:
+                - Select the @b Close @b All action from the 
+                  @ref _window_menu_ menu 
+
+@subsection _manage_log_window_ Manage Status/Log Window Contents
+
+        To save the log contents, the user should:
+                - Select the @b Save action from the @ref _message_menu_ menu
+
+        To search for a string through the log contents, the user should:
+                - Select the @b Find action from the @ref _message_menu_ menu
+
+        To clear the log contents, the user should:
+                - Select the @b Clear action from the @ref _message_menu_ menu
+
+@section _editor_window_  Editor Window
+
+The editor window can be activated via selecting the @b Editor @b Window action from the @ref _window_menu_ menu.\n 
+By default the editor is set to gvim. The default value can be changed in the 
+USER/.bluespec/setup.tcl file where the Workstation defaults are set.\n
+For the particular project the editor's default value can be changed in the @b Editor tab of the Project Options dialog (see @ref _set_project_settings_).
+
+@section _project_files_window_  Project Files Window
+
+This window is intended for representing project contents. It contains the list of all  @ref _project_files_ in the project and makefile, in case if the project is based on makefile, rather than bsc.
+The window consists of menubar where all actions can be found (see @ref _project_files_window_menu_). All menu actions are also available through mouse sensitive pop up menu.
+
+Using this window the user can @ref _manipulate_project_files_ as well as the project. 
+
+        To compile the project, the user should:
+                - Select the @b Compile action from the 
+                  @ref _project_menu_ menu.\n
+
+        To refresh the project information, the user should:
+                - Select the @b Refresh action from the 
+                  @ref _project_menu_ menu.\n
+
+        To close the Project Files Window, the user should:
+                - Select the @b Close action from the 
+                  @ref _project_menu_ menu.\n
+
+@subsection _manipulate_project_files_ Manipulate Project Files
+
+        To add a new file to the project, the user should:
+                - Select the @b New action from the @ref _file_menu_ menu
+                - Specify the name of the file
+                - From the project @ref _search_paths_ list select the directory                   where the created file should be located
+
+        To edit the specified file, the user should:
+                - Select the file via the left mouse click on that file
+                - Select the @b Edit action from the @ref _file_menu_ menu
+
+        To cmpile the specified file without dependencies, the user should:
+                - Select the file via the left mouse click on that file
+                - Select the @b Compile action from the @ref _file_menu_ menu
+
+        To cmpile the specified file with dependencies, the user should:
+                - Select the file via the left mouse click on that file
+                - Select the @b Compile @b With @b Deps action from 
+		  the @ref _file_menu_ menu
+
+
+
+@section _package_window_  Package Window
+
+
+This window is the pre-elaboration viewer for the design. From this window the user can load packages into Bluespec Workstation, and then browse their contents.
+The window consists of two panes. The left pane is hierarchical browser which contains packages and their contents (@b Modules @b and @b Functions and @b Types @b and @b Interfaces). If the loaded package imports other packages, those will not be loaded either and considered as a part of the design. The right pane contains specific details for the selected item in the package hierarchy.
+Using the @ref _package_window_menu_ the user can @ref _load_package_ and 
+@ref _view_packages_ .
+
+@subsection _load_package_ Load/Reload a Package
+
+	To load a package, the user should:
+		- Select the @b Load action from the @ref _package_menu_ menu
+		- Select a package form the opened Select Package dialog window 
+		- Click on the OK button
+
+	To reload all loaded packages, the user should:
+		- Select the @b Reload action from the @ref _package_menu_ menu
+
+	To refresh the package hierarchy, the user should:
+		- Select the @b Refresh action from the @ref _package_menu_ menu
+
+	To view the import hierarchy for the specified package, the user should:
+		- Select the package via the left mouse click
+		- Select the @b Import @b Hierarchy action from 
+		  the @ref _package_menu_ menu
+
+	To close the Package Window, the user should:
+		- Select the @b Close action from the @ref _package_menu_ menu
+
+@subsection _view_packages_ View Contents of the Package
+
+User can view information for a particular item from the package hierarchy via selecting it by the left mouse click.\n
+On the selected item the user can apply the following actions from the @ref 
+_package_view_menu_ menu .\n
+	
+	To expand the selected item, the user should:
+                - Select the @b Expand action from the @ref 
+                  _package_view_menu_ menu
+	
+	To collapse the selected item, the user should:
+                - Select the @b Collapse action from the @ref 
+                  _package_view_menu_ menu
+	
+	To view the definition or the selected item, the user should:
+                - Select the @b View @b Source action from the @ref 
+                  _package_view_menu_ menu
+
+	If the selected item is a type, the user can view it in the @ref
+	_type_browser_window_ via selecting the @b Send @b to @b Type action 
+	from the @ref _package_view_menu_ menu.
+ 
+
+@section _type_browser_window_  Type Browser Window
+
+This window is the primary means for viewing information about types and interfaces. From this window the user can add types and view their contents 
+(subtypes, etc).
+This window consists of two panes. The left pane is a hierarchy browser which shows a type and its composition. The right pane contains information about the selected type from the left pane.
+
+Using the @ref _type_browser_window_menu_ the user can @ref _add_remove_types_ and 
+@ref _view_type_info_ .
+
+@subsection _add_remove_types_ Add/Remove Types
+
+	To add a type to the type hierarchy, the user should:
+		- Select the @b Add action from the @ref _type_menu_ menu
+		- Select a type from the opened Select Type dialog
+		- Double click on the selection or Click on the OK button
+
+	To remove the specified type from the type hierarchy, the user should:
+		- Select the type via the left mouse click on it
+		- Select the @b Remove action from the @ref _type_menu_ menu
+
+@subsection _view_type_info_ View Types 
+
+User can view information for the item of the type hierarchy in the right pane of the Type Browser Window via selecting it by the left mouse click.\n 
+
+On the selected item the user can apply actions from the @ref 
+_type_view_menu_ menu .\n
+
+	To expand the selected item, the user should:
+                - Select the @b Expand action from the @ref 
+                  _type_view_menu_ menu.
+	
+	To collapse the selected item, the user should:
+                - Select the @b Collapse action from the @ref 
+                  _type_view_menu_ menu.
+	
+	To view the definition of the selected item, the user should:
+                - Select the @b View @b Source action from the @ref 
+                  _type_view_menu_ menu.
+
+
+@section _module_browser_window_  Module Browser Window
+
+This window is a post-elaboration model viewer. The window consists of two panes. 
+The left pane is the module hierarchy. The right pane contains module information for the currently selected item from the left pane. It is a tabbed window with the following tabs:
+        - Interface
+        - Rules
+        - Instances
+
+Using the @ref _module_browser_window_menu_ menu the user can @ref _load_module_ and @ref _view_module_hierarchy_ .
+
+@subsection _load_module_ Load/Reload a Module
+
+        To load a module, the user should:
+                - Select the @b Load action from the @ref _module_menu_ menu
+                - Specify a module from the opened Select Module dialog
+                - Double click on the selection or press the OK button
+
+        To reload the currently loaded module, the user should:
+                - Select the @b Reload action from the @ref _module_menu_ menu
+
+        To view the currently loaded module in the @ref 
+        _schedule_analysis_window_, the user should:
+                - Select the @b Show @b Schedule action from the 
+                  @ref _module_menu_ menu
+
+        To close the Module Browser Window, the user should:
+                - Select the @b Close action from the @ref _module_menu_ menu
+
+@subsection _view_module_hierarchy_ View Module Hierarchy
+
+To view information about the specified item from the module hierarchy in the right pane of the window, the user should select it via the left mouse click.\n
+
+On the selected item the user can apply actions from the @ref _module_view_menu_ menu.\n
+
+        To expand the selected item, the user should:
+                - Select the @b Expand action from the @ref 
+                  _module_view_menu_ menu
+
+        To collapse the selected item, the user should:
+                - Select the @b Collapse action from the @ref 
+                  _module_view_menu_ menu
+
+        To expand the module hierarchy, the user should:
+                - Select the @b Collapse @b All action from the @ref 
+                  _module_view_menu_ menu
+
+@section _schedule_analysis_window_  Schedule Analysis Window
+
+This is the primary window for viewing and querying information about a schedule for the currently loaded module. It also provides means to @ref _load_reload_module_ .\n
+This window contains four tabs each describing separate perspectives on the schedule. The tabs are the following: 
+        - @ref _schedule_warnings_  
+        - @ref _rule_order_ 
+        - @ref _method_call_
+        - @ref _rule_relations_
+
+@subsection _load_reload_module_ Load/Reload a Module
+
+        To load a module, the user should:
+                - Select the @b Load action from the 
+                 @ref _schedule_analysis_module_menu_ menu
+
+        To reload the currently loaded module, the user should:
+                - Select the @b Reload action from the 
+                 @ref _schedule_analysis_module_menu_ menu
+
+        To close the Schedule Analysis Window, the user should:
+                - Select the @b Close action from the 
+                 @ref _schedule_analysis_module_menu_ menu
+
+@subsection _schedule_warnings_  Schedule Warnings Tab
+
+This perspective presents the warning messages for the loaded module which 
+occurred during scheduling. 
+
+@subsection _rule_order_  Rule Order Tab
+
+This window consists of two panes. In the left pane is the rule and method execution sequence for the currently loaded module represented in the execution order. 
+The right has specific information about the selected rule from the left pane.\n
+The right pane contains the following components:
+        - @b Predicate
+        - @b Blocking @b Rules
+        - @b Method @b Calls  
+
+User can launch the editor on the selected rule/method definition via selecting the @b View @b Source action from the @ref _schedule_analysis_module_menu_ menu.
+
+@subsection _method_call_  Method Call Tab
+
+In this perspective, the user can view the schedule from the methods call point of view and the relation to the rules by which they are called. It is a dual pain window, where the left pane is a hierarchy view (instance then method call). The right pane presents the list of rules which call this particular instance/method. 
+User can launch the editor on the selected instance definition via selecting  the @b View @b Source action from the @ref _schedule_analysis_module_menu_ menu.
+
+@subsection _rule_relations_  Rule Relations Tab
+
+In this perspective the user can select two rules, and view the scheduling relationship between them. Rules are selected from two combo-boxes. The shown relationships includes the scheduling relation, the disjointness of the predicates and reason for the relation (shared resource, calling conflicting method, etc).
+
+*/
+

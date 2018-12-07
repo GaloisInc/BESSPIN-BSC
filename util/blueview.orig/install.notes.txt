@@ -1,0 +1,13 @@
+wish tk 8.4
+
+bwidget1.7.0
+
+from Debussy
+  nWave
+
+from Unix:
+  grep
+  cp
+  date
+  /bin/sh
+

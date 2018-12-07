@@ -1,0 +1,65 @@
+<?xml version="1.0" ?>
+<node xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:altera="http://www.altera.com/XMLSchema/Qsys/SystemTree">
+  <instanceKey xsi:type="xs:string">clkbuf</instanceKey>
+  <instanceData xsi:type="data">
+    <parameters></parameters>
+    <interconnectAssignments>
+      <interconnectAssignment>
+        <name>$system.qsys_mm.clockCrossingAdapter</name>
+        <value>HANDSHAKE</value>
+      </interconnectAssignment>
+      <interconnectAssignment>
+        <name>$system.qsys_mm.maxAdditionalLatency</name>
+        <value>0</value>
+      </interconnectAssignment>
+    </interconnectAssignments>
+    <className>clkbuf</className>
+    <version>1.0</version>
+    <name>clkbuf</name>
+    <uniqueName>clkbuf</uniqueName>
+    <nonce>0</nonce>
+    <incidentConnections></incidentConnections>
+  </instanceData>
+  <children>
+    <node>
+      <instanceKey xsi:type="xs:string">altclkctrl_0</instanceKey>
+      <instanceData xsi:type="data">
+        <parameters>
+          <parameter>
+            <name>CLOCK_TYPE</name>
+            <value>1</value>
+          </parameter>
+          <parameter>
+            <name>DEVICE_FAMILY</name>
+            <value>Arria 10</value>
+          </parameter>
+          <parameter>
+            <name>ENA_REGISTER_MODE</name>
+            <value>1</value>
+          </parameter>
+          <parameter>
+            <name>GUI_USE_ENA</name>
+            <value>true</value>
+          </parameter>
+          <parameter>
+            <name>NUMBER_OF_CLOCKS</name>
+            <value>1</value>
+          </parameter>
+          <parameter>
+            <name>USE_GLITCH_FREE_SWITCH_OVER_IMPLEMENTATION</name>
+            <value>false</value>
+          </parameter>
+        </parameters>
+        <interconnectAssignments></interconnectAssignments>
+        <className>altclkctrl</className>
+        <version>18.0</version>
+        <name>altclkctrl_0</name>
+        <uniqueName>clkbuf_altclkctrl_180_76rtb7q</uniqueName>
+        <nonce>0</nonce>
+        <incidentConnections></incidentConnections>
+        <path>clkbuf.altclkctrl_0</path>
+      </instanceData>
+      <children></children>
+    </node>
+  </children>
+</node>

@@ -1,0 +1,8 @@
+# Ignore the generated files for the dummy module in Azure.bsv
+mkAzure.ba
+mkAzure.v
+mkSceMiBlueNoC.ba
+mkSceMiBlueNoC.v
+mkSceMiClassic.ba
+mkSceMiClassic.v
+

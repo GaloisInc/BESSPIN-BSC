@@ -1,0 +1,4 @@
+#!/bin/bash
+
+/usr/bin/runhugs -h10000k /export/home/synthesizer/SCRIPTS/Haskell/ShowResultsCGI.hs
+

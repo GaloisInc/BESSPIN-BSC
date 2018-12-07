@@ -1,0 +1,464 @@
+# --------------------------------------------------
+#
+# Makefile for building a Bluespec release
+#
+# Usage to build a release:
+#
+#   make VERSION=<version> [<options>]
+#
+# Usage to clean up after a build:
+#
+#   make VERSION=<version> clean
+#
+# Optional arguments:
+#
+#   BUILD_DATE=<date reported by "bsc -v", as YYYY-MM-DD; default is today's date>
+#
+#   BSC_BUILD=(NORMAL|PROF|DEBUG)
+#
+#   GHC_VERSION=<version directory in /raid/tools>
+#
+#   BUILD_FLAGS=<flags for 'make' in BSC repo>
+#   TMP=<temp work directory>
+#
+#   GIT_BSCSRC_BRANCH=<git branch of bsc to checkout; default is "master">
+#   GIT_BSCSRC_COMMIT=<revision of bsc to checkout; default "HEAD">
+#   GIT_BSCDOC_COMMIT=<revision of bsc-doc to checkout; default is "HEAD">
+#
+#   FLEXLMVER=<flexlm subdirectory>
+#
+#   BSC_LIC_POLICY=(DEFAULT|XGEN|DATE_REVERT)
+#
+#   BSPEC_EXP_DAYS=<days>
+#
+#   NOSVN=<set to 1 to avoid documentation that requires SVN>
+#
+# Requires:
+#   * the GHC version to be installed in /tmp of the chroot
+#   * VERSION set (to YYYY.MM.TAG)
+#
+# --------------------------------------------------
+
+ifndef VERSION
+$(error Variable VERSION is not set)
+else
+$(info >>> Release version "$(VERSION)")
+endif
+
+BUILD_DATE ?= $(shell date +%Y-%m-%d)
+
+PRODUCT = Bluespec-$(VERSION)
+
+# ---------------
+# Options
+
+# This can also be PROF or DEBUG
+BSC_BUILD ?= NORMAL
+
+# Change this to build a release for Cybernet
+# (Note that an appropriate license file needs to be available,
+# (see NATIVE_LICENSE_FILE below)
+#
+FLEXLMVER ?= v10.1
+#FLEXLMVER ?= v11.14.0.2-cybernet
+#FLEXLMVER ?= v10.1-dummy
+
+# This can be set to XGEN or DATE_REVERT
+BSC_LIC_POLICY ?= DEFAULT
+
+# If the licence policy is DATE_REVERT or if it is DEFAULT and the
+# dummy Flex library chosen, this variable indicates the number of
+# days until expiration
+BSPEC_EXP_DAYS ?= 45
+
+# Set this to 1 if SVN is not available (for building docs)
+NOSVN ?= 0
+
+# ---------------
+# Tools
+
+#set STRIP=true to disable strip
+STRIP = strip
+
+SUDO = sudo
+
+MOUNT = $(SUDO) mount
+UMOUNT = $(SUDO) umount
+
+# ---------------
+# chroot
+
+CHROOT_USERNAME=tinderbox
+AS_TINDER=$(SUDO) -u $(CHROOT_USERNAME)
+
+CHROOT_TEMPLATE = LANG=C sudo $(1) chroot
+CHROOT32 = $(call CHROOT_TEMPLATE,linux32)
+CHROOT64 = $(call CHROOT_TEMPLATE,linux64)
+
+# ---------------
+# Git
+
+GIT = git
+
+GIT_BSCSRC_REPO = /raid/git/bsc.git
+GIT_BSCDOC_REPO = /raid/git/bsc-doc.git
+
+GIT_BSCSRC_BRANCH ?= master
+GIT_BSCSRC_COMMIT ?= HEAD
+GIT_BSCDOC_COMMIT ?= HEAD
+
+# ---------------
+# GHC
+
+GHC_VERSION ?= 7.6.3
+
+# ---------------
+# make
+
+# Any additional flags to the BSC 'make'
+BUILD_FLAGS +=
+
+# ---------------
+# Licenses
+
+NATIVE_LICENSE_DIR = /raid/tinderbox/License
+
+ifeq ($(FLEXLMVER),v10.1)
+FLEXLM_LICENSE_NAME = tinderbox.lic
+FLEXLM_VENDOR = BLUESPEC
+else
+ifeq ($(FLEXLMVER),v11.14.0.2-cybernet)
+FLEXLM_LICENSE_NAME = cybernet.lic
+FLEXLM_VENDOR = BLUESPCS
+else
+ifeq ($(FLEXLMVER),v10.1-dummy)
+FLEXLM_LICENSE_NAME = tinderbox.lic
+FLEXLM_VENDOR = BLUESPEC
+else
+$(error Unrecognized FLEXLMVER "$(FLEXLMVER)")
+endif
+endif
+endif
+
+NATIVE_LICENSE_FILE = $(NATIVE_LICENSE_DIR)/$(FLEXLM_LICENSE_NAME)
+
+# ---------------
+# Working directories
+
+# There are two contexts where things happen:
+# (1) Builds that happen inside the chroot environments
+# (2) Builds and shuffling of files that happens in the "native" environment
+
+# In the chroot environment, we have this structure:
+#
+# CHROOT_WORK_DIR/
+#     src/             [where the src is untar'd for native builds]
+#     build/           [install location for chroot builds]
+#     logs/
+
+# In the native environment, we have this structure:
+#
+# NATIVE_WORK_DIR/
+#     git-checkout/    [where the repos are checked out and tar'd up]
+#     src/             [where the src is untar'd for native builds]
+#     build/           [install location for native builds]
+#     logs/
+#         32/          [link to the chroot32 logs directory]
+#         64/          [link to the chroot64 logs directory]
+#     PRODUCT/         [where the final release files are collected]
+
+# The chroot filesystem is visible as a directory in the native filesystem.
+# Some of the following variables provide paths in the native environment
+# while some provide paths in the chroot environment.
+
+# -----
+
+TMP ?= /tmp
+
+# -----
+
+NATIVE_WORK_DIR  = $(TMP)/build-bsc-$(VERSION)
+#
+NATIVE_REPO_DIR  = $(NATIVE_WORK_DIR)/git-checkout
+NATIVE_SRC_DIR   = $(NATIVE_WORK_DIR)/src
+NATIVE_BUILD_DIR = $(NATIVE_WORK_DIR)/build
+NATIVE_LOG_DIR   = $(NATIVE_WORK_DIR)/log
+
+PRODUCT_DIR      = $(NATIVE_WORK_DIR)/$(PRODUCT)
+
+# Location where both source and release tarballs will be put
+TARBALL_OUTPUT_DIR = $(NATIVE_WORK_DIR)
+
+# Path and name for a tarball of the source, to be unpacked in each chroot
+# (We could build a release from a given tarball by substituting it here.)
+BSC_SRC_TARBALL = $(TARBALL_OUTPUT_DIR)/source-$(VERSION).tar.gz
+
+BSC_RELEASE_TARBALL = $(TARBALL_OUTPUT_DIR)/$(PRODUCT).tar.gz
+
+# -----
+
+CHROOT_WORK_DIR  = /tmp/build-bsc-$(VERSION)
+#
+CHROOT_SRC_DIR   = $(CHROOT_WORK_DIR)/src
+CHROOT_BUILD_DIR = $(CHROOT_WORK_DIR)/build
+CHROOT_LOG_DIR   = $(CHROOT_WORK_DIR)/logs
+
+# The license path from inside a chroot
+#   Override this to 27000@license if you wish.  Currently not done
+#   because networking seems flaky inside the chroot.
+CHROOT_LICENSE   = $(CHROOT_WORK_DIR)/$(FLEXLM_LICENSE_NAME)
+
+# -----
+
+# Native paths to the chroot files
+#
+CHROOT_BASE = /home/2013-sarge/
+CHROOT32_DIR = $(CHROOT_BASE)32
+CHROOT64_DIR = $(CHROOT_BASE)64
+
+# ---------------
+# Update the version in the README file
+
+REWRITE_README = sed -i -e "s/yyyy\\.mm/$(VERSION)/g"
+
+# --------------------------------------------------
+
+# $(1) = CXX_FAMILY (for unique name of the log file)
+# $(2) = BUILD_DIR (PREFIX)
+# $(3) = LOG_DIR
+define LIBRARIES_TEMPLATE
+	make -j1 -C src/sim realclean \
+	 > $(3)/40-sim-realclean-$(1).log 2>&1 ;\
+	make -j1 -C src/sim BSC_BUILD=$(BSC_BUILD) \
+	 $(BUILD_FLAGS) PREFIX=$(2) \
+	 install > $(3)/41-sim-install-$(1).log 2>&1;\
+	make -j1 -C src/lib/VPI realclean \
+	 > $(3)/50-vpi-realclean-$(1).log 2>&1 ;\
+	make -j1 -C src/lib/VPI BSC_BUILD=$(BSC_BUILD) \
+	 $(BUILD_FLAGS) PREFIX=$(2)\
+	 install > $(3)/51-vpi-install-$(1).log 2>&1;\
+	make -j1 -C src/lib/Readback realclean > $(3)/55-readback-realclean-$(1).log 2>&1 ;\
+	make -j1 -C src/lib/Readback BSC_BUILD=$(BSC_BUILD) $(BUILD_FLAGS) PREFIX=$(2)\
+	 install > $(3)/56-readback-install-$(1).log 2>&1;\
+	make -j1 -C src/lib/BlueNoC realclean > $(3)/60-bluenoc-realclean-$(1).log 2>&1 ;\
+	make -j1 -C src/lib/BlueNoC BSC_BUILD=$(BSC_BUILD) $(BUILD_FLAGS) PREFIX=$(2)\
+	 install > $(3)/61-bluenoc-install-$(1).log 2>&1;\
+	make -j1 -C src/lib/SceMi realclean > $(3)/70-scemi-realclean-$(1).log 2>&1 ;\
+	make -j1 -C src/lib/SceMi BSC_BUILD=$(BSC_BUILD) $(BUILD_FLAGS) PREFIX=$(2)\
+	 install > $(3)/71-scemi-install-$(1).log 2>&1;\
+	make -j1 -C vendor/stp realclean > $(3)/80-stp-realclean-$(1).log 2>&1 ;\
+	make -j1 -C vendor/stp BSC_BUILD=$(BSC_BUILD) $(BUILD_FLAGS) PREFIX=$(2)\
+	 install > $(3)/81-stp-install-$(1).log 2>&1;\
+	make -j1 -C vendor/yices realclean > $(3)/82-yices-realclean-$(1).log 2>&1 ;\
+	make -j1 -C vendor/yices BSC_BUILD=$(BSC_BUILD) $(BUILD_FLAGS) PREFIX=$(2)\
+	 install > $(3)/83-yices-install-$(1).log 2>&1;\
+
+endef
+
+define COPY_32_TEMPLATE
+       cp -r $(CHROOT32_DIR)$(CHROOT_BUILD_DIR)/lib/$(1)/g++4 \
+           $(PRODUCT_DIR)/lib/$(1)/
+endef
+
+# ---------------
+
+.PHONY: release
+release: mount primary add32 extra tarball umount
+
+.PHONY: release-64only
+release-64only: mount64 primary extra tarball umount64
+
+# ---------------
+
+.PHONY: mount
+mount: mount32 mount64
+
+.PHONY: mount32
+mount32:
+	$(MOUNT) --bind /proc $(CHROOT32_DIR)/proc
+
+.PHONY: mount64
+mount64:
+	$(MOUNT) --bind /proc $(CHROOT64_DIR)/proc
+
+.PHONY: umount
+umount: umount32 umount64
+
+.PHONY: umount32
+umount32:
+	-$(UMOUNT) $(CHROOT32_DIR)/proc
+
+.PHONY: umount64
+umount64:
+	-$(UMOUNT) $(CHROOT64_DIR)/proc
+
+.PHONY: primary
+primary:
+	@echo "----- Make the working directory"
+	    mkdir -p $(NATIVE_WORK_DIR)
+	@echo "----- Make the 64-bit chroot working directory"
+	    $(AS_TINDER) mkdir -p $(CHROOT64_DIR)$(CHROOT_WORK_DIR)
+	@echo "----- Copy the license into the 64-bit chroot"
+	    $(AS_TINDER) cp $(NATIVE_LICENSE_FILE) $(CHROOT64_DIR)$(CHROOT_WORK_DIR)
+	@echo "----- Checkout the 'bsc' and 'bsc-doc' repos"
+	    mkdir -p $(NATIVE_REPO_DIR)
+	    $(GIT) clone --recursive $(GIT_BSCSRC_REPO) --branch $(GIT_BSCSRC_BRANCH) $(NATIVE_REPO_DIR)/bsc
+	    (cd $(NATIVE_REPO_DIR)/bsc; $(GIT) checkout $(GIT_BSCSRC_COMMIT); $(GIT) submodule update --recursive)
+	    $(GIT) clone --recursive $(GIT_BSCDOC_REPO) $(NATIVE_REPO_DIR)/bsc-doc
+	    (cd $(NATIVE_REPO_DIR)/bsc; $(GIT) checkout $(GIT_BSCDOC_COMMIT); $(GIT) submodule update --recursive)
+	@echo "----- Create the BuildVersion.hs file while Git is available"
+	    make -C $(NATIVE_REPO_DIR)/bsc/src/comp BuildVersion.hs
+	@echo "----- Create a source tar-ball (checkout)"
+	    mkdir -p $(TARBALL_OUTPUT_DIR)
+	    tar czf $(BSC_SRC_TARBALL) -C $(NATIVE_REPO_DIR) bsc bsc-doc
+	    chmod a+r $(BSC_SRC_TARBALL)
+	@echo "----- Build 64-bit version"
+	    $(AS_TINDER) mkdir -p $(CHROOT64_DIR)$(CHROOT_SRC_DIR)
+	    $(AS_TINDER) tar xzf $(BSC_SRC_TARBALL) -C $(CHROOT64_DIR)$(CHROOT_SRC_DIR)
+	    $(AS_TINDER) mkdir -p $(CHROOT64_DIR)$(CHROOT_BUILD_DIR)
+	    $(AS_TINDER) mkdir -p $(CHROOT64_DIR)$(CHROOT_LOG_DIR)
+	    mkdir -p $(NATIVE_LOG_DIR)
+	    ln -s $(CHROOT64_DIR)$(CHROOT_LOG_DIR) $(NATIVE_LOG_DIR)/64
+	    $(CHROOT64) $(CHROOT64_DIR) \
+		sudo -u $(CHROOT_USERNAME) -H bash -c "\
+		    set -x ; \
+		    set -e ; \
+		    export PATH=/tmp/$(GHC_VERSION)/bin:\"\$$PATH\" ; \
+		    export $(FLEXLM_VENDOR)_LICENSE_FILE=$(CHROOT_LICENSE) ; \
+		    export FLEXLMVER=$(FLEXLMVER) ; \
+		    export BSC_LIC_POLICY=$(BSC_LIC_POLICY) ; \
+		    export BSPEC_EXP_DAYS=$(BSPEC_EXP_DAYS) ; \
+		    cd $(CHROOT_SRC_DIR)/bsc ; \
+		    (cd src/comp ; \
+		     sed -i 's/^versionnum = \"[^\"]*\"$$/versionnum = \"$(VERSION)\"/' Version.hs ; \
+		     sed -i 's/^versiondate = \"[^\"]*\"$$/versiondate = \"$(BUILD_DATE)\"/' Version.hs \
+		    ) ; \
+		    make -j1 \
+			BSC_BUILD=$(BSC_BUILD) $(BUILD_FLAGS) \
+			NOUPDATEBUILDVERSION=1 \
+			NOSYSTEMC=1 PREFIX=$(CHROOT_BUILD_DIR) \
+			BLUESPEC_VERSION=$(VERSION) \
+			install-bin \
+			> $(CHROOT_LOG_DIR)/bsc-install-bin.log 2>&1 ; \
+		    find $(CHROOT_BUILD_DIR)/lib/bin/linux64 -type f \
+			| xargs -t $(STRIP) ; \
+                "
+	    @echo "The following copy should create $(PRODUCT_DIR)"
+	    cp -r $(CHROOT64_DIR)$(CHROOT_BUILD_DIR) $(PRODUCT_DIR)
+
+.PHONY: add32
+add32:
+	@echo "----- Make the 32-bit chroot working directory"
+	    $(AS_TINDER) mkdir -p $(CHROOT32_DIR)$(CHROOT_WORK_DIR)
+	@echo "----- Copy the license into the 32-bit chroot"
+	    $(AS_TINDER) cp $(NATIVE_LICENSE_FILE) $(CHROOT32_DIR)$(CHROOT_WORK_DIR)
+	@echo "----- Build 32-bit version"
+	    $(AS_TINDER) mkdir -p $(CHROOT32_DIR)$(CHROOT_SRC_DIR)
+	    $(AS_TINDER) tar xzf $(BSC_SRC_TARBALL) -C $(CHROOT32_DIR)$(CHROOT_SRC_DIR)
+	    $(AS_TINDER) mkdir -p $(CHROOT32_DIR)$(CHROOT_BUILD_DIR)
+	    $(AS_TINDER) mkdir -p $(CHROOT32_DIR)$(CHROOT_LOG_DIR)
+	    mkdir -p $(NATIVE_LOG_DIR)
+	    ln -s $(CHROOT32_DIR)$(CHROOT_LOG_DIR) $(NATIVE_LOG_DIR)/32
+	    $(CHROOT32) $(CHROOT32_DIR) \
+		sudo -u $(CHROOT_USERNAME) -H bash -c "\
+		    set -x ; \
+		    set -e ; \
+		    export PATH=/tmp/$(GHC_VERSION)/bin:\"\$$PATH\" ; \
+		    export $(FLEXLM_VENDOR)_LICENSE_FILE=$(CHROOT_LICENSE) ; \
+		    export FLEXLMVER=$(FLEXLMVER) ; \
+		    export BSC_LIC_POLICY=$(BSC_LIC_POLICY) ; \
+		    export BSPEC_EXP_DAYS=$(BSPEC_EXP_DAYS) ; \
+		    cd $(CHROOT_SRC_DIR)/bsc ; \
+		    (cd src/comp ; \
+		     sed -i 's/^versionnum = \"[^\"]*\"$$/versionnum = \"$(VERSION)\"/' Version.hs ; \
+		     sed -i 's/^versiondate = \"[^\"]*\"$$/versiondate = \"$(BUILD_DATE)\"/' Version.hs \
+		    ) ; \
+		    make -j1 -C util \
+			BSC_BUILD=$(BSC_BUILD) $(BUILD_FLAGS) \
+			NOUPDATEBUILDVERSION=1 \
+			NOSYSTEMC=1 PREFIX=$(CHROOT_BUILD_DIR) \
+			BLUESPEC_VERSION=$(VERSION) \
+			install \
+			> $(CHROOT_LOG_DIR)/10-util-install.log 2>&1 ; \
+		    make -j1 -C vendor \
+			BSC_BUILD=$(BSC_BUILD) $(BUILD_FLAGS) \
+			NOUPDATEBUILDVERSION=1 \
+			NOSYSTEMC=1 PREFIX=$(CHROOT_BUILD_DIR) \
+			BLUESPEC_VERSION=$(VERSION) \
+			> $(CHROOT_LOG_DIR)/20-vendor.log 2>&1 ; \
+		    make -j1 -C src/comp \
+			BSC_BUILD=$(BSC_BUILD) $(BUILD_FLAGS) \
+			NOUPDATEBUILDVERSION=1 \
+			NOSYSTEMC=1 PREFIX=$(CHROOT_BUILD_DIR) \
+			BLUESPEC_VERSION=$(VERSION) \
+			install \
+			> $(CHROOT_LOG_DIR)/30-comp-install.log 2>&1 ; \
+		    find $(CHROOT_BUILD_DIR)/lib/bin/linux32 -type f \
+			| xargs -t $(STRIP) ; \
+		    make -j1 -C src/lib/board_support/BlueNoC/bluenoc \
+			PREFIX=$(CHROOT_BUILD_DIR) \
+			BLUESPEC_VERSION=$(VERSION) \
+			install \
+			> $(CHROOT_LOG_DIR)/35-bluenoc-install.log ;\
+		    make -j1 -C src/hdl \
+			BSC_BUILD=$(BSC_BUILD) \
+			$(BUILD_FLAGS) \
+			PREFIX=$(CHROOT_BUILD_DIR) \
+			install \
+			> $(CHROOT_LOG_DIR)/36-hdl-install.log 2>&1;\
+		    $(call LIBRARIES_TEMPLATE,4,$(CHROOT_BUILD_DIR),$(CHROOT_LOG_DIR))\
+		    make -j1 -C src/lib/tcllib \
+			$(BUILD_FLAGS) \
+			PREFIX=$(CHROOT_BUILD_DIR) \
+			> $(CHROOT_LOG_DIR)/90-tcllib.log 2>&1; \
+		"
+	    @echo "Copy everything into place"
+	    cp -r $(CHROOT32_DIR)$(CHROOT_BUILD_DIR)/lib/bin/linux32 \
+		$(PRODUCT_DIR)/lib/bin/
+	    $(call COPY_32_TEMPLATE,Bluesim)
+	    $(call COPY_32_TEMPLATE,VPI)
+	    $(call COPY_32_TEMPLATE,Readback)
+	    $(call COPY_32_TEMPLATE,BlueNoC)
+	    $(call COPY_32_TEMPLATE,SceMi/BlueNoC)
+	    $(call COPY_32_TEMPLATE,SceMi/Classic)
+	    $(call COPY_32_TEMPLATE,SAT)
+	    cp -r $(CHROOT32_DIR)$(CHROOT_BUILD_DIR)/lib/tcllib/lib.linux32 \
+		$(PRODUCT_DIR)/lib/tcllib
+
+.PHONY: extra
+extra:
+	@echo "----- Build the non-platform-specific parts (doc, training, scripts)"
+	    mkdir -p $(NATIVE_SRC_DIR)
+	    tar xzf $(BSC_SRC_TARBALL) -C $(NATIVE_SRC_DIR)
+	    $(MAKE) -j1 -C $(NATIVE_SRC_DIR)/bsc \
+		PREFIX=$(NATIVE_BUILD_DIR) \
+		BLUESPEC_VERSION=$(VERSION) \
+		install-full > $(NATIVE_LOG_DIR)/bsc-install-full.log 2>&1
+	    $(MAKE) -j1 -C $(NATIVE_SRC_DIR)/bsc-doc \
+		PREFIX=$(NATIVE_BUILD_DIR) \
+		BLUESPEC_VERSION=$(VERSION) \
+		NOSVN=$(NOSVN) \
+		release > $(NATIVE_LOG_DIR)/bsc-doc-release.log 2>&1
+	    @echo "Merge the non-platform-specific parts into the product directory"
+	    rsync -v -v -a $(NATIVE_BUILD_DIR)/ \
+		$(PRODUCT_DIR) > $(NATIVE_LOG_DIR)/rsync.log 2>&1
+	    @echo "Update the version in the README file"
+	    $(REWRITE_README) $(PRODUCT_DIR)/README.txt
+
+.PHONY: tarball
+tarball:
+	@echo "----- create the tarball"
+	    tar czf $(BSC_RELEASE_TARBALL) -C $(NATIVE_WORK_DIR) $(PRODUCT)
+	@echo ">>> Release built: $(BSC_RELEASE_TARBALL)"
+
+# --------------------------------------------------
+
+.PHONY: clean
+clean: umount
+	@echo "----- Delete the chroot working directories"
+	$(SUDO) rm -fr $(CHROOT64_DIR)$(CHROOT_WORK_DIR)
+	$(SUDO) rm -fr $(CHROOT32_DIR)$(CHROOT_WORK_DIR)
+	@echo "----- Delete the native working directory"
+	rm -fr $(NATIVE_WORK_DIR)
+
+# --------------------------------------------------

@@ -1,0 +1,106 @@
+package Tasks(FinishTask (..), DisplayTask(..), displayDec, displayHex, displayBin, displayOct) where
+
+--@ XXX THIS PACKAGE NOT YET DOCUMENTED
+
+import Environment
+
+class FinishTask a where
+    finish :: a
+
+instance FinishTask Action 
+  where
+    finish = finish1 (0 :: Bit 3)
+
+-- 0, 1 and 2 are the only reasonable input values
+instance FinishTask (Bit 3 -> Action)
+  where 
+    finish = finish1
+
+finish1 :: Bit 3 -> Action
+finish1 code = fromPrimAction (finish_ (zeroExtend code))
+
+foreign finish_ :: Bit 32 -> PrimAction = "$finish"
+
+class DisplayTask a where
+    display  :: a
+    displayb :: a
+    displayo :: a
+    displayh :: a
+    write  :: a
+    writeb :: a
+    writeo :: a
+    writeh :: a
+
+instance DisplayTask Action
+  where
+    display  = fromPrimAction $ display0
+    displayb = fromPrimAction $ displayb0
+    displayo = fromPrimAction $ displayo0
+    displayh = fromPrimAction $ displayh0
+    write  = fromPrimAction $ write0
+    writeb = fromPrimAction $ writeb0
+    writeo = fromPrimAction $ writeo0
+    writeh = fromPrimAction $ writeh0
+
+foreign display0  :: PrimAction = "$display"
+foreign displayb0 :: PrimAction = "$displayb"
+foreign displayo0 :: PrimAction = "$displayo"
+foreign displayh0 :: PrimAction = "$displayh"
+foreign write0  :: PrimAction = "$write"
+foreign writeb0 :: PrimAction = "$writeb"
+foreign writeo0 :: PrimAction = "$writeo"
+foreign writeh0 :: PrimAction = "$writeh"
+
+instance (Bits a sa) => DisplayTask (a -> Action)
+  where 
+    display  x1 = fromPrimAction $ display1  (pack x1)
+    displayb x1 = fromPrimAction $ displayb1 (pack x1)
+    displayo x1 = fromPrimAction $ displayo1 (pack x1)
+    displayh x1 = fromPrimAction $ displayh1 (pack x1)
+    write  x1 = fromPrimAction $ write1  (pack x1)
+    writeb x1 = fromPrimAction $ writeb1 (pack x1)
+    writeo x1 = fromPrimAction $ writeo1 (pack x1)
+    writeh x1 = fromPrimAction $ writeh1 (pack x1)
+
+foreign display1  :: (Bit n) -> PrimAction = "$display"
+foreign displayb1 :: (Bit n) -> PrimAction = "$displayb"
+foreign displayo1 :: (Bit n) -> PrimAction = "$displayo"
+foreign displayh1 :: (Bit n) -> PrimAction = "$displayh"
+foreign write1  :: (Bit n) -> PrimAction = "$write"
+foreign writeb1 :: (Bit n) -> PrimAction = "$writeb"
+foreign writeo1 :: (Bit n) -> PrimAction = "$writeo"
+foreign writeh1 :: (Bit n) -> PrimAction = "$writeh"
+
+instance (Bits a sa, Bits b sb) => DisplayTask (a -> b -> Action)
+  where
+    display  x1 x2 = fromPrimAction $ display2  (pack x1) (pack x2)
+    displayb x1 x2 = fromPrimAction $ displayb2 (pack x1) (pack x2)
+    displayo x1 x2 = fromPrimAction $ displayo2 (pack x1) (pack x2)
+    displayh x1 x2 = fromPrimAction $ displayh2 (pack x1) (pack x2)
+    write  x1 x2 = fromPrimAction $ write2  (pack x1) (pack x2)
+    writeb x1 x2 = fromPrimAction $ writeb2 (pack x1) (pack x2)
+    writeo x1 x2 = fromPrimAction $ writeo2 (pack x1) (pack x2)
+    writeh x1 x2 = fromPrimAction $ writeh2 (pack x1) (pack x2)
+
+foreign display2  :: (Bit n) -> (Bit m) -> PrimAction = "$display"
+foreign displayb2 :: (Bit n) -> (Bit m) -> PrimAction = "$displayb"
+foreign displayo2 :: (Bit n) -> (Bit m) -> PrimAction = "$displayo"
+foreign displayh2 :: (Bit n) -> (Bit m) -> PrimAction = "$displayh"
+foreign write2  :: (Bit n) -> (Bit m) -> PrimAction = "$write"
+foreign writeb2 :: (Bit n) -> (Bit m) -> PrimAction = "$writeb"
+foreign writeo2 :: (Bit n) -> (Bit m) -> PrimAction = "$writeo"
+foreign writeh2 :: (Bit n) -> (Bit m) -> PrimAction = "$writeh"
+
+-- XXX: should these really be 'h, 'd etc.?
+displayHex :: (Bits a sa) => a -> Action
+displayHex = display "0x%h"
+
+-- XXX: hack to get C to work
+displayDec :: (Bits a sa) => a -> Action
+displayDec x = display "%d" x
+
+displayBin :: (Bits a sa) => a -> Action
+displayBin = display "0b%b"
+
+displayOct :: (Bits a sa) => a -> Action
+displayOct = display "0%o"

@@ -1,0 +1,61 @@
+#!/bin/sh
+# substitute for install program which will try
+# to make symbolic links to files if possible
+# removes target when linking
+# if $INSTALL is not set in environment reverts to real install
+
+REALINSTALL=/usr/bin/install
+#REALINSTALL=echo
+LINK="ln -s"
+
+ARGS="$@"
+
+if [ x"$BSC_INSTALL" = x ] ; then
+    /usr/bin/install $@
+    exit $?
+fi
+if [ x"$BSC_INSTALL" != xLINK ] ; then
+    if [ x"$BSC_INSTALL" != xlink ] ; then
+	/usr/bin/install $@
+	exit $?
+    fi
+fi
+
+# check for -d (create directory)
+# hold onto mode
+case "$ARGS" in
+    *\ -d*|\ -d*) $REALINSTALL $@ ; exit $? ;;
+    *) ;;
+esac
+while true ; do
+    case $1 in
+	-c) ;;	# ignored
+	-d) $REALINSTALL "$ARGS" ; exit $? ;;
+	-m) SETPERM=$2 ; shift ;;
+	-*) echo 'unknown switch: '"$1" ; exit 1 ;;
+	*) break ;;
+    esac
+    shift
+done
+
+for x in $@ ; do
+    LAST="$x"
+done
+
+if [ $# = 2 ] ; then
+    if [ -d "$2" ] ; then
+	rm -f "$2/$1"
+    else
+	rm -f "$2"
+    fi
+    chmod $SETPERM "$1"
+    $LINK "$PWD/$1" "$2"
+else
+    while [ $# -gt 1 ] ; do
+	rm -f "$LAST/$1"
+	chmod $SETPERM "$1"
+	$LINK "$PWD/$1" "$LAST"
+	shift
+    # ignore permissions on installed thingie
+    done
+fi

@@ -1,0 +1,4 @@
+The makefile checks out the source code from bs/customers/trunk/ST_Micro/2005-01_Catania/upcvnt_4 into a subdirectory called upcvnt_4, and calls the makefile in that directory. Make clean simply deletes the upcvnt_4 directory.
+
+Since this design uses some special constraints, the usual make_mantle_script cannot be used. Therefore, it uses a premade run.tcl (found in run.tcl.partial), and just prepends a header that sets the period, utilization and volcano. The necessary verilog files are copied from the standard bsc library.
+

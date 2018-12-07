@@ -1,0 +1,501 @@
+#!/usr/bin/perl
+eval '(exit $?0)' && 
+  eval 'exec perl -S $0 ${1+"$@"}' && 
+  eval 'exec perl -S $0 $argv:q'
+  if 0;
+# $Id: vcd_cmp,v 1.2 2004/07/21 08:31:11 jsheahan Exp $ 
+# Copyright 1999 by John Sheahan <john@reptechnic.com.au>
+#
+#  This program is free software; you may redistribute and/or modify it under
+#  the terms of the GNU General Public License Version 2 as published by the
+#  Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful, but
+#  WITHOUT ANY WARRANTY, without even the implied warranty of MERCHANTABILITY
+#  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#  for complete details.
+#
+
+# script to compare two vcd's 
+
+use Getopt::Long;
+
+&GetOptions ('h', 'b', 's', 'c', 'g', 
+            'file1=s',  \$file1,
+            'file2=s', \$file2, 
+	    'prefix1=s', \$prefix1,
+            'prefix2=s', \$prefix2,
+            'printsigs', \$printsigs, 
+            'mapcase', \$mapcase,
+	    'period1=n', \$period1,
+	    'period2=n', \$period2,
+	    'strobe1=n', \$strobe1,
+	    'strobe2=n', \$strobe2,
+	    'debug', \$debug,
+	    'skip=n', \$skipcycles,
+	    'time=n', \$skiptime,
+	    'skipsignals=s', \$skipre,
+	    'grade',  \$grade,
+            'siglist=s', \$siglist,
+            'k'
+);
+
+if (defined($opt_h)) {
+  print " $0  [ opts ] file1   $Id: vcd_cmp,v 1.2 2004/07/21 08:31:11 jsheahan Exp $ \n";
+  print "      -h help\n";
+  print "      -b bitburst busses\n";
+  print "      -c clean output - remove subsequent change to same state\n";
+  print "      -g deglitch. remove zero-time glitches.\n";
+  print "      -k conk out on first error\n";
+  print "      --file1 reference input file\n";
+  print "      --file2 compare input file\n";
+  print "      --period1 cycle time in [1] in ps\n";
+  print "      --strobe1 strobe time in cycle\n";
+  print "      --period2 cycle time in [2] in ps\n";
+  print "      --strobe2 strobe time in cycle\n";
+  print "      --prefix1 instance name in tb1\n";
+  print "      --prefix2 instance name in tb2\n";
+  print "      --printsigs  print signal names\n";
+  print "      --siglist file listing signals to compare\n";
+  print "      --skip nn   ignore miscompare for first n cycles\n";
+  print "      --time nn   ignore miscompare for first n time periods
+(ref period1)\n";
+  print "      --skipsignals regex  ignore signals which match a regex\n";
+  print "      --debug\n";
+  print "      --mapcase  map all signal names to lowercase\n";
+  print "      --grade\n";
+die ;
+}
+
+if ($mapcase) {
+  $prefix1 = lc($prefix1);
+  $prefix1 = lc($prefix1);
+}
+# print "skipcycles $skipcycles skiptime $skiptime\n";
+
+unless (defined($skipcycles)) {
+   $skipcycles=0;
+}  
+
+unless (defined($skiptime)) {
+   $skiptime = $skipcycles * $period1;
+}
+
+#print "skipcycles $skipcycles skiptime $skiptime\n";
+
+unless (defined($period2)) {
+   $period2 =  $period1;
+}
+unless (defined($strobe21)) {
+   $strobe2 = $strobe1;
+}
+
+# Read the list of signals to compare, if such a file is given
+if (defined($siglist)) {
+  print "reading signal compare list from $siglist\n";
+  open (SIGS, $siglist);
+  while (<SIGS>) {
+    s/^\s*(.*?)\s*$/$1/;  # trim whitespace
+    $doCompare{$_} = 1 unless (length($_) eq 0); 
+  }
+}
+
+if (defined($skipre)) {
+  print "skipping signals which match /" . $skipre . "/\n";
+}
+# set of skipped signals (to avoid unknown signal error)
+%skipped1 = {};
+%skipped2 = {};
+
+@path=();
+
+$signals1 = 0;
+if ($file1 =~ /\.gz$/) {
+  open (VCD1, "gzip -dc $file1 |") or die "couldn't fork: $!\n";
+}
+elsif ($file1 =~ /\.bz2$/) {
+  open (VCD1, "bzip2 -dc $file1 |") or die "couldn't fork: $!\n";
+}
+else {
+  open (VCD1, $file1);
+}
+while (<VCD1>) {
+  # record current scope
+  if ($_ =~ /^\$scope\s/) {
+    @_=split;
+    push(@path,$_[2]);
+  }
+  if ($_ =~ /^\$timescale(.*)/) {
+    if ($1 =~ /(\d+)\s*(\S)s/) {
+      $timescale1=$1 . $2 . "s";
+    }
+    else {
+      $_=<VCD1>;
+      if (/(\d+)\s*(\S)s/) {
+	$timescale1=$1 . $2 . "s";
+      }
+    }
+    $timescale1mul=&mul($timescale1);
+    print STDERR "timescale multiplier 1 is $timescale1mul\n";
+  }
+  if ($_ =~ /^\$upscope\s/) {
+    pop(@path);
+  }
+  
+  if ($_ =~ /^\$var\s/) {
+    @_=split;  # $var kind width symbol name indices $end
+
+    $name= $_[4];
+
+#    if (@_ == 7) { #bus
+#      $name .= $_[5];
+#    }
+
+    # strip dimensions out of the name
+    if ($name =~ /(\w+)\[\d+:\d+\]/) {
+      $name = $1
+    }
+
+    # skip signals that match a given regex
+    $cmd = "\$name =~ /$skipre/" ;
+    if (defined($skipre) && eval($cmd)) {
+      $skipped1{$_[3]} = 1;
+      #print "skipping" . $name . "\n";
+    } else {
+      # skip signals that are not in the comparison list, if given
+      $fullname = join(".", @path) . "." . $name;
+      if (defined($siglist) && !$doCompare{$fullname}) {
+        $skipped1{$_[3]} = 1;
+      } else {
+# record ALL instances of a signal name
+#    unless (defined($signal1{$_[3]})) {
+        $signal1{$_[3]} = $fullname;
+        $signal1{$_[3]}  = lc($signal1{$_[3]}) if ($mapcase);
+        $data1{$_[3]}='';
+        # keep a reverse map from signalname to local code also.
+        $revmap1{$signal1{$_[3]}} = $_[3];
+        print "$signal1{$_[3]} $_[3] from $file1\n" if ($printsigs);
+#    }
+
+        $signals1++;
+      }
+    }
+  }
+  last if ($_ =~ /^\$enddefinitions /);
+}
+
+print STDERR "added $signals1 signals to map from $file1\n";
+
+
+
+@path=();
+
+$signals2 = 0;
+if ($file2 =~ /\.gz$/) {
+  open (VCD2, "gzip -dc $file2 |") or die "couldn't fork: $!\n";
+}
+elsif ($file2 =~ /\.bz2$/) {
+  open (VCD2, "bzip2 -dc $file2 |") or die "couldn't fork: $!\n";
+}
+else {
+  open (VCD2, $file2);
+}
+while (<VCD2>) {
+  # record current scope
+  if ($_ =~ /^\$scope\s/) {
+    @_=split;
+    push(@path,$_[2]);
+  }
+  if ($_ =~ /^\$upscope\s/) {
+    pop(@path);
+  }
+  
+  if ($_ =~ /^\$timescale(.*)/) {
+    if ($1 =~ /(\d+)\s*(\S)s/) {
+      $timescale2=$1 . $2 . "s";
+    }
+    else {
+      $_=<VCD2>;
+      if (/(\d+)\s*(\S)s/) {
+	$timescale2=$1 . $2 . "s";
+      }
+    }
+    $timescale2mul=&mul($timescale2);
+    print STDERR "timescale multiplier 2 is $timescale2mul\n";
+  }
+  if ($_ =~ /^\$var\s/) {
+    @_=split;
+
+    $name= $_[4];
+
+#    if (@_ == 7) { #bus
+#      $name .= $_[5];
+#    }
+
+    # strip dimensions out of the name
+    if ($name =~ /(\w+)\[\d+:\d+\]/) {
+      $name = $1
+    }
+
+    # skip signals that match a given regex
+    $cmd = "\$name =~ /$skipre/" ;
+    if (defined($skipre) && eval($cmd)) {
+      $skipped2{$_[3]} = 1;
+      #print "skipping" . $name . "\n";
+    } else {
+# record ALL instances of a signal name
+#    unless (defined($signal2{$_[3]})) {
+      $signal2{$_[3]} = join(".", @path) . "." . $name;
+      $signal2{$_[3]}  = lc($signal2{$_[3]}) if ($mapcase);
+      $data2{$_[3]}='';
+      # keep a reverse map from signalname to local code also.
+      $revmap2{$signal2{$_[3]}} = $_[3];
+      print "$signal2{$_[3]} $_[3] from $file2\n" if ($printsigs);
+#    }
+
+      $signals2++;
+
+    }
+
+  }
+  last if ($_ =~ /^\$enddefinitions /);
+}
+
+print STDERR "added $signals2 signals to map from $file2\n";
+
+# lets look for reference signals (from file1) in file2
+# signal maps vcd_code to signal name (one name)
+# revmap goes name to vcd_code
+# map gets from the vcd code in first file to [same signal] vcd code in second
+
+$match = 0;
+for $signal (keys %revmap1) {
+  $name=$signal;
+  if ($signal =~ /^$prefix1(.*)/) {
+    $name = $prefix2 . $1;
+  }
+  if (defined($revmap2{$name})) {
+    $map{$revmap1{$signal}}=$revmap2{$name};
+    print "MAP file1 vcd:$revmap1{$signal} ($signal) file2 vcd:$map{$revmap1{$signal}} ($signal2{$map{$revmap1{$signal}}})\n" if ($debug);
+    $match++;
+    print "matched $signal to $name\n" if (defined($printsigs));
+  }
+  else {
+    print "NO match for $signal\n" if (defined($printsigs));
+  }
+}
+print STDERR "matched $match signals (of $signals1) from $signals2\n"; 
+
+# If a list of signals to compare was given, check that all were found
+if (defined($siglist)) {
+  for $name (keys %doCompare) {
+    if (!defined($revmap1{$name})) {
+      print STDERR "WARNING: could not match $name in $file1\n";
+    } else {
+      if (!defined($map{$revmap1{$name}})) {
+        print STDERR "WARNING: could not match $name in $file2\n";
+      }
+    }
+  }
+}
+
+# now have read the headers and generated a cross reference for the 
+# comparisons.    Now do a match.
+
+$time1=$strobe1;
+$time2=$strobe2;
+$file1_finished=0;
+$file2_finished=0;
+$last_time_read_1='0';
+$last_time_read_2='0';
+$mismatches=0;
+$cycles=0;
+$checkcyclees=0;
+
+print "Starting compare on $match of $signals1 signals\n";
+print "file1 $file1 period $period1 strobe $strobe1\n";
+print "file2 $file2 period $period2 strobe $strobe2\n";
+
+until (($file1_finished && $file2_finished) || (defined($opt_k) && ($mismatches
+> 0))) {
+  $cycles++;
+ # print	"looping, $time1  ($last_time_read_1) $time2 ($last_time_read_2)\n";
+  $file1_finished=&get_1_to() if ($time1 >$last_time_read_1);
+  $file2_finished=&get_2_to() if ($time2 >$last_time_read_2);
+  &compare if ($time1 >= $skiptime);
+  $time1+= $period1;
+  $time2+= $period2;
+}
+if (defined($grade)) {
+   $detectable=0;
+   $maybes = 0;
+   print "Done compare $mismatches mismatches $cycles cycles";
+   print  " $checkcycles cycles checked; ";
+   for $stuffup (keys %mismatches) {
+     print "$stuffup $mismatches{$stuffup} times ";
+     if ($detectable < 1) {
+        if ($stuffup =~ /[01][01]$/) {
+            $detectable=1;
+        }
+        elsif ($stuffup =~ /[01][xX]$/) {
+             $maybe += $mismatches{$stuffup}
+        }
+     }
+     }
+     if ($detectable == 0) {$detectable = 1 - 0.5**$mismatches}
+     print "DETECTABLE: $detectable\n";
+}
+else {
+   print "Done compare $mismatches mismatches $cycles cycles";
+   print  " $checkcycles cycles checked\n";
+}
+
+################################################
+# compare the current values 
+sub compare {
+  for $vcdsig1 (keys %map) {
+    print "comparing sym1=$vcdsig1 sym2=$map{$vcdsig1} data1=$data1{$vcdsig1} data2=$data2{$map{$vcdsig1}}\n" if ($debug);
+    unless ($data1{$vcdsig1} eq $data2{$map{$vcdsig1}}) {
+      $mismatches++;
+      if (!defined($grade)) {	
+        print "Mismatch cycle $cycles $time1 ps: $signal1{$vcdsig1} $data1{$vcdsig1} $data2{$map{$vcdsig1}}\n";
+	print "vcdsig1 is $vcdsig1 maps to $map{$vcdsig1} data1: $data1{$vcdsig1} data2: $data2{$map{$vcdsig1}}\n";
+      }
+      else {
+	$stuffup="$data1{$vcdsig1}$data2{$map{$vcdsig1}}";
+	$mismatches{"$signal1{$vcdsig1}.$stuffup"}++;
+      }
+    }
+  }
+  $checkcycles++;
+}
+
+
+# read data from vcd file 1 at least to desired  time..
+sub get_1_to {
+  while (<VCD1>) {
+    chop;
+    if ($_ =~ /^\#(\d+)/) {
+      $last_time_read_1=$1*$timescale1mul;
+      #    print "time1 = $time\n";
+      return 0 if ($last_time_read_1 > $time1);
+    }
+    # is this standard vcd?
+    elsif ( $_ =~ /^([01xzXZ])(.*)/) {
+      if (defined($data1{$2})) {
+#     print "1: SETTING $2 to $1 at $last_time_read_1\n";
+
+	$data1{$2} = "$1";
+      }
+      else {
+	  if (!$skipped1{$2}) {
+	      print STDERR "unknown signal $2 in $_\n";
+	  }
+      }
+    }
+    # is this a bus?
+    elsif ( $_ =~ /^b([01xXzZ]+)\s+(\S+)/) {
+      if (defined($data1{$2})) {
+	$sig=$2;
+	$value=$1;
+	# drop leading zeros, keep 0 digit as minimum 
+	$value=~/^(0*)(.*)/;
+	(length($2)==0)? ($value=0) : ($value=$2);
+	# compress all-z to z    and all-x to x 
+	if ($value=~/^[xX]*$/) { $value='x' }
+	if ($value=~/^[zZ]*$/) { $value='z' }
+	$data1{$sig} = "$value";
+      }
+      else {
+	  if (!$skipped1{$2}) {
+	      print "unknown signal $2 in  $_\n";
+	  }
+      }
+    }
+    # is this 1 bit evcd ?
+    elsif ( $_ =~ /^p(.)\s+(\d)\s+(\d)\s+(\S+)/ ) {  # evcd bit
+      if (defined($data1{$4})) {
+	$val=$1;
+	$val =~ tr/DUNZduLHXTlh01?FAaBbCcf/01xz0101xz0101xzxxxxxxx/;
+	$data2{$4} = "$val";
+      }
+      else {
+	  if (!$skipped1{$4}) {
+	      print "unknown signal $4 in $_\n";
+	  }
+      }
+    }
+  }
+  return 1;   # reached end of file 1;
+}
+
+# read data from vcd file 1 at least to desired  time..
+sub get_2_to {
+  while (<VCD2>) {
+    chop;
+    if ($_ =~ /^\#(\d+)/) {
+      $last_time_read_2=$1*$timescale2mul;
+      #    print "time1 = $time\n";
+      return 0 if ($last_time_read_2 > $time2);
+    }
+    # is this standard vcd?
+    elsif ( $_ =~ /^([01xzXZ])(.*)/) {
+      if (defined($data2{$2})) {
+# print "2: SETTING $2 to $1 at $last_time_read_2\n";
+	$data2{$2} = "$1";
+      }
+      else {
+	  if (!$skipped2{$2}) {
+	      print STDERR "unknown signal $2 in $_\n";
+	  }
+      }
+    }
+    # is this a bus?
+    elsif ( $_ =~ /^b([01xXzZ]+)\s+(\S+)/) {
+      if (defined($data2{$2})) {
+	$sig=$2;
+	$value=$1;
+	# drop leading zeros, keep 0 digit as minimum 
+	$value=~/^(0*)(.*)/;
+	(length($2)==0)? ($value=0) : ($value=$2);
+	# compress all-z to z    and all-x to x 
+	if ($value=~/^[xX]*$/) { $value='x' }
+	if ($value=~/^[zZ]*$/) { $value='z' }
+	$data2{$sig} = "$value";
+      }
+      else {
+	  if (!$skipped2{$2}) {
+	      print "unknown signal $2 in  $_\n";
+	  }
+      }
+    }
+    # is this 1 bit evcd ?
+    elsif ( $_ =~ /^p(.)\s+(\d)\s+(\d)\s+(\S+)/ ) {  # evcd bit
+      if (defined($data2{$4})) {
+	$val=$1;
+	$val =~ tr/DUNZduLHXTlh01?FAaBbCcf/01xz0101xz0101xzxxxxxxx/;
+	$data2{$4} = "$val";
+      }
+      else {
+	  if (!$skipped2{$4}) {
+	      print "unknown signal $4 in $_\n";
+	  }
+      }
+    }
+  }
+  return 1;   # reached end of file 2;
+}
+
+
+# timescale compensation, run in ps
+sub mul {
+  $_[0] =~ /^(\d+)(\S)s$/;
+  if ($2 eq 'p') {return $1;}
+  elsif ($2 eq 'n') {return $1*1000;}
+  elsif ($2 eq 'u') {return $1*1000000;}
+  elsif ($2 eq 'm') {return $1 * 1000000000;}
+  else {
+    print STDERR "dont recognise timescale $_[0]\n";
+    return 1;
+  }
+}

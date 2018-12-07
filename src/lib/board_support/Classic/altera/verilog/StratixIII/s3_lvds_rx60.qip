@@ -1,0 +1,9 @@
+set_global_assignment -name IP_TOOL_NAME "ALTLVDS_RX"
+set_global_assignment -name IP_TOOL_VERSION "10.1"
+set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) "s3_lvds_rx60.v"]
+set_global_assignment -name MISC_FILE [file join $::quartus(qip_path) "s3_lvds_rx60.bsf"]
+set_global_assignment -name MISC_FILE [file join $::quartus(qip_path) "s3_lvds_rx60_inst.v"]
+set_global_assignment -name MISC_FILE [file join $::quartus(qip_path) "s3_lvds_rx60_bb.v"]
+set_global_assignment -name MISC_FILE [file join $::quartus(qip_path) "s3_lvds_rx60.inc"]
+set_global_assignment -name MISC_FILE [file join $::quartus(qip_path) "s3_lvds_rx60.cmp"]
+set_global_assignment -name MISC_FILE [file join $::quartus(qip_path) "s3_lvds_rx60.ppf"]

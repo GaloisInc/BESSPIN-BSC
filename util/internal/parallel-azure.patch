@@ -1,0 +1,15 @@
+Index: src/comp/Makefile
+===================================================================
+--- src/comp/Makefile	(revision 19803)
++++ src/comp/Makefile	(working copy)
+@@ -278,9 +278,8 @@
+ BLUEWISHCP = cp -p bluetcl.hs bluewish.hs
+ BLUEWISHDIFF = diff bluetcl.hs bluewish.hs || $(BLUEWISHCP)
+ 
+-.PHONY: bluewish.hs
+ bluewish.hs: bluetcl.hs
+-	if test -f bluewish.hs; then $(BLUEWISHDIFF); else $(BLUEWISHCP); fi;
++	$(BLUEWISHCP)
+ 
+ # Note that this breaks the pattern above, since there is no bluewish.hs
+ bluewish:  bluewish.hs bluewish_Main.hsc $(SOURCES) $(EXTRAOBJS) bluetcl

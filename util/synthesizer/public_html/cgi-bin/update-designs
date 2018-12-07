@@ -1,0 +1,33 @@
+#!/bin/bash
+
+DESIGNSDIR=/export/home/synthesizer/DESIGNS/
+
+echo "Content-type: text/html"
+echo
+echo "<html><head><title>Updating designs from repository</title></head><body>"
+echo "<h1>Updating designs from repository.</h1>"
+
+if cd $DESIGNSDIR ; then
+  echo > /dev/null
+else
+  echo "<p><b>Error!</b> Couldn't go to the designs directory ($DESIGNSDIR). You need to log in as synthesizer and see what's wrong manually.</p></body></html>"
+  exit 0;
+fi
+
+echo "<p>Running svn update:</p>"
+
+echo "<table border=0 bgcolor=#e8e8e8 width=100%><tr><td><code>"
+if svn update --non-interactive 2>&1 | /export/home/synthesizer/public_html/cgi-bin/addBR ; then
+  echo "</code>"
+else
+  echo "</code><br><b>svn returned error</b>"
+fi
+
+echo "</td></tr></table>"
+
+echo "<p>Done.</p>"
+
+echo '<p><a href="https://svn.bluespec.com:8080/~synthesizer">Back to synthesizer main page</a></p>'
+
+echo "</body></html>"
+

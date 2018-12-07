@@ -1,0 +1,203 @@
+# Makefile for SCE-MI library
+# Copyright 2008 Bluespec, Inc. All Rights Reserved
+PWD:=$(shell pwd)
+TOP:=$(PWD)/../../../../..
+
+VENDOR = $(TOP)/vendor
+
+# definitions for platform dependent variables
+include $(TOP)/platform.mk
+
+INSTALL ?= $(TOP)/util/install
+
+# Wconversion is needed because gcc 3.4, used in the release script,
+# warns about at them with Wall (and then aborts because of Werror)
+CFLAGS += -Wall \
+	 -Wmissing-prototypes \
+	 -Wstrict-prototypes \
+	 -Wpointer-arith \
+	 -Wshadow \
+	 -Wcast-qual \
+         -Wconversion \
+	 -Werror \
+	 -g \
+	 -std=c99 \
+	 -fPIC
+CXXFLAGS += -Wall \
+           -Wpointer-arith \
+           -Wshadow \
+           -Wcast-qual \
+	   -Wno-unused-parameter \
+           -Wconversion \
+           -g \
+           -D_ISOC99_SOURCE \
+	   -std=gnu++98 \
+           -fPIC
+
+# Compares two dotted numeric strings (e.g 2.3.16.1) for $1 >= $2
+define version_ge
+$(findstring TRUE,$(shell bash -c 'sort -cu -t. -k1,1nr -k2,2nr -k3,3nr -k4,4nr <(echo -e "$2\n$1") 2>&1 || echo TRUE'))
+endef
+
+glibcversion := $(shell ldd --version | head -1 | awk '{print $$NF}')
+ifeq ($(call version_ge,$(glibcversion),2.20),TRUE)
+CFLAGS += -D_DEFAULT_SOURCE
+CXXFLAGS += -D_DEFAULT_SOURCE
+else
+CFLAGS += -D_BSD_SOURCE
+CXXFLAGS += -D_BSD_SOURCE
+endif
+
+gxx33 := $(shell $(CXX) --version | grep -c "3\.3\.")
+gccversion := $(shell $(CXX) --version | head -1 | egrep -o "[0-9]+\.[0-9]+" | head -1)
+
+ifneq ($(gccversion), 3.3)
+CXXFLAGS += -Werror
+else
+$(warning gcc version is $(gccversion) -Werror supressed)
+endif
+
+# CFLAGS +=  -I $(LM_BSC_DIR)
+CXXFLAGS +=  -I $(LM_BSC_DIR)
+
+ifeq ($(OSTYPE), Darwin)
+SHARED ?= -dynamiclib -undefined dynamic_lookup
+CXXFLAGS += -D_DARWIN_C_SOURCE
+else
+SHARED ?= -shared
+CXXFLAGS += -D_POSIX_SOURCE
+CFLAGS   += -D_POSIX_SOURCE
+endif
+
+COPT ?= -O3
+CDEBUG ?=
+CFLAGS += $(PROF) $(COPT) $(CDEBUG)
+CXXFLAGS += $(PROF) $(COPT) $(CDEBUG)
+
+# Common makefile code for linking in FlexLM licensing
+# target is FLEXOBJ and is named here
+FLEXOBJ = scemi_ccore.o
+LM_BSC_DIR ?= $(VENDOR)/flexlm/cinterface
+include $(LM_BSC_DIR)/Makefile.inc
+
+
+
+PREFIX?=$(TOP)/inst
+LIBDIR=$(PREFIX)/lib
+SCEMILIB=$(LIBDIR)/SceMi/Classic
+EVEINC=$(VENDOR)/eve
+PCIEINC=$(LIBDIR)/SceMi/Classic
+
+OBJS=scemi.o SceMiParameters.o SceMiProxies.o SceMiEC.o \
+     scemi_capi.o  scemi_c_parameters.o scemi_c_proxies.o \
+     scemi_cbsv.o $(FLEXOBJ) \
+     BSVType.o DataWriter.o VCDWriter.o Target.o SerialProbeXactor.o \
+     SparseMemXactor.o SceMiServiceThread.o MsgPacket.o
+
+BSVXTORS_OBJS=BSVType.o DataWriter.o VCDWriter.o Target.o SerialProbeXactor.o \
+     SparseMemXactor.o SceMiServiceThread.o MsgPacket.o
+
+OBJSHW=TCPLinkHW.o
+LINK_OBJS=TCPLink.o EVELink.o PCIeLink.o
+
+vpath %.c ../
+
+%.o:%.c
+	$(CC) -E -MM $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+vpath %.cxx ../
+
+%.o:%.cxx
+	$(CXX) -E -MM -I $(LM_BSC_DIR) $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+EVELink.o:EVELink.cxx
+	$(CXX) -I$(EVEINC) -E -MM $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CXX) $(CXXFLAGS) -I$(EVEINC) -c -o $@ $<
+
+PCIeLink.o:PCIeLink.cxx
+	$(CXX) -I$(PCIEINC) -E -MM $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CXX) $(CXXFLAGS) -I$(PCIEINC) -c -o $@ $<
+
+%.o: ../bsvxactors/%.cxx
+	$(CXX) -I.. -E -MM $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CXX) -I.. -I$(SCEMILIB) $(CXXFLAGS) -c -o $@ $<
+
+BSVType.o: ../bsvxactors/BSVType.cxx
+Target.o: ../bsvxactors/Target.cxx
+DataWriter.o: ../bsvxactors/DataWriter.cxx
+VCDWriter.o: ../bsvxactors/VCDWriter.cxx
+SerialProbeXactor.o: ../bsvxactors/SerialProbeXactor.cxx
+SparseMemXactor.o: ../bsvxactors/SparseMemXactor.cxx
+SceMiServiceThread.o: ../bsvxactors/SceMiServiceThread.cxx
+
+.PHONY:	all
+all: libscemi.a libbsvxtors.a libscemiHW.a tcplink.so evelink.so pcielink.so
+
+libscemi.a: $(OBJS)
+	$(RM) libscemi.a
+	$(AR) cr libscemi.a $(OBJS)
+
+libbsvxtors.a: $(BSVXTORS_OBJS)
+	$(RM) libbsvxtors.a
+	$(AR) cr libbsvxtors.a $(BSVXTORS_OBJS)
+
+libscemiHW.a: $(OBJSHW)
+	$(RM) libscemiHW.a
+	$(AR) cr libscemiHW.a $(OBJSHW)
+
+tcplink.so: TCPLink.o SceMiParameters.o SceMiEC.o Link.o
+	$(CXX) $(CXXFLAGS) $(SHARED) -fPIC -o $@ $^
+
+evelink.so: EVELink.o SceMiParameters.o SceMiEC.o Link.o
+	$(CXX) $(CXXFLAGS) $(SHARED) -fPIC -o $@ $^
+
+#ethernetlink.so: SceMiParameters.o SceMiEC.o Link.o
+#	$(CXX) $(CXXFLAGS) $(SHARED) -fPIC -o $@ $^
+
+pcielink.so: PCIeLink.o SceMiParameters.o SceMiEC.o Link.o
+	$(CXX) $(CXXFLAGS) $(SHARED) -fPIC -o $@ $^
+
+install: all
+	$(INSTALL) -m 755 -d $(SCEMILIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 libscemi.a $(SCEMILIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 libbsvxtors.a $(SCEMILIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 libscemiHW.a $(SCEMILIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 tcplink.so $(SCEMILIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 evelink.so $(SCEMILIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 pcielink.so $(SCEMILIB)/$(BUILDDIR)
+
+clean:
+	$(RM) *.o *.d *.a *.so
+	$(RM) -rf *.so.dSYM
+
+realclean: clean
+
+TAGS:	*.h *.c *.cxx
+	etags *.h *.c *.cxx
+
+# include dependency information
+DEPEND_OBJS = $(OBJS) $(OBJSHW) $(LINK_OBJS)
+
+-include $(DEPEND_OBJS:.o=.d)

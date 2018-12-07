@@ -1,0 +1,17 @@
+Document: bluespec-user-guide
+Title: Bluespec SystemVerilog and Bluespec Development Workstation User Guide
+Author: Bluespec, Inc.
+Abstract: This document explains the mechanics and logistics of
+ compiling and simulating a Bluespec Sys- temVerilog (BSV)
+ specification with and without the Bluespec Development Workstation
+ (BDW).  BDW is a full-featured graphical environment designed for
+ BSV. You can create, edit, compile, sim- ulate, analyze, and debug
+ BSV designs from within the workstation or from the command line. You
+ can choose the editors, simulators, and waveform viewers to use along
+ with Bluespec-based analysis tools. The development workstation
+ builds on Bluetcl, a collection of Tcl extensions, scripts, and
+ packages providing Bluespec-specific features to Tcl.
+Section: Programming
+
+Format: PDF
+Files: /usr/share/doc/bluespec-__RELEASE_NUM__-doc/user-guide.pdf.gz

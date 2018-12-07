@@ -1,0 +1,170 @@
+-- Copyright 2000--2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id$
+
+package FileIO(
+	FilePut(..),
+	FileGet(..),
+	mkFileBinPut, mkFileHexPut,
+	mkFileBinGet, mkFileHexGet
+	) where
+
+--@ \subsubsection{FileIO}
+--@ 
+--@ \index{FileIO@\te{FileIO} (package)|textbf}
+--@ The \te{FileIO} package contains functions that allow file input and
+--@ output of values from a C simulation.
+--@ 
+--@ \index{FilePut@\te{FilePut} (interface type)|textbf}
+--@ The \te{FilePut} interface is used to write an item to a file.
+--@ \begin{libverbatim}
+--@ interface FilePut #(type a);
+--@     method Action put(a x1);
+--@ endinterface: FilePut
+--@ \end{libverbatim}
+interface FilePut a =
+    put :: a -> Action
+
+interface VFilePut n =
+    put :: Bit n -> PrimAction
+
+--@ \index{mkFileBinPut@\te{mkFileBinPut} (function)|textbf}
+--@ The \te{mkFileBinPut} function is used to create a \te{FilePut}
+--@ interface.  Performing a \te{put} operation on this interface
+--@ will write a binary value to the file.  The argument to \te{mkFileBinPut}
+--@ is the file name.
+--@ The file format is obtained from the item size.  The size of an item
+--@ is rounded to the nearest larger \te{USZ} (32) multiple and that is the
+--@ size (in bits) of the file item.  The order of the bits stored is platform dependent
+--@ and corresponds to how variables are stored internally.
+--@ The standard \te{pack} operation is used to obtain the bits for an item.
+--@ \begin{libverbatim}
+--@ module mkFileBinPut#(String name)(FilePut#(a))
+--@   provisos (Bits#(a, sa));
+--@ \end{libverbatim}
+mkFileBinPut :: (IsModule m c, Bits a sa) => String -> m (FilePut a)
+mkFileBinPut name = liftModule $
+    module
+      v :: VFilePut sa
+      v <- module verilog "FileBinPut" (("size",valueOf sa), ("name", name)) "CLK" {
+		put = "vdata" "vput";
+	     }
+      interface
+	put x = fromPrimAction (v.put (pack x))
+
+
+--@ \index{mkFileHexPut@\te{mkFileHexPut} (function)|textbf}
+--@ The \te{mkFileHexPut} function is used to create a \te{FilePut}
+--@ interface.  Performing a \te{put} operation on this interface
+--@ will write a hexdecimal value to the file.  The argument to \te{mkFileHexPut}
+--@ is the file name.
+--@ Each item will be written with the minimum number of hex digits, prefixed
+--@ \te{0x} and ended by a new-line.
+--@ \begin{libverbatim}
+--@ module mkFileHexPut#(String name)(FilePut#(a))
+--@   provisos (Bits#(a, sa));
+--@ \end{libverbatim}
+mkFileHexPut :: (IsModule m c, Bits a sa) => String -> m (FilePut a)
+mkFileHexPut name = liftModule $
+    module
+      v :: VFilePut sa
+      v <- module verilog "FileHexPut" (("size",valueOf sa), ("name", name)) "CLK" {
+		put = "vdata" "vput";
+	     }
+      interface
+	put x = fromPrimAction (v.put (pack x))
+
+
+--@ \index{FileGet@\te{FileGet} (interface type)|textbf}
+--@ The \te{FileGet} interface is used to read an item from a file.
+--@ On end-of-file \te{Invalid} is returned, otherwise \te{Valid} applied
+--@ to the value from the file.
+--@ \begin{libverbatim}
+--@ interface FileGet #(type a);
+--@     method ActionValue#(Maybe#(a)) get();
+--@ endinterface: FileGet
+--@ \end{libverbatim}
+interface FileGet a =
+    get  :: ActionValue (Maybe a)
+
+interface VFileGet n =
+    get  :: Bit n
+    next :: PrimAction
+    eof  :: Bit 1
+
+
+--@ \index{mkFileBinGet@\te{mkFileBinGet} (function)|textbf}
+--@ The \te{mkFileBinGet} function is used to create a \te{FileGet}
+--@ interface.  Performing a \te{get} operation on this interface
+--@ will read a binary value from the file.  The argument to \te{mkFileBinGet}
+--@ is the file name.  The format of the file is the same as for \te{mkFileBinPut}.
+--@ \begin{libverbatim}
+--@ module mkFileBinGet#(String name)(FileGet#(a))
+--@   provisos (Bits#(a, sa));
+--@ \end{libverbatim}
+mkFileBinGet :: (IsModule m c, Bits a sa) => String -> m (FileGet a)
+mkFileBinGet name = liftModule $
+    module
+      v :: VFileGet sa
+      v <- module verilog "FileBinGet" (("size",valueOf sa), ("name", name)) "CLK" {
+		get = "vget";
+		next = "vnext";
+		eof = "veof";
+	     }  [ [get, eof] <> [get, eof],
+	     	  [get, eof] < next,
+		  next << next ]
+      interface
+	get  = if v.eof == 1 then return Nothing else do { fromPrimAction v.next; return (Just (unpack v.get)) }
+
+
+--@ \index{mkFileHexGet@\te{mkFileHexGet} (function)|textbf}
+--@ The \te{mkFileHexGet} function is used to create a \te{FileGet}
+--@ interface.  Performing a \te{get} operation on this interface
+--@ will read a hexadecimal value from the file.  The argument to \te{mkFileHexGet}
+--@ is the file name.  The format of the file is the same as for \te{mkFileHexPut}.
+--@ \begin{libverbatim}
+--@ module mkFileHexGet#(String name)(FileGet#(a))
+--@   provisos (Bits#(a, sa));
+--@ \end{libverbatim}
+mkFileHexGet :: (IsModule m c, Bits a sa) => String -> m (FileGet a)
+mkFileHexGet name = liftModule $
+    module
+      v :: VFileGet sa
+      v <- module verilog "FileHexGet" (("size",valueOf sa), ("name", name)) "CLK" {
+		get = "vget";
+		next = "vnext";
+		eof = "veof";
+	     } [ [get, eof] <> [get, eof],
+	     	 [get, eof] < next,
+		 next << next ]
+      interface
+	get  = if v.eof == 1 then return Nothing else do { fromPrimAction v.next; return (Just (unpack v.get)) }
+
+--@ The file names used have two special cases:
+--@ the file name ``-'' is interpreted as standard output/input,
+--@ and a string starting with a ``|'' is taken to be a command to which a pipe
+--@ is created for the data.
+--@ Example: the expression \qbs{mkFileBinPut "| od -X"} would create an interface
+--@ where items put would be transferred in
+--@ binary into the \te{od} command which will dump them in hex.
+
+{-
+foo :: Module Empty
+foo =
+    module
+	p :: FilePut (Bit 16)
+	p <- mkFileBinPut "| od -X"
+	g :: FileGet (Bit 16)
+	g <- mkFileHexGet "hinput"
+	eof :: Reg Bool
+	eof <- mkReg False
+	rules
+	    when not eof
+	     ==> action
+			x :: Maybe (Bit 16)
+			x <- g.get
+			case x of {
+			 Nothing -> eof := True;
+			 Just v  -> p.put v
+			 }
+-}

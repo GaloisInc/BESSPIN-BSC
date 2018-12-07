@@ -1,0 +1,42 @@
+From db028b38549651d0bf137ac52bfe52f508e4637a Mon Sep 17 00:00:00 2001
+From: Darius <darius@bluespec.com>
+Date: Tue, 9 Apr 2013 17:28:57 -0400
+Subject: [PATCH 2/5] Only install appropriate version of emacsclient.
+
+---
+ src/lib/tcllib/emacs/Makefile |   14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/src/lib/tcllib/emacs/Makefile b/src/lib/tcllib/emacs/Makefile
+index 7e9dd34..8ce8a0d 100644
+--- a/src/lib/tcllib/emacs/Makefile
++++ b/src/lib/tcllib/emacs/Makefile
+@@ -14,13 +14,23 @@ all:
+ 
+ install: 
+ 	install -d -m755 $(LIBDIR)/tcllib/emacs
+-	install -d -m755 $(LIBDIR)/tcllib/emacs/linux32
+-	install -d -m755 $(LIBDIR)/tcllib/emacs/linux64
+ 	install -m644 $(FILES) $(LIBDIR)/tcllib/emacs
+ 	install -m755 emacsclient    $(LIBDIR)/tcllib/emacs
+ 	install -m755 emacsclient-24 $(LIBDIR)/tcllib/emacs
++
++ifeq ($(shell bsenv is64),64)
++install: install64
++else
++install: install32
++endif
++
++install32:
++	install -d -m755 $(LIBDIR)/tcllib/emacs/linux32
+ 	install -m755 linux32/emacsclient-22.1 $(LIBDIR)/tcllib/emacs/linux32
+ 	install -m755 linux32/emacsclient-24.2 $(LIBDIR)/tcllib/emacs/linux32
++
++install64:
++	install -d -m755 $(LIBDIR)/tcllib/emacs/linux64
+ 	install -m755 linux64/emacsclient-22.1 $(LIBDIR)/tcllib/emacs/linux64
+ 	install -m755 linux64/emacsclient-24.2 $(LIBDIR)/tcllib/emacs/linux64
+ 
+-- 
+1.7.10.4
+

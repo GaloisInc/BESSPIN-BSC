@@ -1,0 +1,379 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <META NAME="Author" CONTENT="John Stump">
+   <META NAME="GENERATOR" CONTENT="Mozilla/4.06 [en] (X11; I; Linux 2.0.34 i586) [Netscape]">
+   <TITLE>Tuba Home Page</TITLE>
+</HEAD>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#0000EE" VLINK="#551A8B" ALINK="#FF0000">
+<IMG SRC="images/tubatitle.jpg" HEIGHT=53 WIDTH=453>
+<P><!--#geoguide-->
+<BR>&nbsp;
+<CENTER><TABLE WIDTH="100%" BGCOLOR="#006600" NOSAVE >
+<TR NOSAVE>
+<TD NOSAVE>&nbsp;</TD>
+</TR>
+</TABLE></CENTER>
+
+<TABLE CELLSPACING=6 WIDTH="100%" NOSAVE >
+<TR NOSAVE>
+<TD VALIGN=TOP WIDTH="25%" BGCOLOR="#FFFFCC" NOSAVE>
+<TABLE COLS=1 WIDTH="100%" NOSAVE >
+<TR NOSAVE>
+<TH ALIGN=LEFT BGCOLOR="#006600" NOSAVE><FONT COLOR="#FFCC00">Tuba News</FONT></TH>
+</TR>
+
+<TR>
+<TD><BLINK><FONT COLOR="#FF0000"><FONT SIZE=-1>2.5.b1 uploaded (Beta Itcl
+support) 06-Jan-99</FONT></FONT></BLINK></TD>
+</TR>
+
+<TR>
+<TD><FONT COLOR="#000000"><FONT SIZE=-1>2.4.p1 uploaded 26-Nov-98</FONT></FONT></TD>
+</TR>
+
+<TR>
+<TD><FONT SIZE=-1>2.4 uploaded 11-Nov-98</FONT></TD>
+</TR>
+
+<TR>
+<TD></TD>
+</TR>
+
+<TR>
+<TD></TD>
+</TR>
+
+<TR NOSAVE>
+<TH ALIGN=LEFT BGCOLOR="#006600" NOSAVE><FONT COLOR="#FFCC00">Quick Links</FONT></TH>
+</TR>
+
+<TR>
+<TD><A HREF="#screenshots">Screenshots</A></TD>
+</TR>
+
+<TR>
+<TD><A HREF="#downloads">Versions &amp; Downloads</A></TD>
+</TR>
+
+<TR>
+<TD><A HREF="#install">Installation</A></TD>
+</TR>
+
+<TR>
+<TD></TD>
+</TR>
+
+<TR>
+<TD></TD>
+</TR>
+
+<TR VALIGN=TOP NOSAVE>
+<TH ALIGN=LEFT VALIGN=TOP BGCOLOR="#006600" NOSAVE><FONT COLOR="#FFCC00">Other
+Iliad Tools</FONT></TH>
+</TR>
+
+<TR>
+<TD><A HREF="../tea/index.html">Tea OO Environment</A></TD>
+</TR>
+
+<TR>
+<TD><A HREF="../sage/index.html">Sage Tcl/Tk profiler</A></TD>
+</TR>
+
+<TR>
+<TD><A HREF="../pfe/index.html">PRCS Version Tree</A></TD>
+</TR>
+
+<TR>
+<TD></TD>
+</TR>
+
+<TR>
+<TD></TD>
+</TR>
+
+<TR>
+<TD><A HREF="mailto:johnstump@iname.com">Email Me</A></TD>
+</TR>
+</TABLE>
+&nbsp;</TD>
+
+<TD NOSAVE>
+<H1>
+What is Tuba</H1>
+Tuba is a debugger for Tcl/Tk/Itcl programs. The goal of Tuba is to provide
+a debugging environment similar to traditional source level debuggers for
+other languages.&nbsp;
+<P>Here are some of the currently supported features of Tuba:&nbsp;
+<UL>
+<LI>
+Able to debug any Tcl/Tk 8.0 based interpreter&nbsp;</LI>
+
+<LI>
+Source code viewing; you see the source as you step through it&nbsp;</LI>
+
+<LI>
+Common debugging operations such as continue, step, step over&nbsp;</LI>
+
+<LI>
+Set breakpoints on specific lines or specific proc entries&nbsp;</LI>
+
+<LI>
+View variables, with the option to set a watchpoint, a breakpoint that
+is triggered when the variable is modified&nbsp;</LI>
+
+<LI>
+Can intercept errors as they occur and look at the stack or variables in
+the context of the error.&nbsp;</LI>
+</UL>
+
+<HR WIDTH="100%">
+<H1>
+Requirements For Running Tuba</H1>
+Tuba requires Tcl/Tk 8.0 or any interpreter built using 8.0 libraries.
+This is for the namespace functionality. Everything is written in pure
+Tcl/Tk, although a couple of included shared libraries can be used for
+increased speed. All you really need is some Tcl/Tk source code to debug!&nbsp;
+<P>If you want to debug [incr tcl] scripts, you'll need the new itcl3.0
+release and at least tcl/tk 8.0.3.
+<P>Tuba has been tested and run on Unix-based systems (Linux and SunOS),
+Windows 95, and Windows NT; however, it should run with little to no modifications
+on all Tcl-supported platforms.&nbsp;
+<P>
+<HR WIDTH="100%">
+<H1>
+<A NAME="screenshots"></A>Screenshots of Tuba</H1>
+Here are some screenshots of Tuba running:&nbsp;
+<UL>
+<LI>
+<A HREF="images/mainwindow.gif">main window</A> (16KB)&nbsp;</LI>
+
+<LI>
+<A HREF="images/varwindow.gif">variable browser window</A> (10KB)&nbsp;</LI>
+
+<LI>
+<A HREF="images/varmonitorwindow.gif">variable monitor window</A> (2KB)&nbsp;</LI>
+
+<LI>
+<A HREF="images/stackwindow.gif">stack window</A> (13KB)&nbsp;</LI>
+
+<LI>
+<A HREF="images/bpswindow.gif">breakpoints windows </A>(18 KB)&nbsp;</LI>
+
+<LI>
+<A HREF="images/errorcatch.gif">error catching window</A> (15 KB)&nbsp;</LI>
+</UL>
+
+<HR WIDTH="100%">
+<H1>
+<A NAME="downloads"></A>Version Descriptions and Downloading</H1>
+
+<UL>
+<LI>
+<B>Tuba 2.5.b1 </B>Uploaded 01/06/99. This is a beta release with preliminary
+Itcl 3.0 support. I don't use itcl, so I'm sure there are lots of bugs
+associated with this release, thus the beta version. I have tested Tuba
+on numerous demos in the iwidgets directory, and it seems to work. See
+the <A HREF="CHANGES.html#25b1">CHANGES</A>.</LI>
+
+<UL>
+<LI>
+Download one of these:</LI>
+
+<UL>
+<LI>
+<A HREF="tuba-2.5.b1.tar.gz">tuba-2.5.b1.tar.gz</A></LI>
+
+<LI>
+<A HREF="tuba25b1.zip">tuba25b1.zip</A></LI>
+</UL>
+
+<LI>
+The parsers are the same as those from v2.4. Get them only if you don't
+have 2.4:</LI>
+
+<UL>
+<LI>
+<A HREF="tuba-2.4-Linux.tar.gz">tuba-2.4-Linux.tar.gz</A></LI>
+
+<LI>
+<A HREF="tuba-2.4-SunOS.tar.gz">tuba-2.4-SunOS.tar.gz</A></LI>
+</UL>
+</UL>
+
+<LI>
+<B>Tuba 2.4.p1 </B>Uploaded 11/26/98. This patch fixes a few bugs that
+were introduced with the 2.4 changes, plus a couple that have just been
+discovered. To see the bugs fixed, look at <A HREF="CHANGES.html#24p1">CHANGES.</A></LI>
+
+<UL>
+<LI>
+Download one of these:</LI>
+
+<UL>
+<LI>
+<A HREF="tuba-2.4.p1.tar.gz">tuba-2.4.p1.tar.gz</A></LI>
+
+<LI>
+<A HREF="tuba24p1.zip">tuba24p1.zip</A></LI>
+</UL>
+
+<LI>
+The parsers have stayed the same. Here they are if you haven't gotten 2.4
+yet.</LI>
+
+<UL>
+<LI>
+<A HREF="tuba-2.4-Linux.tar.gz">tuba-2.4-Linux.tar.gz</A></LI>
+
+<LI>
+<A HREF="tuba-2.4-SunOS.tar.gz">tuba-2.4-SunOS.tar.gz</A></LI>
+</UL>
+</UL>
+
+<LI>
+<B>Tuba 2.4 </B>Uploaded 11/11/98. This release has <B>many</B> bug fixes
+that have been nagging me for awhile. I also managed to get in a few new
+features:</LI>
+
+<UL>
+<LI>
+proc exclusions - a facility to exclude certain procs from being instrumented
+and thus not debugged.</LI>
+
+<LI>
+sessions - you can now save your debug sessions in a file for later retrieval.
+This includes breakpoints, options, etc.</LI>
+
+<LI>
+Many more changes listed in the <A HREF="CHANGES.html#24">CHANGES</A> file.</LI>
+
+<LI>
+Download one of these:</LI>
+
+<UL>
+<LI>
+<A HREF="tuba-2.4.tar.gz">tuba-2.4.tar.gz (for Unix)</A></LI>
+
+<LI>
+<A HREF="tuba24.zip">tuba24.zip (for Windows)</A></LI>
+</UL>
+
+<LI>
+The parsers have a small bug fix in them (these are optional):</LI>
+
+<UL>
+<LI>
+<A HREF="tuba-2.4-Linux.tar.gz">tuba-2.4-Linux.tar.gz</A></LI>
+
+<LI>
+<A HREF="tuba-2.4-SunOS.tar.gz">tuba-2.4-SunOS.tar.gz</A></LI>
+</UL>
+
+<LI>
+The User's Guide has been updated. I've added a section called <B>What's
+New in 2.4.</B> This will give the lowdown on the new features and big
+fixes. Read it <A HREF="USERS.html">here.</A> It is also included in one
+of the above archive files.</LI>
+</UL>
+
+<LI>
+Old versions available upon request</LI>
+</UL>
+
+<HR WIDTH="100%">
+<H1>
+<A NAME="install"></A>Installing Tuba</H1>
+
+<OL>
+<LI>
+First get the distribution tar or zip file.&nbsp;</LI>
+
+<LI>
+Unpack or unzip it in a directory where you will run Tuba.&nbsp;</LI>
+
+<LI>
+That's the minimum you have to do. Just run the tuba program. See the README
+file in the tuba directory for more installation details.&nbsp;</LI>
+</OL>
+For Windows users, you can create an association for the sessions files
+to bring up the session in tuba. An installation script will do this in
+the future, but for now you'll have to do it by hand. Here are the basic
+instructions:&nbsp;
+<OL>
+<LI>
+Bring up the Folder Options window</LI>
+
+<LI>
+Select the File Types tab</LI>
+
+<LI>
+Click the <TT>New </TT>Type...<TT> </TT>button</LI>
+
+<LI>
+Set the Description to "<TT>Tuba Session File</TT>"</LI>
+
+<LI>
+set the Associated Extension to "<TT>ses</TT>"</LI>
+
+<LI>
+Click the New... button for a new action</LI>
+
+<LI>
+Set Action to open</LI>
+
+<LI>
+Set the Application to the following, substituting &lt;wishdir> for the
+directory you installed wish80 in and &lt;tubadir> for the directory you
+installed tuba in:</LI>
+
+<BR>&nbsp;
+<P>&nbsp;
+<P><TT>"C:&lt;wishdir>\wish80.exe" "C:&lt;tubadir>\tuba.tk" -- -s "%1"</TT></OL>
+You can also add a new action to .tcl extensions for debug so that you
+can easily load up a Tcl/Tk source file in the debugger:&nbsp;
+<OL>
+<LI>
+Bring up the Folder Options window</LI>
+
+<LI>
+Select the File Types tab</LI>
+
+<LI>
+Find the registered file type TclScript</LI>
+
+<LI>
+Select it and hit the Edit... button</LI>
+
+<LI>
+Click the New... button for a new action</LI>
+
+<LI>
+Set Action to debug</LI>
+
+<BR>Set the Application to the following, substituting &lt;wishdir> for
+the directory you installed wish80 in and &lt;tubadir> for the directory
+you installed tuba in:&nbsp;
+<P><TT>"C:&lt;wishdir>\wish80.exe" "C:&lt;tubadir>\tuba.tk" "%1"</TT></OL>
+
+<P><BR>
+<HR WIDTH="100%">
+<H1>
+Legal Mumbo Jumbo</H1>
+Tuba is released under the starving Artist Artistic License. Details found
+in the <A HREF="LICENSE.txt">LICENSE</A> file. Basically, you can do anything
+you want with Tuba except make money off it. To do that you have to make
+arrangements with me.</TD>
+</TR>
+</TABLE>
+
+<CENTER><TABLE COLS=1 WIDTH="100%" BGCOLOR="#006600" NOSAVE >
+<TR>
+<TD>&nbsp;</TD>
+</TR>
+</TABLE></CENTER>
+
+</BODY>
+</HTML>

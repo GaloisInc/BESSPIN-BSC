@@ -1,0 +1,33 @@
+// Copyright (c) 2007--2009 Bluespec, Inc.  All rights reserved.
+// $Revision: 17899 $
+// $Date: 2009-09-21 09:39:55 -0400 (Mon, 21 Sep 2009) $
+
+package AXI;
+
+////////////////////////////////////////////////////////////////////////////////
+///
+////////////////////////////////////////////////////////////////////////////////
+
+import AxiDefines::*;
+import AxiMaster::*;
+import AxiMonitor::*;
+import AxiPC::*;
+import AxiRdBus::*;
+import AxiSlave::*;
+import AxiWrBus::*;
+//import AxiRam::*;
+
+////////////////////////////////////////////////////////////////////////////////
+///
+////////////////////////////////////////////////////////////////////////////////
+
+export AxiDefines::*;
+export AxiMaster::*;
+export AxiMonitor::*;
+export AxiPC::*;
+export AxiRdBus::*;
+export AxiSlave::*;
+export AxiWrBus::*;
+//export AxiRam::*;
+
+endpackage

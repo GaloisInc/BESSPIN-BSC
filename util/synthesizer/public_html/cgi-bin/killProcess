@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Tiny CGI script that kills processes on bluetinder. Since it logs in
+# as synthesizer, it can only kill processes that synthesizer runs.
+
+
+# Get the process id from the QUERY_STRING by simply filtering out all
+# digits. This also means that nobody can execute malicious commands
+# on bluetinder, by calling this script with unexpected queries.
+
+export KILLPID=`echo $QUERY_STRING | /export/home/synthesizer/public_html/cgi-bin/onlyDigits`
+export KILLCMD="kill $KILLPID"
+export REMOTECMD="if $KILLCMD; then echo ; echo 'Success'; else echo ; echo 'Failure'; fi"
+export LOCALCMD="ssh -l synthesizer bluetinder "$REMOTECMD""
+
+echo "Content-type: text/html"
+echo
+echo "<html><head><title>Killing synthesizer</title></head></body>"
+
+echo "<p>I'll now try to do a: <code>$LOCALCMD</code>. Here is the output. No output usually means that it was not possible to log on to bluetinder:</p>"
+echo "<table border=0 width=100% bgcolor=#e8e8e8><tr><td><code>"
+$LOCALCMD | ./addBR
+echo "</td></tr></table></code>"
+
+echo '<p><a href="https://svn.bluespec.com:8080/~synthesizer/cgi-bin/check-running">Back to checking if synthesizer is running</a></p>'
+echo '<p><a href="https://svn.bluespec.com:8080/~synthesizer">Back to synthesizer main page</a></p>'
+
+echo "</body></html>"
+

@@ -1,0 +1,2909 @@
+#!/usr/bin/wish
+
+#
+# tuba - this is the tk gui driver for the tuba Tcl debugger
+#  Copyright (C) 1997,1998 John E. Stump
+#
+# See the file "LICENSE" for information on usage and redistribution
+# of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+#  contact author: iliad@doitnow.com
+#       home page: http://www.doitnow.com/~iliad/Tcl/tuba
+
+package require Tk 8.0
+
+namespace eval ::tuba {
+  #variable VERSION %%VERSION%%
+  variable VERSION 2.5.b1
+  
+  set windows [expr {$tcl_platform(platform) == "windows"}]
+
+  ## bug fix from Harald Kirsch
+  ## This should catch even the worst link-chain imaginable
+  while {[file type $argv0] == "link"} {
+    set t [file readlink $argv0]
+    # puts "$argv0 --> $t"
+    if {[file pathtype $t] == "relative"} {
+      set argv0 [file dirname $argv0]/$t
+    } else {
+      set argv0 $t
+    }
+  }
+
+  set tubalibdir [file dirname $argv0]
+  
+  # old code
+#   if { [file type $argv0] == "link" } {
+#     set tubalibdir [file dirname [file readlink $argv0]]
+#   } else {
+#     set tubalibdir [file dirname $argv0]
+#   }
+
+  # make it an absolute path
+  set old [pwd]
+  cd $tubalibdir
+  set tubalibdir [pwd]
+  cd $old
+
+  set Gprogram ""
+  # JSB
+  set Gcmdargs ""
+  set Gworkingdir ""
+
+  if { $windows } {
+    set Ginterp wish80
+  } else {
+    set Ginterp bluewish
+  }
+
+  set cmd_wr_rc_index 0
+  set ACK 0
+  set msgbox ""
+  set top ""
+  set src ""
+  set displayfile ""
+  set currline 0
+  array set files {}
+  set event ""
+  set loadedmenu ""
+  array set stat {}
+  array set toolbar {}
+
+  array set options "
+    systemfiles 1
+    animate 0
+    interrs 1
+    intcaughterrs 0
+    showstatline 1
+    showtoolbar 1
+    showballoons 1
+    stacktype Level
+    dynprocs runtime
+    autoremove 1
+    coreglobals 1
+    instrumenting LT
+    parser C
+    cacheflag 1
+    cachedir [list $tubalibdir/cache]
+    sessiondir ~/tuba
+  "
+  
+  # these widgets are only active in the RUNNING state
+  variable runningwidgets
+    
+  # these widgets are active in the RUNNING and ENDED states
+  variable endedwidgets
+    
+  variable purgeflag 0
+  variable exclusions ""
+  
+  # session support
+  variable sessionfile ""
+  
+  if { $windows } {
+    set optionfile [file join ~ tuba.ini]
+  } else {
+    set optionfile [file join ~ .tubarc]
+  }
+
+  set rccode "0"
+
+  set debug 0
+  proc debug {msg} {
+    variable debug
+    if { $debug } {
+      puts $msg
+    }
+  }
+
+  proc iconwindow {} {
+    variable tubalibdir
+    set top [toplevel .icon]
+    set instrument [image create photo -file $tubalibdir/images/tubaicon3.gif]
+    pack [label $top.li -image $instrument -borderwidth 0]
+    return $top
+  }
+
+  proc mainwnd {} {
+    variable msgbox
+    variable top 
+    variable src 
+    variable loadedmenu
+    variable stat
+    variable toolbar
+    variable options
+    variable windows
+    variable runningwidgets
+    variable endedwidgets
+
+    set top [toplevel .mainwnd -width 500 -height 700]
+
+    wm geometry $top 700x650
+    variable VERSION
+    wm title $top "Tuba Tcl Debugger $VERSION"
+    wm iconname $top "Tuba $VERSION"
+    if { ! $windows } {
+      wm iconwindow $top [iconwindow]
+    }
+    wm protocol $top WM_DELETE_WINDOW [namespace code "exitapp"]
+
+    set menuF [frame $top.f1]
+    pack $menuF -side top -fill both
+
+    # file menu
+    pack [menubutton $menuF.m1 -menu $menuF.m1.m -text Debugger -underline 0] -anchor w -side left -padx 4
+    menu $menuF.m1.m
+    $menuF.m1.m add command -label "Load new program..." -command [namespace code load_program]
+    $menuF.m1.m add command -label "Restart" -command [namespace code restart] -state disabled
+    lappend runningwidgets "$menuF.m1.m entryconfig Res*"
+    lappend endedwidgets "$menuF.m1.m entryconfig Res*"
+    $menuF.m1.m add separator
+    $menuF.m1.m add command -label "Open session..." -command [namespace code opensession]
+    $menuF.m1.m add command -label "Save session" -command [namespace code savesession] -state disabled
+    lappend runningwidgets "$menuF.m1.m entryconfig {Save session}"
+    lappend endedwidgets "$menuF.m1.m entryconfig {Save session}"
+    $menuF.m1.m add command -label "Save session as..." -command [namespace code saveassession] -state disabled
+    lappend runningwidgets "$menuF.m1.m entryconfig *as*"
+    lappend endedwidgets "$menuF.m1.m entryconfig *as*"
+    $menuF.m1.m add separator
+    # JSB
+    if { $windows } {
+       $menuF.m1.m add command -label "Show Console" -command [namespace code "sendcmd console show"]
+       $menuF.m1.m add command -label "Hide Console" -command [namespace code "sendcmd console hide"]
+       $menuF.m1.m add separator
+    }
+    $menuF.m1.m add command -label Exit -command [namespace code "exitapp"]
+
+    # view menu
+    pack [menubutton $menuF.m3 -menu $menuF.m3.m -text View -underline 0] -anchor w -side left -padx 4
+    menu $menuF.m3.m
+    $menuF.m3.m add command -label "Line breakpoints..." -command [namespace code bpwindow] -state disabled
+    lappend runningwidgets "$menuF.m3.m entryconfig Line*"
+    lappend endedwidgets "$menuF.m3.m entryconfig Line*"
+    $menuF.m3.m add command -label "Proc breakpoints..." -command [namespace code pbpwindow] -state disabled
+    lappend runningwidgets "$menuF.m3.m entryconfig {Proc *}"
+    lappend endedwidgets "$menuF.m3.m entryconfig Proc*"
+    $menuF.m3.m add command -label "Variables..." -command [namespace code varwindow] -state disabled
+    lappend runningwidgets "$menuF.m3.m entryconfig Var*"
+    lappend endedwidgets "$menuF.m3.m entryconfig Var*"
+    $menuF.m3.m add command -label "Procedures..." -command [namespace code procwindow] -state disabled
+    lappend runningwidgets "$menuF.m3.m entryconfig Proce*"
+    lappend endedwidgets "$menuF.m3.m entryconfig Proce*"
+    $menuF.m3.m add command -label "Stack..." -command [namespace code stackwindow] -state disabled
+    lappend runningwidgets "$menuF.m3.m entryconfig St*"
+    $menuF.m3.m add command -label "File..." -command [namespace code open_file]
+
+    # step menu
+    pack [menubutton $menuF.m6 -menu $menuF.m6.m -text Step -underline 0] -anchor w -side left -padx 4
+    menu $menuF.m6.m
+    # JSB
+    $menuF.m6.m add command -label "Continue" -command [namespace code "sendcmd cont"] -accelerator F5 -state disabled
+    lappend runningwidgets "$menuF.m6.m entryconfig Co*"
+    $menuF.m6.m add command -label "Step into" -command [namespace code "sendcmd step"] -accelerator F6 -state disabled
+    lappend runningwidgets "$menuF.m6.m entryconfig *into"
+    $menuF.m6.m add command -label "Step over" -command [namespace code "sendcmd step_over"] -accelerator F7 -state disabled
+    lappend runningwidgets "$menuF.m6.m entryconfig *over"
+    $menuF.m6.m add command -label "Stop" -command [namespace code STOP] -accelerator F8 -state disabled
+    lappend runningwidgets "$menuF.m6.m entryconfig Stop"
+    $menuF.m6.m add separator
+    $menuF.m6.m add command -label "Finish program" -command [namespace code "sendcmd finish"] -state disabled
+    lappend runningwidgets "$menuF.m6.m entryconfig *ram"
+    $menuF.m6.m add command -label "Finish procedure" -command [namespace code "sendcmd finish_proc"] -state disabled
+    lappend runningwidgets "$menuF.m6.m entryconfig *ure"
+    $menuF.m6.m add command -label "Finish source" -command [namespace code "sendcmd finish_source"] -state disabled
+    lappend runningwidgets "$menuF.m6.m entryconfig *rce"
+
+    # JSB
+    bind $top <KeyPress-F5> [namespace code {sendcmd cont}]
+    bind $top <KeyPress-F6> [namespace code {sendcmd step}]
+    bind $top <KeyPress-F7> [namespace code {sendcmd step_over}]
+    bind $top <KeyPress-F8> [namespace code STOP]
+
+    # goto menu
+    pack [menubutton $menuF.m5 -menu $menuF.m5.m -text Goto -underline 0] -anchor w -side left -padx 4
+    menu $menuF.m5.m
+    $menuF.m5.m add cascade -menu $menuF.m5.m.m -label "Loaded source file"
+    set loadedmenu [menu $menuF.m5.m.m]
+    $menuF.m5.m add command -label "Home debugger position" -command [namespace code "home"] -state disabled
+    lappend runningwidgets "$menuF.m5.m entryconfigure Home*"
+
+    # breakpoints menu
+    pack [menubutton $menuF.m2 -menu $menuF.m2.m -text Breakpoints -underline 0] -anchor w -side left -padx 4
+    menu $menuF.m2.m
+    $menuF.m2.m add command -label "View line BPs..." -command [namespace code bpwindow] -state disabled
+    lappend runningwidgets "$menuF.m2.m entryconfigure *line*"
+    lappend endedwidgets "$menuF.m2.m entryconfigure *line*"
+    $menuF.m2.m add command -label "View proc BPs..." -command [namespace code pbpwindow] -state disabled
+    lappend runningwidgets "$menuF.m2.m entryconfigure *proc*"
+    lappend endedwidgets "$menuF.m2.m entryconfigure *proc*"
+
+
+    # variables menu
+    pack [menubutton $menuF.m4 -menu $menuF.m4.m -text Variables -underline 2] -anchor w -side left -padx 4
+    menu $menuF.m4.m
+    $menuF.m4.m add command -label View... -command [namespace code varwindow] -state disabled
+    lappend endedwidgets "$menuF.m4.m entryconfigure View*"
+    lappend runningwidgets "$menuF.m4.m entryconfigure View*"
+    $menuF.m4.m add command -label Show -command [namespace code "showvar_wrap"] -state disabled
+    lappend endedwidgets "$menuF.m4.m entryconfigure Show*"
+    lappend runningwidgets "$menuF.m4.m entryconfigure Show*"
+
+    # options menu
+    pack [menubutton $menuF.m8 -menu $menuF.m8.m -text Options -underline 0] -anchor w -side left -padx 4
+    menu $menuF.m8.m
+    set ns [namespace current]
+    $menuF.m8.m add checkbutton -label "Balloon help" -variable ${ns}::options(showballoons) -command [namespace code handle_balloons]
+    $menuF.m8.m add checkbutton -label "Status line" -variable ${ns}::options(showstatline) -command [namespace code handle_status_line]
+    $menuF.m8.m add checkbutton -label "Toolbar" -variable ${ns}::options(showtoolbar) -command [namespace code handle_toolbar]
+    $menuF.m8.m add checkbutton -label "Animate run" -variable ${ns}::options(animate) -command [namespace code "reconfig animate"]
+    $menuF.m8.m add checkbutton -label "Intercept errors" -variable ${ns}::options(interrs) -command [namespace code "reconfig interrs"]
+    $menuF.m8.m add checkbutton -label "Intercept caught errors" -variable ${ns}::options(intcaughterrs) -command [namespace code "reconfig intcaughterrs"]
+    $menuF.m8.m add command -label "Locations..." -command [namespace code locations]
+    $menuF.m8.m add separator
+    $menuF.m8.m add checkbutton -label "Debug system sources" -variable ${ns}::options(systemfiles) -command [namespace code "reconfig systemfiles"]
+    $menuF.m8.m add command -label "Proc Exclusions..." -command [namespace code procexclusions]
+    $menuF.m8.m add separator
+    $menuF.m8.m add radiobutton -label "Level stack" -variable ${ns}::options(stacktype) -value Level
+    $menuF.m8.m add radiobutton -label "Tuba stack" -variable ${ns}::options(stacktype) -value Tuba
+    $menuF.m8.m add separator
+    $menuF.m8.m add radiobutton -label "Instr dyn procs @ load time" -variable ${ns}::options(dynprocs) -value loadtime -command [namespace code "reconfig dynprocs"]
+    $menuF.m8.m add radiobutton -label "Instr dyn procs @ run time" -variable ${ns}::options(dynprocs) -value runtime -command [namespace code "reconfig dynprocs"]
+    $menuF.m8.m add radiobutton -label "Ask" -variable ${ns}::options(dynprocs) -value ask -command [namespace code "reconfig dynprocs"]
+    $menuF.m8.m add separator
+    $menuF.m8.m add radiobutton -label "Loadtime instrumenting" -variable ${ns}::options(instrumenting) -value LT -command [namespace code "reconfig instrumenting"]
+    $menuF.m8.m add radiobutton -label "Runtime instrumenting" -variable ${ns}::options(instrumenting) -value RT -command [namespace code "reconfig instrumenting"]
+    $menuF.m8.m add checkbutton -label "Cache instrumented files" -variable ${ns}::options(cacheflag) -command [namespace code "reconfig cacheflag"]
+    $menuF.m8.m add separator
+    set state normal
+    $menuF.m8.m add radiobutton -label "Tcl-based instrumenter" -variable ${ns}::options(parser) -value T -command [namespace code "reconfig parser"] -state $state
+    $menuF.m8.m add radiobutton -label "C-Based instrumenter" -variable ${ns}::options(parser) -value C -command [namespace code "reconfig parser"] -state $state
+    $menuF.m8.m add radiobutton -label "Experimental Tcl-based instrumenter" -variable ${ns}::options(parser) -value TX -command [namespace code "reconfig parser"] -state $state
+    $menuF.m8.m add radiobutton -label "Experimental C-Based instrumenter" -variable ${ns}::options(parser) -value CX -command [namespace code "reconfig parser"] -state $state
+    $menuF.m8.m add separator
+    $menuF.m8.m add command -label "Save options" -command [namespace code saveoptions]
+
+    # help menu
+    pack [menubutton $menuF.m7 -menu $menuF.m7.m -text Help -underline 0] -anchor e -side right -padx 2
+    menu $menuF.m7.m
+    $menuF.m7.m add command -label About... -command [namespace code aboutwindow]
+    $menuF.m7.m add command -label "User's guide" -command [namespace code help]
+
+
+    set butnF [frame $top.f2]
+    pack $butnF -side top -fill both
+
+    set toolbar(frame) $butnF
+    set toolbar(parent) $menuF
+
+    # gather up the tool bar gifs
+    variable tubalibdir
+    set stepgif [image create photo -file $tubalibdir/images/step.gif]
+    set overgif [image create photo -file $tubalibdir/images/over.gif]
+    set contgif [image create photo -file $tubalibdir/images/cont.gif]
+    set toglgif [image create photo -file $tubalibdir/images/arrows2.gif]
+    set exitgif [image create photo -file $tubalibdir/images/exit.gif]
+    set magngif [image create photo -file $tubalibdir/images/magnify.gif]
+    set finpgif [image create photo -file $tubalibdir/images/finproc.gif]
+    set finsgif [image create photo -file $tubalibdir/images/finsource.gif]
+    set finigif [image create photo -file $tubalibdir/images/finish.gif]
+    set housgif [image create photo -file $tubalibdir/images/house.gif]
+    set stopgif [image create photo -file $tubalibdir/images/stopsign.gif]
+
+    pack [button $butnF.b1 -image $toglgif -command [namespace code setclr] -state disabled] -side left -anchor w -padx 6
+    lappend runningwidgets "$butnF.b1 config"
+    pack [button $butnF.b2 -image $contgif -command [namespace code "sendcmd cont"] -state disabled] -side left
+    lappend runningwidgets "$butnF.b2 config"
+    pack [button $butnF.b3 -image $stepgif -command [namespace code "sendcmd step"] -state disabled] -side left
+    lappend runningwidgets "$butnF.b3 config"
+    pack [button $butnF.b4 -image $overgif -command [namespace code "sendcmd step_over"] -state disabled] -side left
+    lappend runningwidgets "$butnF.b4 config"
+    pack [button $butnF.b9 -image $stopgif -command [namespace code "STOP"] -state disabled] -side left -padx 5
+    lappend runningwidgets "$butnF.b9 config"
+    pack [button $butnF.b8 -image $magngif -command [namespace code "showvar_wrap"] -state disabled] -side left -padx 8
+    lappend runningwidgets "$butnF.b8 config"
+    lappend endedwidgets "$butnF.b8 config"
+    pack [button $butnF.b5 -image $finpgif -command [namespace code "sendcmd finish_proc"] -state disabled] -side left
+    lappend runningwidgets "$butnF.b5 config"
+    pack [button $butnF.b6 -image $finsgif -command [namespace code "sendcmd finish_source"] -state disabled] -side left
+    lappend runningwidgets "$butnF.b6 config"
+    pack [button $butnF.b7 -image $finigif -command [namespace code finish] -state disabled] -side left
+    lappend runningwidgets "$butnF.b7 config"
+    pack [button $butnF.ba -image $housgif -command [namespace code "home"] -state disabled] -side left -padx 7
+    lappend runningwidgets "$butnF.ba config"
+    pack [button $butnF.bx -image $exitgif -command [namespace code "exitapp"]] -side right -anchor e
+
+    balloonhelp $butnF.b1 "toggle breakpoint setting on cursor line"
+    balloonhelp $butnF.b2 "continue to next breakpoint"
+    balloonhelp $butnF.b3 "step into procs/sources"
+    balloonhelp $butnF.b4 "step over procs/sources"
+    balloonhelp $butnF.b9 "stop running program"
+    balloonhelp $butnF.b8 "show highlighted variable"
+    balloonhelp $butnF.b5 "finish current proc"
+    balloonhelp $butnF.b6 "finish current source command"
+    balloonhelp $butnF.b7 "finish progam with no debugger"
+    balloonhelp $butnF.bx "exit"
+    balloonhelp $butnF.ba "home position"
+
+    # after all that, we may not even want to see the toolbar
+    if { $options(showtoolbar) == 0 } { pack forget $butnF }
+
+    if { $options(showballoons) == 0 } {
+      variable BalloonHelp
+      set BalloonHelp(enabled) 0
+    }
+
+    set statF [frame $top.f5 -relief raised -borderwidth 1]
+    pack $statF -fill x -side top
+
+    set stat(frame) $statF
+
+    set statF [frame $stat(frame).f1]
+    pack $statF -fill x
+
+    set fbg [$statF cget -background]
+    
+    # the "parent" is set below...
+    pack [label $statF.l1 -text "File:" -foreground blue] -side left -anchor w -padx 2
+    statline_entry $statF stat(file) 1 -width 30
+
+    pack [label $statF.l5 -text "Line:" -foreground blue] -side left -anchor w -padx 2
+    statline_entry $statF stat(line) 0 -width 4
+
+    pack [label $statF.l2 -text "Proc:" -foreground blue] -side left -anchor w -padx 2
+    statline_entry $statF stat(proc) 1
+
+    pack [label $statF.l3 -text "Lvl:" -foreground blue] -side left -anchor w -padx 2
+    statline_entry $statF stat(level) 0 -width 2
+
+#     pack [label $statF.l4 -text "Source Lvl:" -foreground blue] -side left -anchor w -padx 2
+#     statline_entry $statF stat(sourcelevel) 0 -width 2
+
+    set statF [frame $stat(frame).f2]
+    pack $statF -fill x -expand 1
+    
+    pack [label $statF.l1 -text "Displayed:" -foreground blue] -side left -anchor w -padx 4
+    statline_entry $statF displayfile 1
+    
+    pack [label $statF.l2 -text "Session:" -foreground blue] -side left -anchor w -padx 4
+    statline_entry $statF sessionfile 1
+
+    # after all that, we may not even want to see the statline
+    if { $options(showstatline) == 0 } { 
+      pack forget $stat(frame)
+    }
+
+    set srcF [frame $top.f3]
+
+    set stat(parent) $srcF
+
+    pack $srcF -side top -fill both -expand yes
+    pack [set src [text $srcF.t1 -height 1 -yscroll [list $srcF.s1 set] -background white -foreground black]] -fill both -side left -expand yes
+    pack [scrollbar $srcF.s1 -command [list $src yview]] -fill y -side left
+
+    # create a binding for the right mouse button to toggle bps
+    bind $src <Button-3> [bind Text <Button-1>]
+    bind $src <Button-3> "+[namespace code setclr]"
+
+    # define a tag for the current line
+    #$src tag configure currline -background lightskyblue -relief raised
+    $src tag configure currline -background yellow -relief raised
+
+    # define the tag for an error line
+    $src tag configure errline -background red -foreground black -relief raised
+
+    # define the tag for breakpoints
+    $src tag configure breakpoint -foreground red -relief raised
+
+    set msgF [frame $top.f4]
+    pack $msgF -side top -fill x
+    
+    variable VERSION
+    set msgbox [label $msgF.l1 -text "Tuba v$VERSION"]
+    pack $msgbox -side left -anchor w -fill x
+
+    set statebox [label $msgF.l2 -relief sunken -width 12 -font "Helvetica -12"]
+    pack $statebox -side right -anchor e
+
+    # create a listener for state changes so we can update the text in
+    # statebox
+    addStateTransListener E * [namespace code "updateStateBox $statebox"]
+    
+    # create a listener to state changes in and out of RUNNING so we can
+    # update the -state of the menu items and tool bar buttons
+    addStateTransListener E RUNNING [namespace code "activateCommands runningwidgets"]
+    addStateTransListener L RUNNING [namespace code "deactivateCommands runningwidgets"]
+    addStateTransListener E ENDED [namespace code "activateCommands endedwidgets"]
+    addStateTransListener L ENDED [namespace code "deactivateCommands endedwidgets"]
+  }
+
+  proc finish {} {
+    # transition to a new state to turn off debugger controls
+    stateTrans RUN2END
+    sendcmd finish
+  }
+  
+  # this will activate all the widgets that are active in the RUNNING state
+  proc activateCommands {var} {
+    variable $var
+    
+    foreach w [set $var] {
+      eval $w -state normal
+    }
+  }
+  
+  # this will deactive RUNNING state commands
+  proc deactivateCommands {var} {
+    variable $var
+
+    foreach w [set $var] {
+      eval $w -state disabled
+    }
+  }
+  
+  variable counter 0
+  variable labelfont ""
+  proc statline_entry {parent var scrollbar args} {
+    variable counter
+    variable labelfont
+    
+    set widget $parent.e$counter
+    set sb $parent.sb$counter
+
+    set fbg [$parent cget -background]
+    if { $labelfont == "" } {
+      label $parent.xxx
+      set labelfont [$parent.xxx cget -font]
+      destroy $parent.xxx
+    }
+    
+    incr counter
+
+    if { $scrollbar } {
+      lappend args -xscroll 
+      lappend args [list $sb set]
+    }
+    
+    pack [eval entry $widget -font [list $labelfont] -borderwidth 1 -state disabled -foreground brown \
+      -textvariable [namespace current]::$var $args] -side left -anchor w \
+      -fill x -expand 1
+    if { $scrollbar } {
+      pack [scrollbar $sb -borderwidth 1 -command [list $widget xview] -orient h \
+        -width 13 -relief flat -troughcolor $fbg -repeatdelay 50 -repeatinterval 1] -side left
+    }
+      
+    return $widget
+  }
+  
+  # this will look to see if there is a program already in progress and
+  # asks the user if he wants to kill it
+  proc dontkillinprogress {} {
+    variable Gprogram
+    
+    if { [getState] == "RUNNING" } {
+      set ans [tk_dialog .warn "Confirm Killing App" \
+        "Warning: the program '$Gprogram' is running. Kill it?" \
+        warning 1 Yes No]
+        
+      return $ans
+    }
+    
+    return 0
+  }
+  
+  proc stalebpsdlg {files} {
+    set top [toplevel .stale]
+    wm title $top "Stale Breakpoints"
+    
+    set msg [message $top.msg -aspect 1000 -text "The following files have different time stamps than when the session was saved:"]
+    pack $msg -side top -pady 10 -padx 4 -fill both -expand y
+    
+    set f [frame $top.f1]
+    pack $f -side top -fill both -expand 1
+    
+    set ff [frame $f.f1]
+    pack $ff -side top -fill both -expand 1
+    
+    set lb [listbox $ff.lb -width 50 -height 10 -yscroll [list $ff.sb set] \
+      -xscroll [list $f.sb set] -selectmode multiple]
+    pack $lb -side left -fill both -expand 1
+    
+    foreach file $files {
+      $lb insert end $file
+    }
+    
+    set sb [scrollbar $ff.sb -command [list $lb yview]]
+    pack $sb -fill y -side left
+    
+    set sb [scrollbar $f.sb -command [list $lb xview] -orient h]
+    pack $sb -fill x -side top
+    
+    set l [label $top.l -text "Please select an action:"]
+    pack $l -fill x
+    
+    set f [frame $top.f2]
+    pack $f -side top -fill x -expand 1 -padx 5 -pady 20
+    
+    set b1 [button $f.b1 -text "Edit BPs" -command [namespace code "stalebps_edit $top"]]
+    pack $b1 -side left -padx 10 -expand 1
+
+    set b2 [button $f.b2 -text "Remove all BPs From Selected Files" -command [namespace code "stalebps_remove $top $lb"]]
+    pack $b2 -side left -padx 10 -expand 1
+
+    set b3 [button $f.b3 -text "Continue" -command [namespace code "stalebps_continue $top"]]
+    pack $b3 -side left -padx 10 -expand 1
+    
+    # go modal
+    #grab $top
+    tkwait window $top
+  }
+  
+  proc stalebps_edit {top} {
+    #grab release $top
+    bpwindow
+    tkwait window .bp
+    #grab $top
+  }
+  
+  proc stalebps_remove {top lb} {
+    # get the list of files selected
+    set files ""
+    set indexes [lsort -integer -decreasing [$lb curselection]]
+    foreach s $indexes {
+      lappend files [$lb get $s]
+    }
+    
+    # paw thru our list of BPs and remove those that are in our file list
+    if { [llength $files] != 0 } {
+      set bps [sendcmd_wr get_bps]
+      foreach bp $bps {
+        foreach {file line} [split $bp ,] {}
+        if { [lsearch -exact $files $file] != -1 } {
+          sendcmd_wr toggle_bp $file $line
+        }
+      }
+    }
+    
+    # now update the listbox (we can do it this way because we reversed the order of
+    # the indexes)
+    foreach s $indexes {
+      $lb delete $s
+    }
+  }
+  
+  proc stalebps_continue {top} {
+    destroy $top
+  }
+
+  proc opensession {{sess ""}} {
+    variable sessionfile
+    variable options
+
+    # if a program is already running, ask user if he really wants to kill it
+    if { [dontkillinprogress] } {
+      return
+    }
+    
+    # get the session file
+    if { $sess == "" } {
+      set initdir $options(sessiondir)
+
+      # make sure session dir exists
+      if { ! [file isdirectory $initdir] } {
+        set ans [tk_dialog .error "No Session Directory" \
+          "The session directory $initdir does not exist.
+
+You may create it now, continue, or cancel the open to change the default session directory" error 2 \
+          "Create dir" "Continue" "Cancel open"]
+        if { $ans == 0 } {
+          file mkdir $initdir
+        } elseif { $ans == 1 } {
+          set initdir [pwd]
+        } elseif { $ans == 2 } {
+          return
+        }
+      }
+      
+      set file [tk_getOpenFile -defaultextension ".ses" \
+         -initialdir $initdir -title "Open Session"]
+
+      if { $file == "" } {
+        return
+      } else {
+        set sessionfile $file
+      }
+    } else {
+      set sessionfile $sess
+    }
+    
+    set VERSION ""
+    set pbps(dummy) ""
+    unset pbps(dummy)
+    
+    # source the session file
+    if { [catch {source $sessionfile} err] } {
+      tk_dialog .error "Session Open Error" \
+        "Error parsing session file '$sessionfile':\n$err" \
+        error 0 ok
+      return
+    }
+    
+    # make sure we can handle the version in the session file
+    switch -glob $VERSION {
+      2.5* -
+      2.4* {}
+      default {
+        tk_dialog .error "Session Open Error" \
+          "Unknown version '$VERSION' in session file '$sessionfile':\n$err" \
+          error 0 ok
+        return
+      }
+    }
+    
+    # verify all the variables are there
+    set vars [list _Gprogram _Ginterp _Gcmdargs _Gworkingdir _exclusions bps pbps bpfiles _options]
+    foreach var $vars {
+      if { ! [info exists $var] } {
+        tk_dialog .error "Session Open Error" \
+          "Invalid session file: variable '$var' not defined" \
+          error 0 ok
+        return
+      }
+    }
+    
+    # make sure the program is still around
+    if { ! [file readable $_Gprogram] } {
+      tk_dialog .error "Session Open Error" \
+        "The program '$_Gprogram' is no longer there or readable" \
+        error 0 ok
+      return
+    }
+    
+    # make sure the working dir is still around
+    if { $_Gworkingdir != "" && ! [file isdirectory $_Gworkingdir] } {
+      tk_dialog .error "Session Open Error" \
+        "The working directory '$_Gworkingdir' is no longer there" \
+        error 0 ok
+      return
+    }
+    
+    # make sure the interp is still around
+    if { [catch {
+      set h [open "|$_Ginterp" w]
+      puts $h "exit"
+      close $h
+    }] } {
+      tk_dialog .error "Session Open Error" \
+        "The interpreter '$_Ginterp' is no longer there or executable" \
+        error 0 ok
+      return
+    }
+    
+    # set up some of the globals
+    variable Gprogram  $_Gprogram
+    variable Gcmdargs $_Gcmdargs
+    variable Gworkingdir $_Gworkingdir
+    variable Ginterp $_Ginterp
+    variable exclusions $_exclusions
+    variable options
+    array set options [array get _options]
+    
+    # some options need manual fiddling
+    handle_status_line
+    handle_toolbar
+    handle_balloons
+    
+    # crank up the program
+    load_program_from_globals
+    
+    # wait for tuba to be in running state
+    waitForState RUNNING
+    
+    # set the breakpoints
+    foreach bp $bps {
+      foreach {file line} [split $bp ,] {}
+      # use the force parm to not ask the user on bad lines
+      sendcmd_wr toggle_bp $file $line 1
+    }
+    
+    foreach proc [array names pbps] {
+      foreach {file line} $pbps($proc) {}
+      sendcmd_wr toggle_pbp $proc $file $line
+    }
+    
+    # see if any files that have line breakpoints have changed
+    set stalefiles ""
+    foreach file [array names bpfiles] {
+      if { ! [file exists $file] || $bpfiles($file) != [file mtime $file] } {
+        lappend stalefiles $file
+      }
+    }
+    
+    # force the display to update itself
+    update_display
+    
+    if { [llength $stalefiles] != 0 } {
+      # save the displayed file because looking at stale BPs may change it
+      variable displayfile
+      set file $displayfile
+      
+      stalebpsdlg $stalefiles
+    
+      set displayfile $file
+      
+      # force the display to update itself
+      update_display
+    }
+  }
+  
+  proc savesession {} {
+    variable sessionfile
+    
+    if { $sessionfile == "" } {
+      saveassession
+      return
+    }
+    
+    savesessiondata $sessionfile
+  }
+  
+  proc saveassession {} {
+    variable sessionfile
+    variable options
+    
+    if { [getState] == "NOPROG" } {
+      tk_dialog .error "Tuba error" "No program loaded yet" error 0 ok
+      return
+    }
+    
+    set initdir $options(sessiondir)
+    
+    # make sure session dir exists
+    if { ! [file isdirectory $initdir] } {
+      set ans [tk_dialog .error "No Session Directory" \
+        "The session directory $initdir does not exist.
+
+You may create it now, continue, or cancel the save to change the default session directory" error 2 \
+        "Create dir" "Continue" "Cancel save"]
+      if { $ans == 0 } {
+        file mkdir $initdir
+      } elseif { $ans == 1 } {
+        set initdir [pwd]
+      } elseif { $ans == 2 } {
+        return
+      }
+    }
+    
+    # get the filename to save session under
+    set sessionfile [tk_getSaveFile -defaultextension ".ses" \
+       -initialdir $initdir -title "Save Session"]
+
+    if { $sessionfile == "" } {
+      return
+    }
+    
+    savesessiondata $sessionfile
+  }
+  
+  proc savesessiondata {filename} {
+    variable Ginterp
+    variable Gprogram
+    variable Gcmdargs
+    variable Gworkingdir
+    variable exclusions
+    variable VERSION
+    variable options
+    set bps [sendcmd_wr get_bps]
+    set pbps [sendcmd_wr get_pbps]
+
+    if { [catch {set f [open $filename w]} err] } {
+      tk_dialog .error "Tuba error" "Cannot open session file $filename:\n$err" \
+        error 0 ok
+      return
+    }
+    
+    # go through and get the files that have breakpoints and 
+    # save the time stamp of each file
+    foreach bp $bps {
+      set file [lindex [split $bp ,] 0]
+      if { ! [info exists bpfiles($file)] } {
+        set bpfiles($file) [file mtime $file]
+      }
+    }
+    
+    puts $f "set VERSION {$VERSION}"
+    puts $f "set _Ginterp {$Ginterp}"
+    puts $f "set _Gprogram {$Gprogram}"
+    puts $f "set _Gcmdargs {$Gcmdargs}"
+    puts $f "set _Gworkingdir {$Gworkingdir}"
+    puts $f "set _exclusions {$exclusions}"
+    puts $f "set bps {$bps}"
+
+    # this forces the array to exist even if empty
+    puts $f "set pbps(dummy) {};unset pbps(dummy)"
+    puts $f "array set pbps {$pbps}"
+
+    # this forces the array to exist even if empty
+    puts $f "set bpfiles(dummy) {};unset bpfiles(dummy)"
+    puts $f "array set bpfiles {[array get bpfiles]}"
+
+    puts $f "array set _options {[array get options]}"
+    close $f
+  }
+  
+  proc locations {} {
+    variable options
+    
+    set top [toplevel .dirs]
+    wm title $top "Location Settings"
+    
+    pack [label $top.l -text "Set the default locations"]
+    
+    set f [frame $top.f1]
+    pack $f -fill x -expand 1 -pady 8
+    
+    pack [label $f.l -text "Cache directory:"] -side left -padx 3
+    set cachedirE [entry $f.e -width 40]
+    $cachedirE insert 0 $options(cachedir)
+    pack $cachedirE -side right -fill x -expand y
+    
+    set f [frame $top.f2]
+    pack $f -fill x -expand 1 -pady 8
+    
+    pack [label $f.l -text "Sessions directory:"] -side left -padx 3
+    set sessionsE [entry $f.e -width 40]
+    $sessionsE insert 0 $options(sessiondir)
+    pack $sessionsE -side right -fill x -expand y
+    
+    set f [frame $top.f3]
+    pack $f -fill x -expand 1 -pady 8
+    
+    pack [button $f.b1 -text "ok" -default active -command \
+      [namespace code "locations_ok $top $cachedirE $sessionsE"]] -side left -expand y
+    pack [button $f.b2 -text "cancel" -command "destroy $top"] -side left -expand y
+    
+    bind $top <Return> "$f.b1 invoke"
+    bind $top <Escape> "$f.b2 invoke"
+    
+    grab $top
+    tkwait window $top
+  }
+  
+  proc locations_ok {top cachedir sessiondir} {
+    variable options
+    
+    set options(cachedir) [$cachedir get]
+    set options(sessiondir) [$sessiondir get]
+    
+    destroy $top
+    
+    # the cachedir needs to be passed over to the tuba core
+    reconfig cachedir
+  }
+  
+  proc updateStateBox {box} {
+    $box configure -text [getState]
+  }
+  
+  proc help {} {
+    tk_dialog .warn "Tuba error" "Online help is not yet available" warning 0 ok
+  }
+
+  proc exitapp {} {
+    if { [dontkillinprogress] } {
+      return
+    }
+
+    catch {sendmsg EXIT}
+    exit
+  }
+
+  proc procexclusions {} {
+    variable exclusions
+    
+    set top [toplevel .exclusions]
+    wm title $top "Proc Exclusions"
+    
+    set f [frame $top.f1]
+    pack $f -side top -fill both -expand yes
+    
+    set f2 [frame $f.f1]
+    pack $f2 -side left -fill both -expand yes
+    
+    pack [label $f2.l -text "Current Exclusions:"] -anchor w
+    
+    set f3 [frame $f2.f1]
+    pack $f3 -side top -fill both -expand yes
+    
+    set lb [listbox $f3.lb -yscroll [list $f3.s set]]
+    pack $lb -side left -fill both
+    
+    set sb [scrollbar $f3.s -command [list $lb yview]]
+    pack $sb -fill y -side left
+    
+    set f4 [frame $f2.f2]
+    pack $f4 -fill y -expand yes -pady 5
+    
+    set entry [entry $f4.e -width 20 -font [$lb cget -font]]
+    pack $entry -side left -fill x -padx 8
+    
+    set saveB [button $f4.b -state disabled -text "Save"]
+    pack $saveB
+    bind $entry <Return> "$saveB invoke"
+    
+    set f5 [frame $f.f2]
+    pack $f5 -side right
+    
+    set editB [button $f5.b1 -text "Edit" -width 10 -command [namespace code "procexclusions_edit $lb $entry $saveB"]]
+    pack $editB -expand 1 -pady 5
+    bind $lb <Double-Button-1> "$editB invoke"
+
+    set removeB [button $f5.b2 -text "Remove" -width 10 -command [namespace code "procexclusions_remove $lb"]]
+    pack $removeB -expand 1 -pady 5
+    
+    set f6 [frame $top.f2]
+    pack $f6 -fill x -expand yes -pady 20
+    
+    set okB [button $f6.b1 -text "Ok" -command [namespace code "procexclusions_ok $lb $top"]]
+    pack $okB -side left -expand 1
+    set cancelB [button $f6.b2 -text "Cancel" -command [namespace code "procexclusions_cancel $top"]]
+    pack $cancelB -side left -expand 1
+    
+    # populate the list box
+    $lb insert end "<NEW>"
+    
+    foreach ex $exclusions {
+      $lb insert end $ex
+    }
+  }
+  
+  proc procexclusions_save {e lb i me} {
+    if { $i == 0 } {
+      set i end
+    } else {
+      $lb delete $i
+    }
+    
+    $lb insert $i [$e get]
+    $e delete 0 end
+    $me configure -state disabled
+  }
+  
+  proc procexclusions_edit {lb e saveB} {
+    set cur [lindex [$lb curselection] 0]
+    $e delete 0 end
+    $e insert end [$lb get $cur]
+    if { $cur == 0 } {
+      $e selection range 0 end
+      focus $e
+    } 
+    
+    $saveB configure -state normal -command [namespace code "procexclusions_save $e $lb $cur $saveB"]
+  }
+  
+  proc procexclusions_remove {lb} {
+    set cur [lindex [$lb curselection] 0]
+    if { $cur != "" && $cur != 0 } {
+      $lb delete $cur
+    }
+  }
+  
+  proc procexclusions_ok {lb top} {
+    variable exclusions
+    
+    if { [$lb size] > 1 } {
+      set exclusions [$lb get 1 end]
+    } else {
+      set exclusions {}
+    }
+    
+    destroy $top
+    
+    reconfig exclusions
+  }
+  
+  proc procexclusions_cancel {top} {
+    destroy $top
+  }
+  
+  proc home {} {
+    array set home [sendcmd_wr get_home]
+    showline $home(file) $home(line)
+  }
+
+  proc statupdate {event {arr ""}} {
+    variable stat
+    variable options
+    
+    # if we're not honoring the statline events, then ignore them
+    if { $options(showstatline) } {
+      if { $event == "update" } {
+        array set home $arr
+        set stat(file) $home(file)
+        set stat(line) $home(line)
+        set stat(proc) $home(proc)
+        set stat(level) $home(level)
+        set stat(sourcelevel) $home(sourcelevel)
+#         $stat(file) configure -text $home(file)
+#         $stat(proc) configure -text $home(proc)
+#         $stat(level) configure -text $home(level)
+#         $stat(sourcelevel) configure -text $home(sourcelevel)
+      }
+    }
+  }
+
+  proc load_program {} {
+    variable Gprogram 
+    variable Gcmdargs 
+    variable Gworkingdir
+    variable Ginterp
+
+    if { [dontkillinprogress] } {
+      return
+    }
+
+    set top [toplevel .load]
+    pack [frame $top.f1] -side top -fill x -pady 5
+    pack [label $top.f1.l -text "Program: "] -side left -padx 3
+    pack [entry $top.f1.e -width 40 -background white] -side left
+    pack [button $top.f1.b -text Browse -command [namespace code browse_program]] -side left -padx 3
+
+    pack [frame $top.f2] -side top -fill x -pady 5
+    pack [label $top.f2.l -text "Arguments: "] -side left -padx 3
+    pack [entry $top.f2.e -width 45 -background white -text $Gcmdargs] -side left
+
+    pack [frame $top.f5] -side top -fill x -pady 5
+    pack [label $top.f5.l -text "Interpreter: "] -side left -padx 3
+    pack [entry $top.f5.e -width 45 -background white] -side left
+    pack [button $top.f5.b -text Browse -command [namespace code "browse_interpreter $top"]] -side left -padx 3
+    $top.f5.e insert 0 $Ginterp
+
+    pack [frame $top.f3] -side top -fill x -pady 5
+    pack [label $top.f3.l -text "Run in directory: "] -side left -padx 3
+    pack [entry $top.f3.e -width 45 -background white -text $Gworkingdir] -side left
+    #pack [button $top.f3.b -text Browse -command [namespace code nop]] -side left -padx 3
+
+    pack [frame $top.f4] -side top -pady 5
+    pack [button $top.f4.b1 -text Ok -command [namespace code do_load_program]] -side left -padx 8
+    pack [button $top.f4.b2 -text Cancel -command [namespace code "destroy $top"]] -side left -padx 8
+
+    # make this window modal
+    grab $top
+    tkwait window $top
+  }
+
+  variable restart_keep_lbps 1
+  variable restart_keep_pbps 1
+  
+  proc restart {{force 0}} {
+    variable Gprogram 
+    variable Ginterp 
+    variable Gcmdargs 
+    variable Gworkingdir
+
+    if { $force == 0 && [dontkillinprogress] } {
+      return
+    }
+
+    if { $Gprogram == "" } {
+      tk_dialog .error "Error" "Nothing to restart" error 0 Ok
+      return
+    }
+
+    set top [toplevel .restart]
+    pack [frame $top.f1] -side top -fill x -pady 5
+    pack [label $top.f1.l -text "Program: "] -side left -padx 3
+    pack [label $top.f1.e -text $Gprogram] -side left
+
+    pack [frame $top.f2] -side top -fill x -pady 5
+    pack [label $top.f2.l -text "Arguments: "] -side left -padx 3
+    pack [entry $top.f2.e -width 45 -background white] -side left
+    $top.f2.e insert 0 $Gcmdargs
+
+    pack [frame $top.f5] -side top -fill x -pady 5
+    pack [label $top.f5.l -text "Interpreter: "] -side left -padx 3
+    pack [entry $top.f5.e -width 45 -background white] -side left
+    pack [button $top.f5.b -text Browse -command [namespace code "browse_interpreter $top"]] -side left -padx 3
+    $top.f5.e insert 0 $Ginterp
+
+    pack [frame $top.f3] -side top -fill x -pady 5
+    pack [label $top.f3.l -text "Run in directory: "] -side left -padx 3
+    pack [entry $top.f3.e -width 45 -background white] -side left
+    $top.f3.e insert 0 $Gworkingdir
+    #pack [button $top.f3.b -text Browse -command [namespace code nop]] -side left -padx 3
+
+    pack [frame $top.f6 -borderwidth 2 -relief groove] -side top -pady 5 -fill x -expand y
+    pack [checkbutton $top.f6.cb1 -text "Keep existing line breakpoints" \
+      -variable [namespace current]::restart_keep_lbps]
+    pack [checkbutton $top.f6.cb2 -text "Keep existing proc breakpoints" \
+      -variable [namespace current]::restart_keep_pbps]
+      
+    pack [frame $top.f4] -side top -pady 5
+    pack [button $top.f4.b1 -text Ok -command [namespace code do_restart_program]] -side left -padx 8
+    pack [button $top.f4.b2 -text Cancel -command [namespace code "destroy $top"]] -side left -padx 8
+
+    # make this window modal
+    grab $top
+    tkwait window $top
+  }
+
+  proc do_restart_program {} {
+    variable Gcmdargs 
+    variable Gworkingdir
+    variable Ginterp
+    variable restart_keep_lbps
+    variable restart_keep_pbps
+    
+    set Gcmdargs [.restart.f2.e get]
+    set Gworkingdir [.restart.f3.e get]
+    set Ginterp [.restart.f5.e get]
+
+    destroy .restart
+
+    # this causes the display to clear out all the breakpoints
+    # JES kludge!
+    variable displayfile 
+    set displayfile ""
+
+    # need to remove the cache to force reread of source files
+    variable files
+    catch {unset files}
+
+    # save BPs
+    if { $restart_keep_lbps } {
+      set bps [sendcmd_wr get_bps]
+    }
+    
+    if { $restart_keep_pbps } {
+      array set pbps [sendcmd_wr get_pbps]
+    }
+    
+    load_program_from_globals
+    
+    # wait for tuba to be in running state
+    waitForState RUNNING
+    
+    # set the breakpoints
+    if { $restart_keep_lbps } {
+      foreach bp $bps {
+        foreach {file line} [split $bp ,] {}
+        # use the force parm to not ask the user on bad lines
+        sendcmd_wr toggle_bp $file $line 1
+      }
+      
+      update_display
+    }
+    
+    if { $restart_keep_pbps } {
+      foreach proc [array names pbps] {
+        foreach {file line} $pbps($proc) {}
+        sendcmd_wr toggle_pbp $proc $file $line
+      }
+      
+      update_display
+    }
+  }
+
+  proc do_load_program {} {
+    # JSB
+    variable Gprogram 
+    variable Gcmdargs 
+    variable Gworkingdir
+    variable Ginterp
+    variable sessionfile
+    
+    set Gprogram [.load.f1.e get]
+    set Gcmdargs [.load.f2.e get]
+    set Ginterp [.load.f5.e get]
+    set Gworkingdir [.load.f3.e get]
+
+    destroy .load
+    
+    # when you load a program this way, you effectively remove the current sessionfile
+    set sessionfile ""
+    
+    load_program_from_globals
+  }
+
+  proc load_program_from_globals {} {
+    variable Gprogram 
+    variable Gcmdargs 
+    variable Gworkingdir
+    variable Ginterp
+
+    killapp
+    eval startapp [list $Gworkingdir] [list $Gprogram] [list $Ginterp] $Gcmdargs
+  }
+  
+  proc browse_program {} {
+    # JSB
+    set types {
+      {{TCL Scripts} {.tcl}} 
+      {{TK Scripts} {.tk}}
+      {{All Files} *}
+    }
+
+    # JSB
+    set program [tk_getOpenFile -filetypes $types -parent .load -title "Load program to debug"]
+    if { $program != "" } {
+      .load.f1.e delete 0 end
+      .load.f1.e insert 0 $program
+      .load.f3.e delete 0 end
+      # JSB - This code assumes that a '/' or a device letter will begin the path.
+  #    .load.f3.e insert 0 [lindex [split $program /] 0]/[lindex [split $program /] 1]
+      # JES this one seems to work better :-)
+      .load.f3.e insert 0 [file dirname $program]
+    }
+  }
+
+  proc browse_interpreter {top} {
+    variable windows
+
+    if { $windows } {
+      set types {
+        {{Executables} {.exe}} 
+        {{All Files} *}
+      }
+    } {
+      set types {
+        {{All Files} *}
+      }
+    }
+
+    # JSB
+    set interpreter [tk_getOpenFile -filetypes $types -parent $top -title "Choose interpreter"]
+    if { $interpreter != "" } {
+      $top.f5.e delete 0 end
+      $top.f5.e insert 0 $interpreter
+    }
+  }
+
+  proc open_file {} {
+    variable top
+    variable src
+    variable Gworkingdir
+
+    set filename [tk_getOpenFile -initialdir $Gworkingdir -parent $top -title "Open File"]
+    if { $filename != "" } {
+      showline $filename 0 0
+      setmsg "Displaying $filename"
+    }
+  }
+
+  proc handle_status_line {} {
+    variable options
+    variable stat
+    if { $options(showstatline) } {
+      pack $stat(frame) -before $stat(parent) -anchor w
+    } else {
+      pack forget $stat(frame)
+    }
+  }
+
+
+  proc handle_toolbar {} {
+    variable options
+    variable toolbar
+    if { $options(showtoolbar) } {
+      pack $toolbar(frame) -after $toolbar(parent) -anchor w
+    } else {
+      pack forget $toolbar(frame)
+    }
+  }
+
+  proc handle_balloons {} {
+    variable BalloonHelp
+    variable options
+
+    if { $options(showballoons) } {
+      set BalloonHelp(enabled) 1
+    } else {
+      set BalloonHelp(enabled) 0
+    }
+  }
+
+  # show the breakpoint highlighting in the text widget
+  proc showbp {line} {
+    variable src
+    $src tag add breakpoint $line.0 "$line.0+1 lines"
+  }
+
+  # remove the breakpoint highlighting from the text widget
+  proc removebp {line} {
+    variable src
+    $src tag remove breakpoint $line.0 "$line.0+1 lines"
+  }
+
+  # show the current line highlighting
+  proc showcurrline {line} {
+    variable src
+    $src tag add currline $line.0 "$line.0+1 lines"
+  }
+
+  # show the error line highlighting
+  proc showerrline {line} {
+    variable src
+    $src tag add errline $line.0 "$line.0+1 lines"
+  }
+
+  # hide the current line highlighting
+  proc removecurrline {} {
+    variable src
+    variable currline
+    $src tag remove currline $currline.0 "$currline.0+1 lines"
+  }
+
+  # hide the error line highlighting
+  proc removeerrline {line} {
+    variable src
+    $src tag remove errline $line.0 "$line.0+1 lines"
+  }
+
+  proc update_display {} {
+    variable displayfile
+    variable currline
+    
+    set file $displayfile
+    set displayfile ""
+    showline $file $currline
+  }
+  
+  # show the given file and highlight the given line number. If the file is
+  # not loaded, load it up in a cache so the next time it is referred to we
+  # already have it in memory. The makecurrent flag is for setting the
+  # current program pointer. Sometimes we don't want to set it if we're just
+  # browsing the loaded sources.
+  proc showline {file lineno {makecurrent 1}} {
+    variable files
+    variable Gfile 
+    variable src 
+    variable currline 
+    variable displayfile 
+
+    if { $file != $displayfile } {
+      # this deletes all the tags too
+      $src delete 1.0 end
+
+      # is the file loaded at all
+      if { ! [info exists files($file)] } {
+        # load the file in
+        set f [open $file r]
+        # cache the file contents
+        set files($file) [read $f]
+        close $f
+
+        # update the loadedmenu
+        variable loadedmenu
+        $loadedmenu add command -label $file -command [namespace code "showline $file 1 0"]
+      }
+
+      $src insert 1.0 $files($file)
+
+      # create the breakpoint tags for any breakpoints in this file
+      foreach bp [sendcmd_wr get_bps] {
+        set split [split $bp ,]
+        set bpfile [lindex $split 0]
+        if { $bpfile == $file } {
+          showbp [lindex $split 1]
+        }
+      }
+
+      array set pbps [sendcmd_wr get_pbps]
+      foreach bp [array names pbps] {
+        set split [split $pbps($bp)]
+        set bpfile [lindex $split 0]
+        if { $bpfile == $file } {
+          showbp [lindex $split 1]
+        }
+      }
+
+      set displayfile $file
+    }
+
+    if { $makecurrent == 1 } {
+      # make sure the line number is set properly
+      # but remove the old one first
+      if { $currline > 0 } {
+        removecurrline
+      }
+
+      showcurrline $lineno
+      #$src see currline.first
+      set currline $lineno
+    } elseif { $makecurrent == 2 } {
+      # highlight an error line
+      showerrline $lineno
+    }
+
+    $src see $lineno.0
+  }
+
+  # put a message in the message area
+  proc setmsg {msg {conditional 0}} {
+    variable msgbox
+
+    # this is sort of kludgey. Need a better way
+    if { $conditional && [$msgbox cget -text] != "Running..." } {
+      return
+    }
+
+    $msgbox configure -text $msg
+  }
+
+  variable bpactions
+  proc setclr {} {
+    variable src 
+    variable displayfile
+    variable options
+
+    # get the current line
+    set cursorline [lindex [split [$src index insert] .] 0]
+
+    # get the BP targets
+    set targets [sendcmd_wr get_bptargets $displayfile $cursorline]
+    # is this line a target?
+    if { $targets == "" && $options(instrumenting) == "LT" } {
+      set action [getNotValidBPAction]
+      if { $action != "set" } {
+        return
+      }
+      
+      # pretend this is a valid line
+      set targets {}
+    }
+    
+    # okay, so it's a target, but are there more than one?
+    if { [llength $targets] > 1 } {
+      # create the ambiguity resolve array
+      variable bpactions
+      
+      # clear out the array
+      foreach i [array names bpactions] {
+        unset bpactions($i)
+      }
+      
+      foreach entry $targets {
+        set bpactions($entry) 0
+      }
+      
+      # now ask the user to resolve the ambiguities
+      resolveAmbiguities 
+    } else {
+      # there are no ambiguities, so we'll fill in the actions array
+      set bpactions([lindex $targets 0]) 1
+    }
+    
+    foreach {entry flag} [array get bpactions] {
+      if { $flag } {
+        if { $entry == {} } {
+          # it's a line BP
+          sendcmd_wr toggle_bp $displayfile $cursorline
+        } else {
+          # it's a proc BP
+          sendcmd_wr toggle_pbp $entry $displayfile $cursorline
+        }
+      }
+    }
+    
+    if { [sendcmd_wr getBPCount $displayfile $cursorline] > 0 } {
+      showbp $cursorline
+    } else {
+      removebp $cursorline
+    }
+  }
+
+  variable tempactions
+  proc resolveAmbiguities {} {
+    variable bpactions
+    variable tempactions
+
+    # clear out temp actions array
+    foreach i [array names tempactions] {
+      unset tempactions($i)
+    }
+    
+    set top [toplevel .resolveambig]
+    wm title $top "Resolve BP Toggle Ambiguity"
+    
+    pack [label $top.l1 -text "The selected line has more than one BP target."] -side top
+    pack [label $top.l2 -text "Please select action(s):"] -side top
+
+    pack [frame $top.f] -side top -pady 5 -padx 3
+    set counter 0
+    foreach entry [lsort [array names bpactions]] {
+      if { $entry == {} } {
+        pack [checkbutton $top.f.cb$counter -text "Toggle line BP" \
+                -variable [namespace current]::tempactions($entry)] -side top -anchor w
+      } else {
+        pack [checkbutton $top.f.cb$counter -text "Toggle BP on proc $entry" \
+                -variable [namespace current]::tempactions($entry)] -side top -anchor w
+      }
+      
+      incr counter
+    }
+    
+    pack [button $top.b1 -text "Ok" -command "[namespace current]::copy_arrays $top"] -side top -pady 6
+    pack [button $top.b2 -text "Cancel" -command "destroy $top"] -side top -pady 3
+
+    # make this window modal
+    catch {grab $top}
+    tkwait window $top
+  }
+  
+  proc copy_arrays {top} {
+    variable bpactions
+    variable tempactions
+    
+    foreach {entry value} [array get tempactions] {
+      set bpactions($entry) $value
+    }
+    
+    destroy $top
+  }
+  
+  proc getuniqvarname {} {
+    variable cmd_wr_rc_index
+    incr cmd_wr_rc_index
+    upvar #0 cmd_wr_$cmd_wr_rc_index v
+    set v ""
+    return cmd_wr_$cmd_wr_rc_index
+  }
+
+  proc bpwindow {} {
+    if { [info command .bp] == ".bp" } {
+      wm deiconify .bp
+      return
+    }
+
+    set top [toplevel .bp]
+    
+    pack [frame $top.f1 -width 50 -height 50] -side left -expand yes -fill both
+    pack [frame $top.f2 -width 15 -height 50] -side right
+    pack [label $top.f1.l -text "Breakpoints:"] -side top -anchor w
+    pack [frame $top.f1.f1] -side top -fill both -expand 1
+    pack [listbox $top.f1.f1.lb -width 50 -yscroll [list $top.f1.f1.s1 set] -xscroll [list $top.f1.s1 set] -selectmode single] -side left -fill both -expand yes
+    pack [scrollbar $top.f1.f1.s1 -command [list $top.f1.f1.lb yview]] -side left -fill y
+    pack [scrollbar $top.f1.s1 -orient h -command [list $top.f1.f1.lb xview]] -side top -fill x
+
+    pack [button $top.f2.b1 -text Remove] -side top -pady 4
+    pack [button $top.f2.b2 -text Goto -command [namespace code bpwindow_goto]] -side top -pady 4
+    pack [button $top.f2.b3 -text Close] -side bottom -pady 16
+
+    # register ourself as an observer of breakpoint events
+    set id [sendcmd_wr register_observer bps bpwindow_notify]
+    $top.f2.b3 configure -command [namespace code "bpwindow_close $top $id"]
+    $top.f2.b1 configure -command [namespace code "bpwindow_remove $id"]
+    wm protocol $top WM_DELETE_WINDOW [namespace code "bpwindow_close $top $id"]
+
+    bpwindow_notify update
+  }
+
+  proc bpwindow_close {top obsid} {
+    sendcmd unregister_observer bps $obsid
+    destroy $top
+  }
+
+  proc bpwindow_notify {event {bps ""}} {
+    if { $event == "update" } {
+      # just clear out the list and redo it
+      .bp.f1.f1.lb delete 0 end
+      if { $bps == "" } {
+        set bps [sendcmd_wr get_bps]
+      }
+
+      eval .bp.f1.f1.lb insert end [lsort $bps]
+    } elseif { $event == "destroy" } {
+      # invoke the close button
+      .bp.f2.b3 invoke
+    }
+  }
+
+  proc bpwindow_remove {id} {
+    variable src
+    variable displayfile
+
+    # get the bp(s) selected
+    set selected [.bp.f1.f1.lb curselection]
+    if { [llength $selected] > 1 } {
+      sendcmd pause_observer bps $id
+    }
+
+    foreach sel $selected {
+      set sel [.bp.f1.f1.lb get $sel]
+      set split [split $sel ,]
+      set file [lindex $split 0]
+      set line [lindex $split 1]
+      # don't care about the return code
+      sendcmd_wr toggle_bp $file $line
+      if { $displayfile == $file && [sendcmd_wr getBPCount $file $line] == 0 } {
+        removebp $line
+      }
+    }
+
+    if { [llength $selected] > 1 } {
+      sendcmd unpause_observer bps $id
+      bpwindow_notify update
+    }
+  }
+
+  proc bpwindow_goto {} {
+    # get the bp(s) selected
+    set sellist [.bp.f1.f1.lb curselection]
+    if { [llength $sellist] > 0 } {
+      set sel [lindex $sellist 0]
+      set sel [.bp.f1.f1.lb get $sel]
+      set split [split $sel ,]
+      showline [lindex $split 0] [lindex $split 1] 0
+    }
+  }
+
+  proc pbpwindow {} {
+    if { [info commands .pbp] == ".pbp" } {
+      wm deiconify .pbp
+      return
+    }
+
+    set top [toplevel .pbp]
+    pack [frame $top.f1 -width 30 -height 50] -side left 
+    pack [frame $top.f2 -width 15 -height 50] -side right
+    pack [label $top.f1.l -text "Procedure Breakpoints:"] -side top -anchor w
+    listbox $top.f1.lb -yscroll [list $top.f1.s1 set] -selectmode multiple
+    scrollbar $top.f1.s1 -command [list $top.f1.lb yview]
+
+    pack $top.f1.lb $top.f1.s1 -side left -fill y
+
+    pack [button $top.f2.b1 -text Remove] -side top -pady 4
+    pack [button $top.f2.b2 -text Goto -command [namespace code pbpwindow_goto]] -side top -pady 4
+    pack [button $top.f2.b3 -text Close] -side bottom -pady 16
+
+    # register ourself as an observer of breakpoint events
+    set id [sendcmd_wr register_observer pbps pbpwindow_notify]
+    $top.f2.b3 configure -command [namespace code "pbpwindow_close $top $id"]
+    $top.f2.b1 configure -command [namespace code "pbpwindow_remove $id"]
+    wm protocol $top WM_DELETE_WINDOW [namespace code "pbpwindow_close $top $id"]
+
+    pbpwindow_notify update
+  }
+
+  proc pbpwindow_close {top obsid} {
+    destroy $top
+    sendcmd unregister_observer pbps $obsid
+  }
+
+  proc pbpwindow_notify {event {pbpsarr ""}} {
+    if { $event == "update" } {
+      if { $pbpsarr == "" } {
+        set pbpsarr [sendcmd_wr get_pbps]
+      }
+
+      array set pbps $pbpsarr
+
+      # just clear out the list and redo it
+      .pbp.f1.lb delete 0 end
+      eval .pbp.f1.lb insert end [lsort [array names pbps]]
+    } else {
+      .pbp.f2.b3 invoke
+    }
+  }
+
+  proc pbpwindow_remove {id} {
+    variable src 
+    variable displayfile
+
+    array set pbps [sendcmd_wr get_pbps]
+
+    # get the bp(s) selected
+    set selected [.pbp.f1.lb curselection]
+    if { [llength $selected] > 1 } {
+      sendcmd pause_observer pbps $id
+    }
+
+    foreach sel $selected {
+      set proc [.pbp.f1.lb get $sel]
+      set file [lindex $pbps($proc) 0]
+      set line [lindex $pbps($proc) 1]
+      sendcmd_wr toggle_pbp $proc $file $line
+      if { $displayfile ==  $file && [sendcmd_wr getBPCount $file $line] == 0 } {
+        removebp $line
+      }
+    }
+
+    if { [llength $selected] > 1 } {
+      sendcmd unpause_observer pbps $id
+      pbpwindow_notify update
+    }
+  }
+
+  proc pbpwindow_goto {} {
+    # get the bp(s) selected
+    set sellist [.pbp.f1.lb curselection]
+    if { [llength $sellist] > 0 } {
+      set sel [lindex $sellist 0]
+      set sel [.pbp.f1.lb get $sel]
+      array set pbps [sendcmd_wr get_pbps]
+      set split $pbps($sel)
+      showline [lindex $split 0] [lindex $split 1] 0
+    }
+  }
+
+  # this displays the variable in the selection in a tempory window
+  proc showvar_wrap {} {
+    # get the selection
+    if { [catch {selection get} rc] } {
+      tk_dialog .error "Error in operation" "No variable selected to show" error 0 Ok
+      return
+    }
+
+    set level [sendcmd_wr get_level]
+    set rc [sendstackcmd_wr $level subst $rc]
+    if { ! [sendstackcmd_wr $level info exists $rc] } {
+      tk_dialog .error "Error in operation" "variable '$rc' does not exist at level $level" error 0 Ok
+      return
+    }
+
+    showvar $rc $level
+  }
+
+  proc findmaxwidth {buf} {
+    set max 0
+    set i 0
+
+    set j [string first \n [string range $buf $i end]]
+    while {$j != -1} {
+      if { $j > $max } { set max $j }
+      incr i $j; incr i
+      set j [string first \n [string range $buf $i end]]
+    }
+
+    # the last line may not have terminated with a newline
+    if { $j > $max } { 
+      set max $j 
+    } elseif { $i == 0 } {
+      # the line never had a newline
+      set max [string length $buf]
+    }
+
+    return $max
+  }
+
+  proc singlevarwindow {} {
+    # do globals first
+    foreach index [.vars.f2.f1.lbg curselection] {
+      set var [.vars.f2.f1.lbg get $index]
+      showvar $var 0
+    }
+    .vars.f2.f1.lbg selection clear 0 end
+
+    # do locals next
+    foreach index [.vars.f2.f2.lbl curselection] {
+      set var [.vars.f2.f2.lbl get $index]
+      set level [sendcmd_wr get_level]
+      showvar $var $level
+    }
+    .vars.f2.f2.lbl selection clear 0 end
+
+  }
+
+  proc getarrayvalue {arr level {value "null"}} {
+    set buf ""
+
+    if { $value == "null" } {
+      # we'll have to get the value
+      foreach index [lsort [sendstackcmd_wr $level array names $arr]] {
+        append buf "$index \x7b[sendstackcmd_wr $level set [set arr]($index)]\x7d\n"
+      }
+    } else {
+      array set ar $value
+      foreach index [array names ar] {
+        append buf "$index \x7b $ar($index)\x7d\n"
+      }
+    }
+
+    return $buf
+  }
+
+  proc showvar {var level} {
+    # the var may have other vars in it (like indexes to arrays) so we'll
+    # run the varname thru subst first
+    set var [sendstackcmd_wr $level subst $var]
+    
+    if { [info commands .var$var:$level] == ".var$var:$level" } {
+      wm deiconify .var$var:$level
+      return
+    }
+
+    set varfont -*-fixed-medium-r-*-*-*-140-*-*-*-*-*-*
+    set maxwidth 40; set minwidth 10
+    set maxheight 20; set minheight 3
+
+    if { [sendstackcmd_wr $level ::tuba::isarray $var] } {
+      set value [getarrayvalue $var $level]
+      set arrflag 1
+    } else {
+      # get the value of the global
+      set value [sendstackcmd_wr $level ::tuba::get_var $var]
+      set arrflag 0
+    }
+
+    # determine the size of the text window we should create
+    set width [findmaxwidth $value]
+    set height [regsub -all \n $value "" dummy]
+
+    if { $height > $maxheight } { set height $maxheight }
+    if { $height < $minheight } { set height $minheight }
+    if { $width > $maxwidth } { set width $maxwidth }
+    if { $width < $minwidth } { set width $minwidth }
+
+    set top [toplevel .var$var:$level]
+    wm title $top "Variable: $var Level: $level"
+
+    pack [frame $top.f0] -fill x
+    pack [label $top.f0.l1 -text "Value for "] -side left -anchor w -padx 4 -pady 5
+    pack [label $top.f0.l2 -foreground blue -font $varfont -text "$var:$level"] -side left -anchor w -pady 5
+    pack [frame $top.f1] -side top -expand yes -fill both
+    pack [text $top.f1.t -wrap none -width $width -height $height -yscroll [list $top.f1.sy set] -xscroll [list $top.f3.sx set]] -side left -expand yes -fill both
+    pack [scrollbar $top.f1.sy -command [list $top.f1.t yview]] -fill y -side right
+    pack [frame $top.f3] -fill x
+    pack [scrollbar $top.f3.sx -orient horizontal -command [list $top.f1.t xview]] -fill x -side top
+
+    pack [frame $top.f4] -fill x -side top
+    upvar #0 ${top}watchpoint watchpoint
+    set watchpoint 0
+    pack [checkbutton $top.f4.cb -text "Break when variable set" -variable ::${top}watchpoint]
+
+    pack [frame $top.f2] -side bottom 
+    pack [button $top.f2.b1 -text Modify] -side left -padx 8 -pady 4
+    pack [button $top.f2.b2 -text Close] -side left -padx 8 -pady 4
+
+    # stick the global value in the textbox
+    $top.f1.t insert 1.0 $value
+
+    # set up the global observation to keep the value updated
+    set id [sendstackcmd_wr $level ::tuba::register_var_observer $var $level [list singvar_event $top]]
+    $top.f2.b1 configure -command [namespace code "singvar_modify $id $arrflag $level [list $top.f1.t] $var"]
+    $top.f2.b2 configure -command [namespace code "singvar_close [list $top] [list $id] $level"]
+    wm protocol $top WM_DELETE_WINDOW [namespace code "singvar_close [list $top] [list $id] $level"]
+  }
+
+  proc singvar_close {top obsid level} {
+    destroy $top
+    upvar #0 ${top}watchpoint watchpoint
+
+    unset watchpoint
+    sendstackcmd $level ::tuba::unregister_var_observer $obsid
+  }
+
+  proc singvar_modify {id arrflag level widget var} {
+    # get the new value
+    set value [$widget get 1.0 "end-1 chars"]
+
+    # set the value on the appl
+    if { $arrflag } {
+      # need to pause the observer so we don't get a callback for every freaking
+      # element in the array
+      sendstackcmd $level ::tuba::pause_var_observer $id
+      sendstackcmd $level array set $var $value
+      sendstackcmd $level ::tuba::unpause_var_observer $id
+    } else {
+      sendstackcmd $level set $var [list $value]
+    }
+  }
+
+  proc singvar_event {top var level arrflag event {value ""}} {
+    set textbox $top.f1.t
+    if { $event == "r" } return
+
+    if { $event == "destroy" } {
+      $top.f2.b2 invoke
+      return
+    }
+
+    $textbox delete 1.0 end
+    if { $event == "u" } {
+      variable options
+      if { $options(autoremove) } {
+        singvar_event $top $var $level $arrflag "destroy" $value
+        return
+      } else {
+        set text "<unset variable>"
+      }
+    } else {
+      if { $arrflag } {
+        set text [getarrayvalue $var $level $value]
+      } else {
+        set text $value
+      }
+
+      # do we have a watch point set?
+      global ${top}watchpoint
+      if { [set ${top}watchpoint] } {
+        # so we'll stop the next time around
+        sendcmd breakpoint
+        setmsg "Variable '$var' was modified"
+#        puts "Variable '$var' was modified"
+      }
+    }
+
+    # we should adjust the windows to accomodate the new value, but within
+    # limits
+    set maxwidth 40; set minwidth 10
+    set maxheight 20; set minheight 3
+
+    set width [findmaxwidth $text]
+    set height [regsub -all \n $text "" dummy]
+
+    if { $height > $maxheight } { set height $maxheight }
+    if { $height < $minheight } { set height $minheight }
+    if { $width > $maxwidth } { set width $maxwidth }
+    if { $width < $minwidth } { set width $minwidth }
+
+    $textbox configure -height $height -width $width
+    $textbox insert 1.0 $text
+  }
+
+  proc varwindow {} {
+    if { [info commands .vars] == ".vars" } {
+      wm deiconify .vars
+      return
+    }
+
+    set top [toplevel .vars]
+    wm title $top "Variable Quick Browser"
+
+    set menuF [frame $top.mf]
+    pack $menuF -side top -fill both
+
+    # options menu 
+    pack [menubutton $menuF.m1 -menu $menuF.m1.m -text Options -underline 0] -anchor w -side left -padx 4
+    menu $menuF.m1.m
+    $menuF.m1.m add checkbutton -label "auto remove unset vars" -variable [namespace current]::options(autoremove)
+    $menuF.m1.m add checkbutton -label "show interpreter core globals" -variable [namespace current]::options(coreglobals) -command [namespace code reset_shown]
+    $menuF.m1.m add separator
+    $menuF.m1.m add command -label "Save options" -command [namespace code saveoptions]
+
+    pack [frame $top.f1 -height 10] -side left -fill y
+    pack [frame $top.f2 -height 10 -width 10] -side left -fill y
+    pack [frame $top.f2.f1] -side top
+    pack [frame $top.f2.f2] -side top
+    pack [frame $top.f3 -height 10] -side left
+    pack [label $top.f1.l -text "Variables:"] -side top -anchor w
+    pack [set varT [text $top.f1.t -wrap none -width 60 -state disabled -yscroll [list $top.f1.s1 set]]] -fill both -pady 2 -padx 2 -side left
+    pack [scrollbar $top.f1.s1 -command [list $top.f1.t yview]] -fill y -side right
+
+    pack [label $top.f2.f1.lg -text "Global variables:"] -side top -anchor w -pady 3
+    pack [listbox $top.f2.f1.lbg -yscroll [list $top.f2.f1.s1 set] -selectmode multiple] -fill both -side left
+    pack [scrollbar $top.f2.f1.s1 -command [list $top.f2.f1.lbg yview]] -fill y -side right
+    pack [label $top.f2.f2.ll -text "Local variables:"] -side top -anchor w -pady 3
+    pack [listbox $top.f2.f2.lbl -yscroll [list $top.f2.f2.s2 set] -selectmode multiple] -fill both -side left
+    pack [scrollbar $top.f2.f2.s2 -command [list $top.f2.f2.lbl yview]] -fill y -side right
+
+    pack [button $top.f3.b1 -text View -command [namespace code "varwindow_add"]] -side top -pady 7 -anchor n
+    pack [button $top.f3.b2 -text Monitor -command [namespace code "singlevarwindow"]] -side top -pady 7
+    pack [button $top.f3.b3 -text Close] -side bottom -anchor s -pady 7
+
+    # register ourselves with the tuba core as an observer of variables
+    set id [sendcmd_wr register_observer vars reset_vars]
+
+    # and code the unobserve in the close button
+    $top.f3.b3 configure -command [namespace code "varwindow_close $top $id"]
+    wm protocol $top WM_DELETE_WINDOW [namespace code "varwindow_close $top $id"]
+
+    reset_vars update
+  }
+
+  proc varwindow_close {top obsid} {
+    # this is really ugly code, but it's the best I can come up with
+    # without rewriting a large portion of this
+    # we have to "destruct" all the variable entries in the text window
+    foreach b [winfo children $top.f1.t] {
+      if { [winfo exists $b] } {
+        if { [string first "kill_varline" [$b cget -command]] != -1 } {
+          $b invoke
+        }
+      }
+    }
+
+    destroy $top
+
+    sendcmd unregister_observer vars $obsid
+  }
+
+  # this proc is called when the user changes the coreglobals option
+  proc reset_shown {} {
+    # reconfigure the option in the tuba core
+    reconfig coreglobals
+
+    # force the tuba core to reset its variable list
+    sendstackcmd [sendcmd_wr get_level] ::tuba::grabvars
+
+    # read in a new set of variables
+    reset_vars update
+  }
+
+  proc reset_vars {event {visvars "null"} {glovars "null"}} {
+    if { $event == "update" } {
+      if { $visvars == "null" } {
+        set visvars [sendcmd_wr get_visvars]
+      }
+      if { $glovars == "null" } {
+        set glovars [sendcmd_wr get_glovars]
+      }
+
+      # do the globals
+      set w .vars.f2.f1.lbg
+      $w delete 0 end
+      foreach var [lsort $glovars] {
+        $w insert end $var
+      }
+
+      # do the locals
+      set w .vars.f2.f2.lbl
+      $w delete 0 end
+      foreach var [lsort $visvars] {
+        $w insert end $var
+      }
+    } elseif { $event == "destroy" } {
+      .vars.f3.b3 invoke
+    }
+  }
+
+  proc monitor_var {var type} {
+    set widget .vars.f1.t
+
+    # if the var is a global, need to set the level to 0
+    if { $type == "global" } {
+      set level 0
+    } else {
+      set level [sendcmd_wr get_level]
+    }
+
+    set lineinfo [$widget index insert]
+    set line [lindex [split $lineinfo .] 0]
+
+    # does the window exist already?
+    if { [winfo exists .vars.f1.t.b$var:$level] } {
+      return
+    }
+
+    $widget configure -state normal
+
+    set b [button .vars.f1.t.b$var:$level -text $var:$level -font fixed]
+    $widget window create end -window $b
+
+    # is it an array?
+    if { [sendstackcmd_wr $level ::tuba::isarray $var] } {
+      set bb [button .vars.f1.t.v$var:$level -font fixed -background lightblue \
+        -height 0 -justify left -anchor w \
+        -text [list [getarrayvalue $var $level]] \
+        -command [namespace code "showvar $var $level"]]
+    } else {
+      set bb [button .vars.f1.t.v$var:$level -font fixed -background white \
+        -height 0 -justify left -anchor w \
+        -text [sendstackcmd_wr $level ::tuba::get_var $var] \
+        -command [namespace code "showvar $var $level"]]
+    }
+    $widget window create end -window $bb -padx 3
+    set id [sendstackcmd_wr $level ::tuba::register_var_observer $var $level [list var_event $bb]]
+    $b configure -command "::tuba::kill_varline $widget $b $bb; ::tuba::sendstackcmd $level ::tuba::unregister_var_observer [list $id]"
+    $widget insert end \n
+
+    $widget configure -state disabled
+  }
+
+  proc kill_varline {w b bb} {
+    set pos [$w index $b]
+    set line [lindex [split $pos .] 0]
+    destroy $b
+    destroy $bb
+    $w delete $line.0 "$line.0 + 1 lines"
+  }
+
+  proc varwindow_add {} {
+    # get the globals
+    foreach index [.vars.f2.f1.lbg curselection] {
+      set var [.vars.f2.f1.lbg get $index]
+      monitor_var $var global
+    }
+
+    # get the locals
+    foreach index [.vars.f2.f2.lbl curselection] {
+      set var [.vars.f2.f2.lbl get $index]
+      monitor_var $var local
+    }
+
+    # clear the selections
+    .vars.f2.f1.lbg selection clear 0 end
+    .vars.f2.f2.lbl selection clear 0 end
+  }
+
+  proc var_event {w var1 level arrflag event {value ""}} {
+    variable options
+
+    if { $event == "destroy" } {
+      .vars.f1.t.b$var1:$level invoke
+      return
+    }
+
+    if { $event == "u" } {
+      if { $options(autoremove) } {
+        var_event $w $var1 $level $arrflag "destroy"
+        return
+      } else {
+        $w configure -text "<unset variable>"
+      }
+    } else {
+      if { $arrflag } {
+        $w configure -text [getarrayvalue $var1 $level $value]
+      } else {
+        #$w configure -text [sendstackcmd_wr $level ::tuba::get_var $var1]
+        $w configure -text $value
+      }
+    }
+  }
+
+  proc procwindow {} {
+    if { [info commands .procs] == ".procs" } {
+      wm deiconify .procs
+      return
+    }
+
+    set top [toplevel .procs]
+    wm title $top "Procedure List"
+
+    pack [frame $top.f1] -side left -fill y
+    pack [frame $top.f2 -height 20] -side left -fill both -expand yes
+    pack [frame $top.f3] -side left
+  #     pack [label $top.f1.l -text "Procedure Code:"] -side top -anchor w -pady 3
+  #     pack [set codeT [text $top.f1.t -width 60 -yscroll [list $top.f1.s1 set]]] -fill both -pady 2 -padx 2 -side left
+  #     pack [scrollbar $top.f1.s1 -command [list $top.f1.t yview]] -fill y -side right
+
+    pack [label $top.f2.l -text "Procedures:"] -side top -anchor w -pady 3
+    pack [listbox $top.f2.lb -yscroll [list $top.f2.s1 set] -selectmode multiple] -fill both -side left -expand yes
+    pack [scrollbar $top.f2.s1 -command [list $top.f2.lb yview]] -fill y -side right
+
+    pack [button $top.f3.b1 -text "Toggle BP"] -side top
+    pack [button $top.f3.b2 -text "Goto"  -command [namespace code procwindowgoto]] -side top
+    pack [button $top.f3.b3 -text Close] -side bottom -anchor s -pady 6
+
+    # register ourselves with the tuba core as an observer of procedures
+    set id [sendcmd_wr register_observer procs reset_procs]
+
+    # we also want to observe the proc breakpoints
+    set id2 [sendcmd_wr register_observer pbps reset_procs2]
+
+    # and code the unobserve in the close button
+    $top.f3.b3 configure -command [namespace code "procwindow_close $top $id $id2"]
+    $top.f3.b1 configure -command [namespace code "procwindowtoggle $id $id2"]
+    wm protocol $top WM_DELETE_WINDOW [namespace code "procwindow_close $top $id $id2"]
+
+    reset_procs update
+  }
+
+  proc procwindow_close {top obsid obsid2} {
+    destroy $top
+    sendcmd unregister_observer procs $obsid
+    sendcmd unregister_observer pbps $obsid2
+  }
+
+  proc procwindowtoggle {id id2} {
+    variable displayfile
+
+    set selected [.procs.f2.lb curselection]
+
+    if { [llength $selected] > 1 } {
+      # pause the observer so we don't get a bunch of update notifications
+      sendcmd pause_observer procs $id
+      sendcmd pause_observer pbps $id2
+    }
+
+    foreach index $selected {
+      set proc [.procs.f2.lb get $index]
+      if { [string match *(B) $proc] } {
+        set proc [string range $proc 0 [expr {[string first " (B)" $proc] - 1}]]
+      }
+
+      set procinfo [sendcmd_wr get_procinfo $proc]
+      if { $procinfo == "" } {
+        tk_dialog .error "Internal Error" "Couldn't get proc info on '$proc'" \
+          error 0 Ok
+        return
+      }
+
+      set file [lindex $procinfo 0]
+      set line [lindex $procinfo 1]
+      sendcmd_wr toggle_pbp $proc $file $line
+      if { $file == $displayfile } {
+        set r [sendcmd_wr getBPCount $file $line]
+        if { $r > 0 } {
+          showbp $line
+        } else {
+          removebp $line
+        }
+      }
+    }
+
+    if { [llength $selected] > 1 } {
+      # unpause the observer
+      sendcmd unpause_observer procs $id
+      sendcmd unpause_observer pbps $id2
+      reset_procs update
+    }
+  }
+
+  proc procwindowgoto {} {
+    # we'll only goto the first one in the list
+    foreach index [.procs.f2.lb curselection] {
+      set proc [.procs.f2.lb get $index]
+      if { [string match *(B) $proc] } {
+        set proc [string range $proc 0 [expr {[string first " (B)" $proc] - 1}]]
+      }
+
+      set procinfo [sendcmd_wr get_procinfo $proc]
+      if { $procinfo == "" } {
+        tk_dialog .error "Internal Error" "Couldn't get proc info on '$proc'" \
+          error 0 Ok
+        return
+      }
+
+      set file [lindex $procinfo 0]
+      set line [lindex $procinfo 1]
+      showline $file $line 0
+      
+      # this forces us to only goto the first line
+      return
+    }
+  }
+
+  proc reset_procs {event {procs ""}} {
+    if { $event == "update" } {
+      set w .procs.f2.lb
+      $w delete 0 end
+
+      if { $procs == "" } {
+        set procs [sendcmd_wr get_procs]
+      }
+      foreach proc [lsort $procs] {
+        # does it have a breakpoint?
+        if { [sendcmd_wr is_pbp $proc] } {
+          $w insert end "$proc (B)"
+        } else {
+          $w insert end $proc
+        }
+      }
+    } elseif { $event == "destroy" } {
+      .procs.f3.b3 invoke
+    }
+  }
+
+  proc reset_procs2 {event args} {
+    reset_procs $event
+  }
+
+  proc stackwindow {} {
+    if { [info commands .stack] == ".stack" } {
+      wm deiconify .stack
+      return
+    }
+
+    set top [toplevel .stack]
+
+    pack [frame $top.f1] -side left -fill both -expand yes
+    pack [label $top.f1.l -text "Stack:"] -side top -pady 2
+    pack [text $top.f1.t -width 50 -height 20 -yscroll [list $top.f1.s1 set]] -side left -padx 3 -pady 2 -fill both -expand yes
+    pack [scrollbar $top.f1.s1 -command [list $top.f1.t yview]] -fill y -side right
+
+    pack [frame $top.f2] -side right -fill y
+    pack [label $top.f2.l -text "Choose a stack type"] -pady 7
+    pack [radiobutton $top.f2.r2 -text "Level stack" -value "Level" \
+      -variable [namespace current]::options(stacktype) -command [namespace code "stack_notifier update"]] \
+      -side top -padx 2 -anchor w
+    pack [radiobutton $top.f2.r3 -text "Tuba stack" -value "Tuba" \
+      -variable [namespace current]::options(stacktype) -command [namespace code "stack_notifier update"]] \
+      -side top -padx 2 -anchor w
+    pack [button $top.f2.b -text Close] -side bottom -anchor s
+
+    # register ourself as an observer
+    set id [sendcmd_wr register_observer stack stack_notifier]
+
+    $top.f2.b configure -command [namespace code "stackwindow_close $top $id"]
+    wm protocol $top WM_DELETE_WINDOW [namespace code "stackwindow_close $top $id"]
+
+    stack_notifier update
+  }
+
+  proc stackwindow_close {top obsid} {
+    destroy $top
+    sendcmd unregister_observer stack $obsid
+  }
+
+  proc stack_notifier {event {levelst ""} {tubast ""}} {
+    variable options
+
+    if { $event == "update" } {
+      # clear out the text contents
+      .stack.f1.t delete 1.0 end
+
+      switch $options(stacktype) {
+        Level {
+          if { $levelst == "" } {
+            set levelst [sendcmd_wr get_level_stack]
+          }
+          .stack.f1.t insert 1.0 $levelst
+        }
+
+        Tuba {
+          if { $tubast == "" } {
+            set tubast [sendcmd_wr get_tuba_stack]
+          }
+          .stack.f1.t insert 1.0 $tubast
+        }
+      }
+    } elseif { $event == "destroy" } {
+      .stack.f2.b invoke
+    }
+  }
+
+  proc saveoptions {} {
+    variable options 
+    variable optionfile
+    variable VERSION
+
+    set f [open $optionfile w]
+    puts $f "array set options {[array get options]}"
+    puts $f "set VERSION $VERSION"
+    close $f
+  }
+
+  proc getoptions {} {
+    variable options
+    variable optionfile
+    
+    if { [file readable $optionfile] } {
+      source $optionfile
+    } else {
+      return
+    }
+    
+    # is it a pre 2.4 version?
+    if { ! [info exists VERSION] } {
+      set VERSION 2.3
+      
+      # is it a pre 2.3 version?
+      if { ! [info exists parser] } {
+        set VERSION 2.2
+      }
+    }
+    
+    # is it an old file?
+    switch -glob $VERSION {
+      2.5* -
+      2.4* {
+        return
+      }
+      
+      2.3 {
+        # convert old format
+        array set options "
+          systemfiles {$systemfiles}
+          animate {$animate}
+          interrs {$interrs}
+          parser {$parser}
+          cachedir {$cachedir}
+          cacheflag {$cacheflag}
+          showtoolbar {$showtoolbar}
+          showballoons {$showballoons}
+          showstatline {$showstatline}
+          stacktype {$stacktype}
+          dynprocs {$dynprocs}
+          autoremove {$autoremove}
+          coreglobals {$coreglobals}
+          instrumenting {$instrumenting}
+        "
+        set ans [tk_dialog .warn "Tuba Config File" \
+          "Warning: Your tuba config file '$optionfile' is from tuba version 2.3.\n
+I will convert it to 2.4, but do you want me to save the conversion?" warning \
+0 Yes No]
+
+        
+        # now, did he want it saved?
+        if { $ans == 0 } {
+          # save the old version as a backup
+          set backup $optionfile.bak
+          file copy -force $optionfile $backup
+          saveoptions
+        }
+      }
+      
+      2.2 {
+        # convert old format
+        array set options "
+          systemfiles {$systemfiles}
+          animate {$animate}
+          interrs {$interrs}
+          showtoolbar {$showtoolbar}
+          showballoons {$showballoons}
+          showstatline {$showstatline}
+          stacktype {$stacktype}
+          dynprocs {$dynprocs}
+          autoremove {$autoremove}
+          coreglobals {$coreglobals}
+        "
+        set ans [tk_dialog .warn "Tuba Config File" \
+          "Warning: Your tuba config file '$optionfile' is from tuba version 2.2 or earlier.\n
+I will convert it to 2.4, but do you want me to save the conversion?" warning \
+0 Yes No]
+
+        
+        # now, did he want it saved?
+        if { $ans == 0 } {
+          # save the old version as a backup
+          set backup $optionfile.bak
+          file copy -force $optionfile $backup
+          saveoptions
+        }
+      }
+      
+      default {
+      }
+    }
+    
+
+  }
+
+  proc reconfig {var} {
+    variable options
+    upvar #0 [namespace current]::$var v
+
+    if { [getState] != "RUNNING" } {
+      # there is no one on the other side ready for our config stuff
+      return
+    }
+    
+    # some vars won't take affect until restart
+    switch $var {
+      instrumenting -
+      dynprocs -
+      exclusions -
+      cachedir -
+      cacheflag -
+      parser {
+        set ans [tk_dialog .warn "Note" \
+          "This configuration change won't take effect until you restart\nRestart now?" \
+          warning 1 Yes No]
+        if { $ans == 1 } {
+          return
+        } else {
+          restart 1
+        }
+      }
+    }
+  
+    if { $var != "exclusions" } {
+      sendmsg CONFIG [list $var $options($var)]
+    } else {
+      variable $var
+      sendmsg CONFIG [list $var [set $var]]
+    }
+  }
+
+  proc aboutwindow {} {
+    variable tubalibdir 
+    variable VERSION
+
+    set gnu { \
+  Tuba comes with ABSOLUTELY NO WARRANTY. \
+  This is free software, and you are welcome to redistribute it \
+  under certain conditions; See the file "LICENSE" for details. \
+  }
+
+    set top [toplevel .about]
+    pack [frame $top.f -background white] -fill both
+    pack [label $top.f.l -font -*-palatino-*-r-*-*-*-140-*-*-*-*-*-* -text "Tuba version $VERSION John E. Stump" -background white] -side top -padx 5 -pady 3
+    pack [message $top.f.m -text $gnu -aspect 200 -width 400 -foreground red -background gray95 -borderwidth 3 -relief raised] -side top -padx 5 -pady 3
+    set instrument [image create photo -file $tubalibdir/images/tubaicon.gif]
+    pack [label $top.f.li -image $instrument -borderwidth 0] -side top -pady 8
+    pack [button $top.f.b -text Ok -command [namespace code "destroy $top"]] -side bottom -pady 4
+
+    # make this window modal
+    grab $top
+    tkwait window $top
+  }
+
+  proc getNotValidBPAction {} {
+    variable nvbpAction
+
+    set top [toplevel .nvbpaction]
+    pack [label $top.l1 -text "The selected line doesn't appear to be a valid line for"] -side top
+    pack [label $top.l2 -text "a breakpoint (if in a dynamic proc, this is ok). Set anyway?"] -side top
+    pack [button $top.b1 -text "Yes, set breakpoint there" -command [namespace code "nvbp_return set $top"]] -side top
+    pack [button $top.b2 -text "No, don't set it" -command [namespace code "nvbp_return no $top"]] -side top
+
+    # make this window modal
+    catch {grab $top}
+    tkwait window $top
+
+    return $nvbpAction
+  }
+
+  proc nvbp_return {retcode top} {
+    variable nvbpAction
+    destroy $top
+    set nvbpAction $retcode
+  }
+
+  set dynaproAction ""
+  proc getDynaprocAction {file line} {
+    showline $file $line 2
+    variable dynaproAction
+
+    set top [toplevel .dynaction]
+    pack [label $top.l1 -text "The highlighted line is defining a dynamic proc"] -side top
+    pack [label $top.l3 -text "Select an action"] -side top
+    pack [button $top.b1 -text "Instrument now as is" -command [namespace code "dyna_return loadtime $top $line"]] -side top
+    pack [button $top.b2 -text "Instrument now as is always!" -command [namespace code "dyna_return LOADTIME $top $line"]] -side top
+    pack [button $top.b3 -text "Instrument at run time" -command [namespace code "dyna_return runtime $top $line"]] -side top
+    pack [button $top.b4 -text "Instrument at run time always!" -command [namespace code "dyna_return RUNTIME $top $line"]] -side top
+
+    # make this window modal
+    grab $top
+    tkwait window $top
+
+    return $dynaproAction
+  }
+
+  proc dyna_return {retcode top line} {
+    variable dynaproAction
+    destroy $top
+    removeerrline $line
+    set dynaproAction $retcode
+  }
+
+  set errorAction ""
+  proc getErrorAction {file line msg} {
+    showline $file $line 2
+
+    set top [toplevel .erraction]
+    pack [label $top.l1 -text "Tuba caught an error from the application:"] -side top
+    pack [label $top.l2 -text $msg] -side top
+    pack [label $top.l3 -text "Select an action"] -side top
+    pack [button $top.b1 -text "Abort Application" -command [namespace code "error_abort $top $line"]] -side top
+    pack [button $top.b2 -text "Let Error Continue" -command [namespace code "error_cont $top $line"]] -side top
+    pack [button $top.b3 -text "Ignore Error and Continue" -command [namespace code "error_ign $top $line"]] -side top
+  }
+
+  proc error_abort {top line} {
+    destroy $top
+    removeerrline $line
+    sendcmd error_abort
+  }
+
+  proc error_cont {top line} {
+    destroy $top
+    removeerrline $line
+    sendcmd error_cont
+  }
+
+  proc error_ign {top line} {
+    destroy $top
+    removeerrline $line
+    sendcmd error_ign
+  }
+
+  proc internal_error {msg} {
+    tk_dialog .error "Internal Error" \
+      "Received the following error from Tuba:\n$msg" error 0 ok
+  }
+
+  set appl_ch ""
+
+  proc connect {ch host port} {
+    variable appl_ch
+  #  puts "got a connection on channel '$ch' with host '$host' port '$port'"
+
+    set appl_ch $ch
+    fileevent $ch readable [namespace code msgfromappl]
+  }
+
+  set stop_ch ""
+
+  # this is a connection for the stop socket, which is used *only* for
+  # sending the STOP command to the app
+  proc stopcmdconnect {ch host port} {
+    variable stop_ch
+    set stop_ch $ch
+  }
+
+  proc STOP {} {
+    if { [getState] == "RUNNING" } {
+      variable stop_ch
+      puts $stop_ch "STOP"
+      flush $stop_ch
+    }
+  }
+
+  proc msgfromappl {} {
+    variable appl_ch
+
+    if { [eof $appl_ch] } {
+      setmsg "Application just died..."
+      return
+    }
+
+    set bytes [gets $appl_ch]
+    if { $bytes == "" } return
+    set msg [read $appl_ch $bytes]
+
+    debug "UI <- APPL: '$msg'"
+
+    switch [lindex $msg 0] {
+      ACK {
+        variable ACK
+        incr ACK
+      }
+
+      INIT {
+        variable timeoutid
+        # cancel the timeout wait
+        after cancel $timeoutid
+        
+        # the appl has started and wants configuration info
+        variable options
+        variable exclusions
+        variable tubalibdir 
+        variable debug 
+        variable windows 
+        variable purgeflag
+        
+        if { $options(cacheflag) } {
+          set cd $options(cachedir)
+        } {
+          set cd ""
+        }
+
+        set config "
+          windows $windows
+          parser $options(parser)
+          animate $options(animate)
+          systemfiles $options(systemfiles)
+          interrs $options(interrs)
+          intcaughterrs $options(intcaughterrs)
+          homeobservercmd statupdate
+          dynprocs $options(dynprocs)
+          debug $debug
+          coreglobals $options(coreglobals)
+          instrumenting $options(instrumenting)
+          cachedir {$cd}
+          purgeflag $purgeflag
+          exclusions [list $exclusions]
+        "
+
+        sendmsg CONFIG $config
+        
+        # now that we have gotten the INIT message, transition to the
+        # WAIT4READY state
+        stateTrans WAIT4READY
+      }
+
+      CMD {
+        # command to execute in the UI
+        if { [catch {eval [lindex $msg 1] [lrange $msg 2 end]} rc] } {
+          tk_dialog .error "Internal Error" \
+            "Tuba has asked the UI to run the command: '$msg' which has caused \
+            the following error:\n$rc" \
+            error 0 ok
+        }
+
+        # send an acknowledgement
+        sendmsg ACK
+      }
+
+      CMD_WR {
+        set id [lindex $msg 1]
+        set rc [eval [lindex $msg 2] [lrange $msg 3 end]]
+        sendmsg RETURN $id $rc
+      }
+
+      EXIT {
+        # application has exited
+        variable rccode
+        set rccode [lindex $msg 1]
+        setmsg "Program completed with return code: $rccode"
+        removecurrline
+        # JES should probably disable some functions
+        
+        # transition to ENDED state
+        stateTrans ENDED
+      }
+
+      ENDED {
+        # this is different from EXIT because the appl just ended without calling
+        # exit, which means there might be an event loop still going
+        # JES how can we check for this?
+        variable rccode
+        set rccode [lindex $msg 1]
+        set loopflag [lindex $msg 2]
+        if { $loopflag == "loop" } {
+          setmsg "Script ended and in an event loop."
+        } else {
+          setmsg "Script ended with return code: $rccode."
+
+          # transition to ENDED state
+          stateTrans ENDED
+        }
+      }
+
+      READY {
+        # the READY message tells the UI that the debugger can accept messages
+        # transition to the RUNNING state
+        stateTrans RUNNING
+#         # only set the "Ready" message if the current one says Running...
+#         setmsg "Ready" 1
+      }
+
+      RETURN {
+        # this is a message specifying a return code for a previous
+        # CMD_WR message
+        set varname [lindex $msg 1]
+        upvar #0 $varname v
+        set v [lindex [lrange $msg 2 end] 0]
+      }
+
+      default {
+        puts "unknown msg from application to UI: '$msg'"
+      }
+    }
+  }
+
+  proc bgerror {msg} {
+    puts "Tuba UI has detected a background error:\n$msg"
+  }
+
+  # we don't provide any special options, so this just exits
+  proc unknown_option {argvref argcref} {
+    upvar $argvref argv
+    upvar $argcref argc
+
+    puts "unknown option: '[lindex $argv $argc]'"
+    exit 1
+  }
+
+  proc sendmsg {msg args} {
+    variable appl_ch 
+
+    debug "UI -> APPL: $msg $args"
+
+    puts $appl_ch [string length "$msg $args"]
+    puts -nonewline $appl_ch "$msg $args"
+    flush $appl_ch
+  }
+
+  # sends a CMD message to the tuba core
+  proc sendcmd {cmd args} {
+    if { [getState] == "RUNNING" } {
+      eval sendmsg CMD $cmd $args
+      vwait [namespace current]::ACK
+    }
+  }
+
+  # this command must be run on the debug stack, so it is queued up and
+  # executed on the next eventloop
+  proc sendstackcmd {level cmd args} {
+    eval sendmsg STACKCMD $level $cmd $args
+    vwait [namespace current]::ACK
+  }
+
+  # this sendcmd expects a return from the remote command
+  proc sendcmd_wr {cmd args} {
+    set varname [getuniqvarname]
+
+    eval sendmsg CMD_WR $varname $cmd $args
+    vwait $varname
+
+    upvar #0 $varname v
+    return $v
+  }
+
+  # this sendstackcmd expects a return from the remote command
+  proc sendstackcmd_wr {level cmd args} {
+    set varname [getuniqvarname]
+
+    eval sendmsg STACKCMD_WR $varname $level $cmd $args
+    vwait $varname
+
+    upvar #0 $varname v
+    return $v
+  }
+
+  proc timeout {} {
+    tk_dialog .error "Application Timeout" \
+      "We have timed out waiting for the application to start up. Please check your console for any error messages" \
+      error 0 ok
+  }
+  
+  # load in the balloon help
+  uplevel #0 source [list $tubalibdir/balloonhelp.tcl]
+
+  # crank up the loader
+  uplevel #0 source [list $tubalibdir/loader.tcl]
+
+  # load in the state transition support
+  source $tubalibdir/statetrans.tcl
+
+  proc main {argv} {
+    variable port
+    variable Gprogram
+    variable Gcmdargs
+    variable Gworkingdir
+    variable Ginterp
+    variable sessionfile
+
+    # get the options
+    getoptions
+    
+    # parse the arguments
+    set argc [parse_args $argv]
+
+    # initialize the state model
+    initStateModel UNINITED [list UNINITED NOPROG WAIT4INIT WAIT4READY RUNNING RUN2END ENDED]
+
+    wm withdraw .
+    mainwnd
+
+    # create the server socket
+    socket -server [namespace current]::connect $port
+
+    # create the stop command channel
+    socket -server [namespace current]::stopcmdconnect [expr {$port + 1}]
+
+    if { $sessionfile != "" } {
+      opensession $sessionfile
+    } elseif { [lindex $argv $argc] != "" } {
+      set prog [lindex $argv $argc]
+      cd [file dirname $prog]
+      set Gprogram [pwd]/[file tail $prog]
+
+      incr argc
+      set Gcmdargs [lrange $argv $argc end]
+
+      # this can now be set via the -w option
+      #set Gworkingdir .
+      if { $Gworkingdir == "" } {
+        set wd [pwd]
+      } {
+        set wd $Gworkingdir
+      }
+
+      eval startapp [list $wd] [list $Gprogram] [list $Ginterp] $Gcmdargs
+
+      # transition to WAIT4INIT
+      stateTrans WAIT4INIT
+    } else {
+      # no program loaded on startup, so transition to the NOPROG state
+      stateTrans NOPROG
+    }
+
+    # hang around until the main window goes away
+    tkwait window .mainwnd
+  }
+}
+
+::tuba::main $argv

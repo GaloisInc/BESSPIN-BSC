@@ -1,0 +1,323 @@
+#!/usr/bin/env python
+
+#
+# Generate project and script file for buildin a design with XST.
+#
+# Copyright Bluespec, Inc. 2009
+#
+
+import os
+import os.path
+import sys
+import optparse
+import subprocess
+import glob
+
+
+# ################################################################
+# Option parsing
+
+# Used for generating error messages due to incorrect option usage
+class Usage(Exception):
+  def __init__(self, status=0, msg=None):
+    self.status = status
+    self.msg = msg
+
+# Subclass optparse.OptionParser to make it throw an exception
+# instead of calling sys.exit()
+class MyOptionParser(optparse.OptionParser):
+  def exit(self, status=0, msg=None):
+    raise Usage(status, msg)
+
+# Create an option parser for this script
+def mkOptionParser():
+  parser = MyOptionParser(usage='usage: %prog [options] top_module board part',
+                          version='%prog 1.0',
+                          description='Prepare input files for an XST synthesis run.'
+                         );
+  # XXX Currently unused, but added for symmetry with 'prepare_pa_project'
+  parser.add_option('--project-root',
+                    dest='project_root',
+                    help='Base directory for the current project', metavar='DIR')
+  # XXX Currently unused, but added for symmetry with 'prepare_pa_project'
+  parser.add_option('--bpath',
+                    dest='bpath',
+                    help='BSC colon-separated search path for intermediate files', metavar='PATH')
+  parser.add_option('--bdir',
+                    dest='bdir',
+                    help='BSC bi/bo directory', metavar='DIR')
+  parser.add_option('--vdir',
+                    dest='vdir',
+                    help='BSC RTL output directory', metavar='DIR')
+  parser.add_option('--edir',
+                    dest='edir',
+                    help='RTL edit output directory', metavar='DIR')
+  parser.add_option('--outdir',
+                    dest='outdir',
+                    help='script output directory', metavar='DIR')
+  parser.add_option('--vlib',
+                    dest='libdirs', action='append', default=[],
+                    help='search directory for Verilog files', metavar='DIR')
+  parser.add_option('--import',
+                    dest='imports', action='append', default=[],
+                    help='file for additional import', metavar='FILE')
+  parser.add_option('--vfile',
+                    dest='vfile',
+                    help='verilog file', metavar='FILE')
+  parser.add_option('--ngcfile',
+                    dest='ngcfiles', action='append', default=[],
+                    help='NGC file', metavar='FILE')
+  parser.add_option('-l', '--logic',
+                    action='store_true', dest='logic', default=False,
+                    help='create a logic allocation file when building bitstream')
+  parser.add_option('-p', '--preserve',
+                    action='store_true', dest='preserve', default=False,
+                    help='set options so as to maximize preserved signals for readback debugging')
+  parser.add_option('--synth-strategy',
+                    dest='synthstrategy', help='set synthesis strategy', metavar='STRING')
+  parser.add_option('--impl-strategy',
+                    dest='implstrategy', help='set implementation strategy', metavar='STRING')
+  parser.add_option('--exclude',
+                    dest='excludes', action='append', default=[],
+                    help='files to exclude from add_file list', metavar='FILE')
+  return parser
+
+
+# ##################################################################
+# Core program logic
+
+# Exception classes used to handle error conditions
+
+
+# ##################################################################
+# Top-level program sequencing
+
+# The main entry point for the program
+def main(argv=None):
+  if argv is None:
+    argv = sys.argv
+
+  try:
+    # process command line arguments
+    parser = mkOptionParser()
+    opts, args = parser.parse_args()
+
+    # ensure that all required arguments were given
+    if len(args) != 7:
+      raise Usage(1,"Require 7 arguments: top_module, board, part, family, device, package, and speed")
+    (top_module,board,part,family,device,package,speed) = args
+
+
+    # get the BLUESPECDIR value
+    bsdir = os.getenv('BLUESPECDIR')
+    if bsdir == None:
+      print >>sys.stderr, "$BLUESPECDIR environment variable is not set"
+      return 1
+
+    # run the listFiles TCL script
+    listfiles_cmd = [os.path.join(bsdir,'tcllib','bluespec','listVlogFiles.tcl')]
+    #if opts.bdir:
+    #  listfiles_cmd += ['-bdir', opts.bdir, '-p', '%s:+' % opts.bdir]
+    if opts.vdir:
+      listfiles_cmd += ['-y', opts.vdir]
+    if opts.edir:
+      listfiles_cmd += ['-y', opts.edir]
+    for d in opts.libdirs:
+      listfiles_cmd += ['-y', d]
+    if opts.vfile:
+      if os.path.isfile(opts.vfile):
+        listfiles_cmd += ['-v', opts.vfile]
+      else:
+        vfile = opts.vdir + "/" + opts.vfile
+        if os.path.isfile(vfile):
+          listfiles_cmd += ['-v', vfile]
+        else:
+          vfile = opts.edir + "/" + opts.vfile
+          if os.path.isfile(vfile):
+            listfiles_cmd += ['-v', vfile]
+          else: # when all else fails, use the raw file and let the listVlogFiles.tcl error out
+            listfiles_cmd += ['-v', opts.vfile]
+
+    listfiles_cmd += [top_module]
+    scr = subprocess.Popen(listfiles_cmd, stdout=subprocess.PIPE)
+    files = scr.communicate()[0]
+    if scr.returncode != 0:
+      print >> sys.stderr, 'listVlogFiles.tcl script failed'
+      return scr.returncode
+
+    category = None
+    prj_entries = []
+    for f in files.splitlines():
+      if f.isspace():
+        continue
+      elif f.startswith('#'):
+        continue
+      elif f.startswith('--'):
+        continue
+      elif f.find('(VERI-') != -1:
+        continue
+      else:
+        if f.endswith('.v'):
+          prj_entries += ['verilog work %s' % f]
+        else:
+          prj_entries += ['vhdl top %s' % f]
+
+    # added explicitly given imports
+    for f in opts.imports:
+      if f.isspace():
+        continue
+      elif f.endswith('.v'):
+        prj_entries += ['verilog work %s' % f]
+      else:
+        prj_entries += ['vhdl top %s' % f]
+
+    # compute file names
+    prj_file_name  = top_module + '.prj'
+    scr_file_name  = top_module + '.scr'
+    ngc_file_name  = top_module + '.ngc'
+    ace_file_name  = top_module + '_ace.cmd'
+    bsd_file_name  = 'unknown_sram.bsd'
+    prog_file_name = top_module + '_jtag.cmd'
+    bit_file_name  = top_module + '.bit'
+    tcl_file_name  = top_module + '_build_xise.tcl'
+
+    if opts.outdir:
+      full_prj_file_name  = os.path.join(opts.outdir, prj_file_name)
+      full_scr_file_name  = os.path.join(opts.outdir, scr_file_name)
+      full_ace_file_name  = os.path.join(opts.outdir, ace_file_name)
+      full_prog_file_name = os.path.join(opts.outdir, prog_file_name)
+      full_bsd_file_name  = os.path.join(opts.outdir, bsd_file_name)
+      full_tcl_file_name  = os.path.join(opts.outdir, tcl_file_name)
+    else:
+      full_prj_file_name  = prj_file_name
+      full_scr_file_name  = scr_file_name
+      full_ace_file_name  = ace_file_name
+      full_prog_file_name = prog_file_name
+      full_bsd_file_name  = bsd_file_name
+      full_tcl_file_name  = tcl_file_name
+
+    # write out the .prj file
+    prj_file = open(full_prj_file_name,'w')
+    print "Writing %s." % full_prj_file_name
+    for entry in prj_entries:
+      prj_file.write(entry)
+      prj_file.write('\n')
+    prj_file.close()
+
+    # write out the ace .cmd file
+    ace_file = open(full_ace_file_name,'w')
+    print "Writing %s." % full_ace_file_name
+    ace_file.write('setMode -acecf\n')
+    ace_file.write('addCollection -name "%s"\n' % board)
+    ace_file.write('addDesign -version 6 -name "cfg6"\n')
+    ace_file.write('addDeviceChain -index 0\n')
+    ace_file.write('setCurrentDesign -version 6\n')
+    ace_file.write('setCurrentDeviceChain -index 0\n')
+    ace_file.write('addDevice -p 1 -file %s\n' % bit_file_name)
+    ace_file.write('generate -active %s\n' % board)
+    ace_file.write('quit\n')
+    ace_file.close()
+
+    # write out bsd file if necessary
+    # write out the jtag .cmd file and bsd files if DN10GHXTLL board
+    if board == "10GHXTLL":
+      bsd_file = open(full_bsd_file_name,'w')
+      bsd_file.write('entity generated_unknown_sram is\n')
+      bsd_file.write('\n')
+      bsd_file.write('generic (PHYSICAL_PIN_MAP : string := "X_PACKAGE");\n')
+      bsd_file.write('\n')
+      bsd_file.write('port (TCK: in bit; TDI: in bit; TDO: out bit; TMS: in bit);\n')
+      bsd_file.write('\n')
+      bsd_file.write('use STD_1149_1_2001.all;\n')
+      bsd_file.write('attribute Component_Conformance of unknown_sram : entity is "STD_1149_1_2001";\n')
+      bsd_file.write('\n')
+      bsd_file.write('attribute PIN_MAP of unknown_sram : entity is PHYSICAL_PIN_MAP;\n')
+      bsd_file.write('\n')
+      bsd_file.write('constant X_PACKAGE:PIN_MAP_STRING := "TCK : 1," & "TDI : 2," & "TDO : 3," & "TMS : 4";\n')
+      bsd_file.write('attribute Tap_Scan_In of TDI: signal is true;\n')
+      bsd_file.write('attribute Tap_Scan_Mode of TMS: signal is true;\n')
+      bsd_file.write('attribute Tap_Scan_Out of TDO: signal is true;\n')
+      bsd_file.write('attribute Tap_Scan_Clock of TCK: signal is (6.0e06, BOTH);\n')
+      bsd_file.write('\n')
+      bsd_file.write('attribute Instruction_Length of unknown_sram: entity is 3;\n')
+      bsd_file.write('attribute Instruction_Opcode of unknown_sram: entity is "BYPASS (111)";\n')
+      bsd_file.write('attribute Instruction_Capture of unknown_sram: entity is "XXX";\n')
+      bsd_file.write('attribute Boundary_Length of unknown_sram: entity is 1;\n')
+      bsd_file.write('attribute Boundary_Register of unknown_sram: entity is "0 (BC_1, *, control, 0)";\n')
+      bsd_file.write('\n')
+      bsd_file.write('end unknown_sram;\n')
+      bsd_file.close()
+
+      prog_file = open(full_prog_file_name,'w')
+      print "Writing %s." % full_prog_file_name
+      prog_file.write('setMode -bscan\n')
+      prog_file.write('setCable -port auto\n')
+      prog_file.write('Identify -inferir\n')
+      prog_file.write('identifyMPM\n')
+      prog_file.write('assignFile -p %d -file %s\n' % (3, bsd_file_name))
+      prog_file.write('assignFile -p %d -file %s\n' % (4, bsd_file_name))
+      prog_file.write('assignFile -p %d -file %s\n' % (5, bsd_file_name))
+      prog_file.write('assignFile -p %d -file %s\n' % (6, bsd_file_name))
+      prog_file.write('assignFile -p %d -file %s\n' % (1, bit_file_name))
+      prog_file.write('program -p %d\n' % 1)
+      prog_file.write('quit\n')
+      prog_file.close()
+
+    else:
+      prog_file = open(full_prog_file_name,'w')
+      print "Writing %s." % full_prog_file_name
+      prog_file.write('setMode -bscan\n')
+      prog_file.write('setCable -port auto\n')
+      prog_file.write('identify\n')
+      if board == "ML605":
+        position = 2
+      else:
+        position = 5
+      prog_file.write('assignFile -p %d -file %s\n' % (position,bit_file_name))
+      prog_file.write('program -p %d\n' % position)
+      prog_file.write('quit\n')
+      prog_file.close()
+
+    # write out a tcl script to generate an ise project file
+    tcl_file = open(full_tcl_file_name,'w')
+    print "Writing %s." % full_tcl_file_name
+    tcl_file.write('#!/usr/bin/env xtclsh\n\n')
+    tcl_file.write('file delete -force %s.xise\n' % top_module)
+    tcl_file.write('project new %s.xise\n' % top_module)
+    tcl_file.write('project set "Device Family" "%s"\n' % family)
+    tcl_file.write('project set "Device" "%s"\n' % device)
+    tcl_file.write('project set "Package" "%s"\n' % package)
+    tcl_file.write('project set "Speed Grade" "-%s"\n' % speed)
+    tcl_file.write('project set "Synthesis Tool" "XST (VHDL/Verilog)"\n')
+    tcl_file.write('project set "Simulator" "ISim (VHDL/Verilog)"\n')
+    tcl_file.write('\n')
+
+    # files
+    for entry in prj_entries:
+      tcl_file.write('xfile add "%s"\n' % entry.split(' ')[2])
+    tcl_file.write('xfile add "%s"\n' % 'default.ucf')
+
+    # project settings
+
+    # done
+    tcl_file.write('project close')
+    tcl_file.close()
+
+    # make the script executable
+    tcl_cmd = "chmod +x %s" % full_tcl_file_name
+    subprocess.Popen(tcl_cmd, shell=True, stdout=subprocess.PIPE, stdin=None, stderr=subprocess.PIPE).wait()
+
+    # a successful return code
+    return 0
+
+  # Handle command-line option errors
+  except Usage, usage:
+    if usage.msg:
+      print >>sys.stderr, usage.msg
+      print >>sys.stderr, 'for help use --help'
+    return usage.status
+
+# For non-interactive invocations, call main() and use its return value
+# as the exit code.
+if __name__ == '__main__':
+  sys.exit(main())

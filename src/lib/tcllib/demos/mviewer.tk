@@ -1,0 +1,270 @@
+# ----------------------------------------------------------------------
+#  DEMO: module hierarchy
+# ----------------------------------------------------------------------
+
+package require Iwidgets 4.0
+
+# ------------------------------
+# widget to select a module file
+
+proc openModule { } {
+    set typeList {
+	{{Module Files} {.ba}}
+    }
+    set absfile [tk_getOpenFile -filetypes $typeList]
+
+    # separate the path from the base filename
+    set path [file dirname $absfile]
+    set fname [file tail $absfile]
+
+    # get the module name
+    if [regexp {^(.+)\.ba$} $fname tmp modname] {
+	puts "Loading module $modname"
+	flags set "-p +:$path"
+	module load $modname
+	# refresh the viewer state
+	browsemodule refresh
+	# refresh the widget
+	collapse_all
+    } else {
+	# if it isn't a .ba file, then do nothing
+	puts "Load failed"
+    }
+}
+
+# ---------------
+# menubar
+
+iwidgets::menubar .mb -helpvariable helpVar -menubuttons {
+    menubutton file -text "File" -menu {
+        options -tearoff false
+
+        command new -label "Open" \
+                -command openModule
+
+        separator sep1
+
+        command exit -label "Exit" -command {exit}
+    }
+
+    menubutton options -text "Backend" -menu {
+        options -tearoff false -selectcolor blue
+
+        radiobutton bVerilog -variable backend \
+                -value verilog -label "Verilog" \
+                -command {flags set -verilog}
+
+        radiobutton bBluesim -variable backend \
+                -value sim -label "Bluesim" \
+                -command {flags set -verilog}
+    }
+}
+pack .mb -fill x -side top
+
+#frame .fr -width 200 -height 200 -background white
+#pack .fr -fill both
+
+
+# Start the backend variable as Verilog
+set backend verilog
+flags set -verilog
+
+# ------------------------------
+# paned window
+
+# place the hierarchy and message text in a paned frame
+
+iwidgets::panedwindow .pw -width 8i -height 4i -orient vertical
+pack .pw -padx 4 -pady 4
+
+
+# ------------------------------
+# module browser
+
+proc getElems {file} {
+
+    if {$file == ""} {
+	set dir 0
+    } else {
+	set dir $file
+    }
+    set res [browsemodule list $dir]
+    #puts "getElems $file = $res"
+    return $res
+}
+
+# ---------------
+
+proc select_node {uid status} {
+    global h
+
+    if {$status} {
+	$h selection remove $uid
+
+	# clear the display
+	clear_detail
+    } else {
+	# remove all previously selected
+	set others [$h selection get]
+	foreach other $others {
+	   $h selection remove $other
+	}
+	
+	# select this one
+	$h selection add $uid
+
+	# update the display
+	set_detail [browsemodule detail $uid]
+    }
+}
+
+proc expand_node {uid} {
+    global h
+
+    $h expand $uid
+}
+
+proc collapse_node {uid} {
+    global h
+
+    $h collapse $uid
+}
+
+proc expand_recursive {node} {
+    global h
+
+    set children [getElems $node]
+    foreach c $children {
+        set uid [lindex $c 0]
+        $h expand $uid
+        expand_recursive $uid
+    }
+}
+
+proc expand_all {} {
+    expand_recursive 0
+}
+
+proc collapse_all {} {
+    global h
+
+    $h configure -querycommand "getElems %n"
+}
+
+# ---------------
+
+# 
+# Create the hierarchy mega-widget, adding commands to both the item
+# and background popup menus.
+#
+
+# put it in a new pane
+.pw add "left"
+set pane [.pw childsite "left"]
+
+set h \
+  [iwidgets::hierarchy $pane.h \
+    -querycommand "getElems %n" -visibleitems 30x15 \
+    -labeltext "Module Viewer" -selectcommand "select_node %n %s"]
+pack $h -side left -expand yes -fill both
+
+$h component itemMenu add command -label "Select" \
+    -command {select_node [$h current] 0}
+$h component itemMenu add command -label "Deselect" \
+    -command {select_node [$h current] 1}
+$h component itemMenu add separator
+$h component itemMenu add command -label "Expand" \
+    -command {expand_node [$h current]}
+$h component itemMenu add command -label "Collapse" \
+    -command {collapse_node [$h current]}
+
+$h component bgMenu add command -label "Expand All" -command expand_all
+$h component bgMenu add command -label "Collapse All" -command collapse_all
+$h component bgMenu add command -label "Clear Selections" \
+    -command {$h selection clear}
+
+
+# ------------------------------
+# Pane to display information about the selected module
+
+# put it in a new pane
+.pw add "right"
+set pane [.pw childsite "right"]
+
+# make it tabbed
+set tnb [iwidgets::tabnotebook $pane.tnb -width 3.75i -height 3.5i -tabpos n]
+pack $tnb -padx 4 -pady 4
+
+# ----------
+# page 1
+
+set page [$tnb add -label "Interface"]
+
+set m_ifc [message $page.mifc -textvariable msg_ifc -anchor nw -width 3i]
+pack $m_ifc -side left -expand yes -fill both
+
+# ----------
+# page 2
+
+set page [$tnb add -label "Rules"]
+
+set m_rules [message $page.mrules -textvariable msg_rules -anchor nw -width 3i]
+pack $m_rules -side left -expand yes -fill both
+
+# ----------
+# page 3
+
+set page [$tnb add -label "Schedule"]
+
+set m_sched [message $page.msched -textvariable msg_sched -anchor nw -width 3i]
+pack $m_sched -side left -expand yes -fill both
+
+# --------
+
+$tnb view "Interface"
+.pw fraction 40 60
+
+# ----------
+
+# function to set the tab infos
+
+proc set_detail { detail } {
+    global msg_ifc
+    global msg_rules
+    global msg_sched
+
+    set modname [getField "module" $detail]
+
+    set ifc [getField "methods" $detail]
+    set rules [getField "rules" $detail]
+    set sched [getField "schedule" $detail]
+
+    set msg_ifc [join $ifc "\n"]
+    set msg_rules [join $rules "\n"]
+    set msg_sched $sched
+}
+
+proc clear_detail { } {
+    global msg_ifc
+    global msg_rules
+    global msg_sched
+
+    set msg_ifc ""
+    set msg_rules ""
+    set msg_sched ""
+}
+
+# ------------------------------
+# utilities
+
+proc getField {fname flist} {
+    foreach elem $flist {
+        if {[lindex $elem 0] == $fname } {
+            return [lindex $elem 1]
+        } 
+    }
+    return ""
+}
+
+# ------------------------------
+

@@ -1,0 +1,220 @@
+#!/bin/sh
+## Copyright 2000--2008 Bluespec, Inc.  All rights reserved.
+##
+
+usage()
+{
+    echo "Usage: $0 <option>"
+    echo ""
+    echo "Display environment information for operation of Bluespec tools."
+    echo "Valid options are:"
+    echo "   ostype   "
+    echo "   machtype "
+    echo "   is64     "
+    echo "   w32or64  "
+    echo "   kernel   "
+    echo "   platform "
+    echo "   c++_family"
+    echo "   c++_shared_flags"
+    echo "   sysc_libdir"
+    echo "   tcl_libdir"
+    echo "   version"
+    echo "   all"
+}
+
+if [ $# -ne 1 ] ; then
+    usage
+    exit 1;
+fi
+
+## =========================
+## OSTYPE
+
+if [ -z "${OSTYPE}" ] ; then
+    OSTYPE=`uname -s`
+fi
+## Account for values like "linux-gnu" by removing extra fields
+OSTYPE=$(echo ${OSTYPE} | cut -d'-' -f1)
+## Account for values like "Darwin10.0" by removing the version number
+OSTYPE=$(echo ${OSTYPE} | egrep -o "^[A-Za-z]+")
+## Account for lowercase values like "linux" when we want "Linux"
+OSTYPE=$(echo ${OSTYPE} | cut -c1 | tr a-z A-Z)$(echo $OSTYPE | cut -c2- | tr A-Z a-z)
+
+if [ "$1" = "ostype" ] ; then
+    echo ${OSTYPE}
+    exit 0
+fi
+
+## =========================
+## MACHTYPE
+
+if [ -z "${MACHTYPE}" ] ; then
+    MACHTYPE=`uname -m`
+fi
+## Account for values like "x86_64-pc-linux-gnu" when all we want is
+## "x86_64", "i386", etc
+MACHTYPE=$(echo ${MACHTYPE} | cut -d'-' -f1)
+
+if [ "$1" = "machtype" ] ; then
+    echo ${MACHTYPE}
+    exit 0
+fi
+
+## =========================
+## IS64
+
+IS64=$(echo "${MACHTYPE}" | cut -s -d"_" -f2)
+
+if [ "$1" = "is64" ] ; then
+    echo ${IS64}
+    exit 0
+fi
+
+## =========================
+## W32OR64
+
+if [ "${IS64}" != ""  ]
+then
+    W32OR64=64
+else
+    W32OR64=32
+fi
+
+if [ "$1" = "w32or64" ] ; then
+    echo ${W32OR64}
+    exit 0
+fi
+
+## =========================
+## KERNELNAME
+
+KERNELNAME=$(echo "${OSTYPE}" | tr A-Z a-z)
+
+if [ "$1" = "kernel" ] ; then
+    echo ${KERNELNAME}
+    exit 0
+fi
+
+## =========================
+## PLATFORM
+
+PLATFORM=${KERNELNAME}${W32OR64}
+
+if [ "$1" = "platform" ] ; then
+    echo ${PLATFORM}
+    exit 0
+fi
+
+## =========================
+## C++ FAMILY
+
+if [ -z "${BSC_CXXFAMILY}" ]  ; then
+
+    if [ "${IS64}" != ""  ]
+    then
+	M64="_${IS64}"
+    else
+	M64=
+    fi
+
+    ## If CXX is set, use that.  Otherwise just use c++
+    if [ "$CXX" = "" ]
+    then
+	CXX=c++
+    fi
+
+    ## Get the version string
+    VERSION=`$CXX --version | head -1 | egrep -o "[0-9]+\.[0-9]+" | head -1`
+
+    ## If we didn't get any version string, then bail out
+    if [ "$VERSION" = "" ]
+    then
+	VERSION="1.0"
+    fi
+
+    ## Extract the major and minor numbers
+    MAJOR=`echo $VERSION | cut -d. -f1`
+    MINOR=`echo $VERSION | cut -d. -f2`
+
+    ## Print the family name based on the major/minor versions
+    if [ $MAJOR -lt 3 ]
+    then
+	VER="g++2"               # 2.9x
+    elif [ $MAJOR -gt 3 ]
+    then
+	VER="g++4"               # 4.x
+    elif [ $MINOR -lt 4 ]
+    then
+	VER="g++3"               # 3.2 or 3.3
+    else
+	VER="g++4"               # 3.4 (uses same ABI as 4.x)
+    fi
+
+    BSC_CXXFAMILY=$VER$M64
+fi
+if [ "$1" = "c++_family" ] ; then
+	echo ${BSC_CXXFAMILY}
+	exit 0
+fi
+
+## =========================
+## C++ SHARED FLAGS
+
+if [ "$1" = "c++_shared_flags" ] ; then
+    if [ "${OSTYPE}" = "Darwin" ]
+    then
+	echo "-dynamiclib -Wl,-undefined,dynamic_lookup"
+    else
+	echo "-shared"
+    fi
+    exit 0
+fi
+
+## =========================
+## SYSTEMC LIB DIR
+
+if [ "$1" = "sysc_libdir" ] ; then
+    if [ "${IS64}" != ""  ]
+    then
+	EXT64=64
+    else
+	EXT64=
+    fi
+    echo "lib-${KERNELNAME}${EXT64}"
+    exit 0
+fi
+
+## =========================
+## TCL LIB DIR
+
+if [ "$1" = "tcl_libdir" ] ; then
+    echo "lib.${KERNELNAME}${W32OR64}"
+    exit 0
+fi
+
+## =========================
+## VERSION
+
+if [ "$1" = "version" ] ; then
+    BUILD=$(bsc -v | egrep -o 'build\s+[0-9]+' | egrep -o '[0-9]+')
+
+    echo ${BUILD}
+    exit 0
+fi
+
+## =========================
+
+if [ "$1" = "all" ] ; then
+    echo "ostype ${OSTYPE}"
+    echo "machtype ${MACHTYPE}"
+    echo "is64 ${IS64}"
+    echo "kernel ${KERNELNAME}"
+    echo "platform ${PLATFORM}"
+    echo "c++_family $BSC_CXXFAMILY"
+
+   exit 0
+fi
+
+usage
+exit 1
+

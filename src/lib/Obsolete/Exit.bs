@@ -1,0 +1,29 @@
+-- Copyright 2000--2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id: Exit.bs,v 1.2 2003/01/10 21:39:15 elf Exp $
+
+package Exit(exit, exitWith) where
+
+import Environment 
+--@ \subsection{Exit}
+--@ 
+--@ \index{exit@\te{exit} (function)|textbf}
+--@ The \te{exitWith} function takes an eight-bit exit code and never returns.
+--@ \begin{verbatim}
+--@ function Action exitWith(Bit#(8) status);
+--@ \end{verbatim}
+exitWith :: Bit 8 -> Action
+exitWith status = fromPrimAction (exitWith_ status)
+
+vfinish :: Action
+vfinish = fromPrimAction (vfinish_ 0)
+
+--@ The \te{exit} function is equivalent to \te{exitWith 0}.
+--@ \begin{verbatim}
+--@ Action exit;
+--@ \end{verbatim}
+exit :: Action
+exit = if genC then exitWith 0 else vfinish
+
+foreign exitWith_ :: Bit 8 -> PrimAction = "exitWith"
+foreign vfinish_ :: Bit 32 -> PrimAction = "$finish"

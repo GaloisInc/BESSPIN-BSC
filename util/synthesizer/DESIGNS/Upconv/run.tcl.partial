@@ -1,0 +1,157 @@
+set b       "mkUpConverterP32128"
+set m       "/work/mkUpConverterP32128/mkUpConverterP32128"
+set clk     "$m/CLK"
+#set utilization 0.75
+#set volcano "/raid/home/sallen/magmalib/FE_CSM13HP/csm13rvt_8lm.volcano"
+set l       "/csm13rvt_8lm"
+set cnstrts1 "processor_constraints.tcl"
+set cnstrts2 "constraints.tcl"
+set v_files [list mkCamTest.v mkUpConverterP32128.v sysCamTest.v RegN.v SizedFIFO.v SizedFIFO0.v FIFOL1.v]
+#set period 1800p
+set periodA [unfix $period]
+
+
+############################################################
+############################################################
+#
+## Config report timing path *********
+config report timing path {PIN_NAME MODEL_NAME DELAY AT GAIN SLEW PIN_CAP PIN_LOAD WIRE_LOAD TOTAL_LOAD FANOUT LENGTH EDGE GAIN}
+
+config hierarchy separator /
+config rtl datapath physical off
+
+# downgrade CK-23 and CK-347 ERRORs
+config message level CK-23 warning
+config message level CK-347 warning
+config message level RTL-2027 info
+config message level TA-399 warning
+
+if {[data exists /work]} {data delete object /work}
+
+import volcano "$volcano"
+
+config report timing path {PIN_NAME MODEL_NAME DELAY AT GAIN SLEW PIN_CAP PIN_LOAD WIRE_LOAD TOTAL_LOAD FANOUT LENGTH EDGE GAIN}
+
+config hierarchy separator /
+config rtl datapath physical off
+
+# find clock cells in the library, and hide them
+set _clk_libcells [data find $l CLK*]
+foreach i $_clk_libcells {force hide $i}
+
+report arc $l -file arc.rpt
+
+####### IMPORT RTL ##########
+config rtl verilog 2000 on
+
+#v_files is now set at the beginning of this file
+#source ${b}_files.tcl
+
+
+foreach v $v_files {
+    import rtl -verilog -analyze $v
+}
+
+run rtl elaborate $b
+
+run bind logical $m $l
+
+check model $m -print unbound_cells -file unbound.rpt
+
+config rtl clockgate off
+
+fix rtl $m
+
+### SETTING SCAN-STYLE ###
+# define prior to fix-netlist to avoid Create
+# inserting scan-flops
+force dft scan style $m muxed_flip_flop
+
+#######################################################
+# Make sure we "force keep" hand-instantiated cells
+#######################################################
+
+# data loop entity lib_entity $l {
+#   data loop models entity_model $entity {
+#     data loop upcells model_upcell $models {
+#       set model_types [data get $models model_type]
+#       if {$model_types == "standard"} {
+#         regsub -all % $upcells "" upcell
+#         puts "force keep $upcells -model"
+#         force keep $upcells -model
+#       }
+#     }
+#   }
+# }
+
+# area opt
+data flatten $m
+fix netlist $m $l
+
+
+###############
+# load constraints
+###############
+source $cnstrts1
+source $cnstrts2
+
+###############
+# run fix time
+###############
+
+config hierarchy separator /
+config undriven 0
+run gate sweep $m -hier
+
+
+check model $m -print weird_nets -file weirdnets.rpt
+check model $m -print netlist_violations -file netviolations.rpt
+
+#data flatten $m
+# timing optimization
+fix time $m $l -rtl
+
+#############################
+# floorplanning and fix-cell
+#############################
+force plan net VDD $m -port VDD -usage power
+force plan net VSS $m -port VSS -usage ground
+
+data create floorplan $m fp1
+set f ${m}/floorplan:fp1
+force floorplan parameters $f -utilization $utilization -aspect_ratio 1
+run floorplan apply $m
+run plan create pin $m
+
+# import def all -mode netlist -section floorplan -section pin -model_type macro def_name.def $l $l
+# run dft scan trace $m
+
+fix cell $m $l
+
+# quick summary
+puts ""
+puts "######################## Synthesis Summary ########################"
+puts ""
+set worst_slack [unfix [query measure slack -worst $m]]
+set worst_slack_in_ns [expr $worst_slack * 1e9]
+if { $worst_slack >= 0 } {
+  message info "SUMM-1" "TIMING: PASSED  Worst slack:     $worst_slack_in_ns ns"
+} else {
+  message warning "SUMM-2" "TIMING: FAILED  Worst slack:     $worst_slack_in_ns ns"
+}
+set best_area [unfix [query measure cellarea $m]]
+set best_area_in_u2 [expr round([expr $best_area * 1e12])]
+
+message info "SUMM-3" "AREA            Total cell area: $best_area_in_u2 um^2" 
+puts ""
+puts "###################### End Synthesis Summary ######################"
+puts ""
+
+#############################################################################
+# Report slack, area, and CPU time for the synthesizer system
+set worst_slack [query measure slack -worst $m]
+set best_area [query measure cellarea $m]
+set cpu_time [query cputime]
+
+message info "RSLT-123" "OK: $worst_slack $best_area $cpu_time"
+

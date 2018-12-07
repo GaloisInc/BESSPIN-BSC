@@ -1,0 +1,73 @@
+################################################################################
+# build 52 => {Built on 'Mon Jan  3 15:14:47 EST 2005' on 'clef' by 'sallen'}
+  - fix semi random "gInfoDefof" not defined error message in flattened hierarchies
+
+################################################################################
+# build 51 => {Built on 'Tue Dec 21 10:49:40 EST 2004' on 'clef' by 'sallen'}
+  - fix "can't find design.vcd" error message
+  - fix "else not a command" syntax error
+
+################################################################################
+# build 50 => {Built on 'Wed Dec  8 12:41:19 EST 2004' on 'clef' by 'sallen'}
+  - add DumpSnapshot to debugging environment (can I get linux info, etc?)
+  - make sure there are no spaces in busses when sending to nWave
+
+################################################################################
+# build 49 => {Built on 'Wed Dec  8 11:18:17 EST 2004' on 'clef' by 'sallen'}
+
+################################################################################
+# build 48 => {Built on 'Thu Dec  2 12:48:53 EST 2004' on 'clef' by 'sallen'}
+  - fix bug with openning blueview with no arguments
+  - don't autogenerate path for .fsdb file just yet
+
+################################################################################
+# build 47 => {Built on 'Mon Nov 29 17:17:40 EST 2004' on 'clef' by 'sallen'}
+  - update license agreement for use of bwidget1.7.0
+  - blueview.tcl is copyright but bwidget is not
+
+################################################################################
+# build 46 => {Built on 'Tue Nov 23 18:48:41 EST 2004' on 'clef' by 'sallen'}
+  - tested downgrade to tcl/tk 8.3
+  - tested on redhat 7.2 
+  - tested on debian unstable (redhat 9.0)
+  - release now sends bwidget package also
+  - add copyleft notice
+  - remove license restriction for now
+
+################################################################################
+# build 45 => {Built on 'Tue Nov 23 18:47:57 EST 2004' on 'clef' by 'sallen'}
+
+################################################################################
+# build 45 => {Built on 'Tue Nov 23 18:47:25 EST 2004' on 'clef' by 'sallen'}
+
+################################################################################
+# build 44 => {Built on 'Tue Nov 16 18:01:29 EST 2004' on 'clef' by 'sallen'}
+
+################################################################################
+# build 43 => {Built on 'Thu Nov 11 17:36:04 EST 2004' on 'clef' by 'sallen'}
+
+################################################################################
+# build 42 => {Built on 'Wed Nov  3 14:37:25 EST 2004' on 'clef' by 'sallen'}
+  - tweak hierachy reading scheme again
+  - requires "INSTOF" lines for every level of hierarchy
+  - add "SelectAll" - selects entire buffer
+  - add "Send All Signals to nWave" for debugging
+  - add "DumpAll" - dump state for testing + misc support for that 
+       stage 1 of testing anyway
+
+################################################################################
+# build 41 => {Built on 'Mon Oct 25 13:01:08 EDT 2004' on 'clef' by 'sallen'}
+  - fix modified flag (edit window, save file, exit would pop up "do you
+       want to save file" box, when it was already saved.
+  - fix selection of highlighted area (for switch between, show signals)
+  - allow insert cursor at first character of waveable signal
+
+################################################################################
+# build 40 => {Built on 'Wed Oct 20 12:32:43 EDT 2004' on 'clef' by 'sallen'}
+  - fix bug in verilog where waveable signal doesn't get sent to nWave
+
+################################################################################
+# build 39 => {Built on 'Tue Oct 19 19:46:54 EDT 2004' on 'clef' by 'sallen'}
+  - major rewrite for performance
+  - add splash screen
+  - user INSTOF info for tree (not bsv-inst)

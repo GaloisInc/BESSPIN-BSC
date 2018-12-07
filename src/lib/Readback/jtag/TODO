@@ -1,0 +1,4 @@
+- Remove requirement of VCD dumping
+- Remove requirement of control clock to get state out
+- Prepare for shared library method to extract readback info - perhaps structural changes required for things like callback
+  routine for checking status, etc.

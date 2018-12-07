@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deploy
+ date="2018.10.15.13:54:52"
+ outputDirectory="/export/home/stoy/altera/work/poc_pcie_new/clkbuf/">
+ <perimeter>
+  <parameter
+     name="AUTO_GENERATION_ID"
+     type="Integer"
+     defaultValue="0"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_UNIQUE_ID"
+     type="String"
+     defaultValue=""
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_FAMILY"
+     type="String"
+     defaultValue="Arria 10"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE"
+     type="String"
+     defaultValue="10AX115S2F45I1SG"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_SPEEDGRADE"
+     type="String"
+     defaultValue="1"
+     onHdl="0"
+     affectsHdl="1" />
+  <interface name="altclkctrl_input" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="inclk" direction="input" role="inclk" width="1" />
+   <port name="ena" direction="input" role="ena" width="1" />
+  </interface>
+  <interface name="altclkctrl_output" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="outclk" direction="output" role="outclk" width="1" />
+  </interface>
+ </perimeter>
+ <entity kind="clkbuf" version="1.0" name="clkbuf">
+  <parameter name="AUTO_GENERATION_ID" value="0" />
+  <parameter name="AUTO_DEVICE" value="10AX115S2F45I1SG" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Arria 10" />
+  <parameter name="AUTO_UNIQUE_ID" value="" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="1" />
+  <generatedFiles>
+   <file
+       path="/export/home/stoy/altera/work/poc_pcie_new/clkbuf/synth/clkbuf.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/export/home/stoy/altera/work/poc_pcie_new/clkbuf/synth/clkbuf.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file path="/export/home/stoy/altera/work/poc_pcie_new/clkbuf.ip" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="/export/home/stoy/bin/intelFPGA_pro/18.0/ip/altera/megafunctions/altclkctrl/altclkctrl_hw.tcl" />
+  </childSourceFiles>
+  <messages>
+   <message level="Info" culprit="clkbuf">"Generating: clkbuf"</message>
+   <message level="Info" culprit="clkbuf">"Generating: clkbuf_altclkctrl_180_76rtb7q"</message>
+   <message level="Info" culprit="altclkctrl_0">Generating top-level entity clkbuf_altclkctrl_180_76rtb7q.</message>
+   <message level="Debug" culprit="altclkctrl_0">Current quartus bindir: /export/home/stoy/bin/intelFPGA_pro/18.0/quartus/linux64/.</message>
+  </messages>
+ </entity>
+ <entity kind="altclkctrl" version="18.0" name="clkbuf_altclkctrl_180_76rtb7q">
+  <parameter name="NUMBER_OF_CLOCKS" value="1" />
+  <parameter name="USE_GLITCH_FREE_SWITCH_OVER_IMPLEMENTATION" value="false" />
+  <parameter name="GUI_USE_ENA" value="true" />
+  <parameter name="DEVICE_FAMILY" value="Arria 10" />
+  <parameter name="ENA_REGISTER_MODE" value="1" />
+  <parameter name="CLOCK_TYPE" value="1" />
+  <generatedFiles>
+   <file
+       path="/export/home/stoy/altera/work/poc_pcie_new/clkbuf/altclkctrl_180/synth/clkbuf_altclkctrl_180_76rtb7q.v"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/export/home/stoy/altera/work/poc_pcie_new/clkbuf/altclkctrl_180/synth/clkbuf_altclkctrl_180_76rtb7q.v"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="/export/home/stoy/bin/intelFPGA_pro/18.0/ip/altera/megafunctions/altclkctrl/altclkctrl_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="clkbuf" as="altclkctrl_0" />
+  <messages>
+   <message level="Info" culprit="clkbuf">"Generating: clkbuf_altclkctrl_180_76rtb7q"</message>
+   <message level="Info" culprit="altclkctrl_0">Generating top-level entity clkbuf_altclkctrl_180_76rtb7q.</message>
+   <message level="Debug" culprit="altclkctrl_0">Current quartus bindir: /export/home/stoy/bin/intelFPGA_pro/18.0/quartus/linux64/.</message>
+  </messages>
+ </entity>
+</deploy>

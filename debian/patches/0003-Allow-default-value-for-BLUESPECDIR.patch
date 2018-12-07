@@ -1,0 +1,153 @@
+From 6f94ef0aa6a804e79155e27d05c67de74f73f131 Mon Sep 17 00:00:00 2001
+From: Darius <darius@bluespec.com>
+Date: Thu, 23 May 2013 10:09:38 -0400
+Subject: [PATCH 3/5] Allow default value for BLUESPECDIR.
+
+---
+ src/comp/bluespec-wrapper       |    4 ++++
+ src/comp/bluetcl-wrapper        |    4 ++++
+ src/comp/bluewish-wrapper       |    4 ++++
+ src/comp/bsc-wrapper.template   |    4 ++++
+ src/comp/scemilink-wrapper      |    4 ++++
+ src/comp/semu-wrapper           |    4 ++++
+ src/comp/showrules-wrapper      |    4 ++++
+ src/hdl/rtl_edit/genvch-wrapper |    4 ++++
+ util/scripts/build-wrapper      |    4 ++++
+ util/scripts/enum-wrapper       |    4 ++++
+ 10 files changed, 40 insertions(+)
+
+Index: bsc/src/comp/bluespec-wrapper
+===================================================================
+--- bsc.orig/src/comp/bluespec-wrapper	2017-07-24 21:27:20.961449567 -0400
++++ bsc/src/comp/bluespec-wrapper	2017-07-24 21:27:20.897449066 -0400
+@@ -4,6 +4,10 @@
+ ###
+ 
+ 
++if [ -z "$BLUESPECDIR" ] && [ -d "/usr/lib/bluespec" ]; then
++    export BLUESPECDIR=/usr/lib/bluespec
++fi
++
+ if [ -z "$BLUESPECDIR" ] || [ ! -d $BLUESPECDIR ]; then
+     echo "Error: \$BLUESPECDIR is not set or does not exist $BLUESPECDIR"
+     exit 1
+Index: bsc/src/comp/bluetcl-wrapper
+===================================================================
+--- bsc.orig/src/comp/bluetcl-wrapper	2017-07-24 21:27:20.961449567 -0400
++++ bsc/src/comp/bluetcl-wrapper	2017-07-24 21:27:20.901449097 -0400
+@@ -4,6 +4,10 @@
+ ###
+ 
+ 
++if [ -z "$BLUESPECDIR" ] && [ -d "/usr/lib/bluespec" ]; then
++    export BLUESPECDIR=/usr/lib/bluespec
++fi
++
+ if [ -z "$BLUESPECDIR" ] || [ ! -d $BLUESPECDIR ]; then
+     echo "Error: \$BLUESPECDIR is not set or does not exist $BLUESPECDIR"
+     exit 1
+Index: bsc/src/comp/bluewish-wrapper
+===================================================================
+--- bsc.orig/src/comp/bluewish-wrapper	2017-07-24 21:27:20.961449567 -0400
++++ bsc/src/comp/bluewish-wrapper	2017-07-24 21:27:20.905449129 -0400
+@@ -4,6 +4,10 @@
+ ###
+ 
+ 
++if [ -z "$BLUESPECDIR" ] && [ -d "/usr/lib/bluespec" ]; then
++    export BLUESPECDIR=/usr/lib/bluespec
++fi
++
+ if [ -z "$BLUESPECDIR" ] || [ ! -d $BLUESPECDIR ]; then
+     echo "Error: \$BLUESPECDIR is not set or does not exist $BLUESPECDIR"
+     exit 1
+Index: bsc/src/comp/scemilink-wrapper
+===================================================================
+--- bsc.orig/src/comp/scemilink-wrapper	2017-07-24 21:27:20.961449567 -0400
++++ bsc/src/comp/scemilink-wrapper	2017-07-24 21:27:20.905449129 -0400
+@@ -4,6 +4,10 @@
+ ###
+ 
+ 
++if [ -z "$BLUESPECDIR" ] && [ -d "/usr/lib/bluespec" ]; then
++    export BLUESPECDIR=/usr/lib/bluespec
++fi
++
+ if [ -z "$BLUESPECDIR" ] || [ ! -d $BLUESPECDIR ]; then
+     echo "Error: \$BLUESPECDIR is not set or does not exist $BLUESPECDIR"
+     exit 1
+Index: bsc/src/comp/semu-wrapper
+===================================================================
+--- bsc.orig/src/comp/semu-wrapper	2017-07-24 21:27:20.961449567 -0400
++++ bsc/src/comp/semu-wrapper	2017-07-24 21:27:20.909449161 -0400
+@@ -3,6 +3,10 @@
+ ### Copyright 2013, Bluespec Incorporated
+ ###
+ 
++if [ -z "$BLUESPECDIR" ] && [ -d "/usr/lib/bluespec" ]; then
++    export BLUESPECDIR=/usr/lib/bluespec
++fi
++
+ if [ -z "$BLUESPECDIR" ] || [ ! -d $BLUESPECDIR ]; then
+     echo "Error: \$BLUESPECDIR is not set or does not exist $BLUESPECDIR"
+     exit 1
+Index: bsc/src/comp/showrules-wrapper
+===================================================================
+--- bsc.orig/src/comp/showrules-wrapper	2017-07-24 21:27:20.961449567 -0400
++++ bsc/src/comp/showrules-wrapper	2017-07-24 21:27:20.913449192 -0400
+@@ -4,6 +4,10 @@
+ ###
+ 
+ 
++if [ -z "$BLUESPECDIR" ] && [ -d "/usr/lib/bluespec" ]; then
++    export BLUESPECDIR=/usr/lib/bluespec
++fi
++
+ if [ -z "$BLUESPECDIR" ] || [ ! -d $BLUESPECDIR ]; then
+     echo "Error: \$BLUESPECDIR is not set or does not exist $BLUESPECDIR"
+     exit 1
+Index: bsc/src/hdl/rtl_edit/genvch-wrapper
+===================================================================
+--- bsc.orig/src/hdl/rtl_edit/genvch-wrapper	2017-07-24 21:27:20.961449567 -0400
++++ bsc/src/hdl/rtl_edit/genvch-wrapper	2017-07-24 21:27:20.917449222 -0400
+@@ -4,6 +4,10 @@
+ ###
+ 
+ 
++if [ -z "$BLUESPECDIR" ] && [ -d "/usr/lib/bluespec" ]; then
++    export BLUESPECDIR=/usr/lib/bluespec
++fi
++
+ if [ -z "$BLUESPECDIR" ] || [ ! -d $BLUESPECDIR ]; then
+     echo "Error: \$BLUESPECDIR is not set or does not exist $BLUESPECDIR"
+     exit 1
+Index: bsc/util/scripts/build-wrapper
+===================================================================
+--- bsc.orig/util/scripts/build-wrapper	2017-07-24 21:27:20.961449567 -0400
++++ bsc/util/scripts/build-wrapper	2017-07-24 21:27:20.921449254 -0400
+@@ -4,6 +4,10 @@
+ ###
+ 
+ 
++if [ -z "$BLUESPECDIR" ] && [ -d "/usr/lib/bluespec" ]; then
++    export BLUESPECDIR=/usr/lib/bluespec
++fi
++
+ if [ -z "$BLUESPECDIR" ] || [ ! -d $BLUESPECDIR ]; then
+     echo "Error: \$BLUESPECDIR is not set or does not exist $BLUESPECDIR"
+     exit 1
+Index: bsc/util/scripts/enum-wrapper
+===================================================================
+--- bsc.orig/util/scripts/enum-wrapper	2017-07-24 21:27:20.961449567 -0400
++++ bsc/util/scripts/enum-wrapper	2017-07-24 21:27:20.925449286 -0400
+@@ -4,6 +4,10 @@
+ ###
+ 
+ 
++if [ -z "$BLUESPECDIR" ] && [ -d "/usr/lib/bluespec" ]; then
++    export BLUESPECDIR=/usr/lib/bluespec
++fi
++
+ if [ -z "$BLUESPECDIR" ] || [ ! -d $BLUESPECDIR ]; then
+     echo "Error: \$BLUESPECDIR is not set or does not exist $BLUESPECDIR"
+     exit 1

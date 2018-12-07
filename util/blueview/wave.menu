@@ -1,0 +1,636 @@
+#
+# menu panel descriptions
+#
+
+Menu Top
+{
+    "File"      	_F  f.menu "File"
+    "Signal"            _S  f.menu "Signal"
+    "View"              _V  f.menu "View"
+    "Waveform"        	_W  f.menu "Waveform"
+    "Analog"            _A  f.menu "Analog"
+    "Tools"             _T  f.menu "Tools"
+    "Blueview"          _B  f.menu "Blueview"
+    "Window"            _i  f.menu "Window"
+#    "Format"            _o  f.menu "Format"
+#    "Search"            _r  f.menu "Search"
+#    "Options"           _p  f.menu "Options"
+#    "Group"             _G  f.menu "Group"
+#    "Compare"           _C  f.menu "Compare"
+#    "Messages"          _M  f.menu "Messages"
+    "Help"              _H  f.menu "Help"
+}
+
+Menu File
+{
+    "Open..."       	_O  f.exec "openFile"
+    "Set View Time Range..." _T f.exec "CTRopenFile"
+    "Reload"        	_l  f.exec "reread"
+    "Set Active..."     _A  f.exec "active"
+    "Close"         	_C  f.exec "closeFile"
+#    no-label        	    f.separator
+#    "Hierarchy Delimiter..."    _H  f.exec "analogDelimiter"
+    no-label        	    f.separator
+    "Save Signal..."    _S  f.exec "saveSignal"
+    "Restore Signal..." _R  f.exec "restoreSignal"
+#    no-label        	    f.separator
+#    "Save Env"      	_E  f.exec "saveEnv"
+#    "Restore Env..."   _s  f.exec "restoreEnv"
+##    "Directly Open File in RC"  @uncheck  _D f.exec "directOpenFile"
+    no-label        	    f.separator
+    "Recent Files"      _F  f.menu "RecentFile"
+    no-label        	    f.separator
+    "Convert to Fast File..."   _v  f.exec "fastFile"
+    "Extract Selected Signals..."   _t  f.exec "extractSelSignals"
+    no-label        	    f.separator
+    "Print..."      	_P  f.exec "print"
+    "Capture in PNG..." _a  f.exec "wvCaptureWindow"
+    no-label        f.separator
+    "Close Window"  	_W  f.exec "closeWindow"
+    no-label                f.separator
+    "Exit"              _x  f.exec "turboWaveExit"
+}
+
+Menu RecentFile
+{
+        "1."                                                    _1      f.exec "RestoreFile1"
+        "2."                                                    _2      f.exec "RestoreFile2"
+        "3."                                                    _3      f.exec "RestoreFile3"
+        "4."                                                    _4      f.exec "RestoreFile4"
+        "5."                                                    _5      f.exec "RestoreFile5"
+}
+
+Menu Waveform
+{
+    "Auto Update"           @uncheck _U f.exec "autoUpdate"
+    no-label                            f.separator
+    "Spacing..."              _S  f.exec "changeSignalSpacing"
+    "Height..."               _H  f.exec "changeSignalHeight"
+    "Color/Pattern..."        _C  f.exec "changeColor"
+    "Signal Value Radix"      _R  f.menu "Format"
+    "Signal Value Notation"   _N  f.menu "Notation"
+    "Analog Waveform"         _A  f.exec "fmtAnalog"
+    "Digital Waveform"        _D  f.exec "fmtDigital"
+    "Bus Invert"              _I  f.exec "fmtInvert"
+    "Bus Reverse"             _B  f.exec "fmtReverse"
+    no-label                	  f.separator
+    "Go To"                      _G  f.menu "GoTo"
+    #"Go To Time..."           _G  f.exec "findTime"
+    "Set Search Value..."     _V  f.exec "findValue"
+    "Set Search Constraint..."    _n  f.exec "byGlitchWindow"
+    no-label                	  f.separator
+    "Snap Cursor To Transitions"    @check   _a f.exec "snap"
+    "Fix Cursor/Marker Delta Time"  @uncheck _x f.exec "fixDelta"
+    "Keep Cursor At Center"         @uncheck _K f.exec "keepCursorAtCenter"
+    no-label                      f.separator
+     "Waveform Time"        _T f.menu "WaveformTime"
+#    "Shift File Time..."      _T  f.exec "shiftFile"
+#    "Shift Individual Signal Time" _I f.exec "shiftSignal"
+#    "Set File Time Scale..."  _e  f.exec "fileTimeScale"
+#    "Set Window Time Unit..." _W  f.exec "windowTimeUnit"
+#    "Display Time Stamp"    @uncheck _T f.exec "qdsTagMode"
+    no-label                      f.separator
+    "Marker..."     	      _M  f.exec "usrMarker"
+}
+
+Menu WaveformTime
+{
+    "Shift File Time..."      _T  f.exec "shiftFile"
+    "Shift Individual Signal Time..." _I f.exec "shiftSignal"
+    "Set File Time Scale..."  _e  f.exec "fileTimeScale"
+    "Set Window Time Unit..." _W  f.exec "windowTimeUnit"
+}
+
+Menu GoTo
+{
+       "Begin"    _B   f.exec "jumpToBegin"
+       "End"         _E  f.exec "jumpToEnd"
+       "Time..."           _T  f.exec "findTime"   
+}
+
+Menu Blueview
+{
+        # how can I have it send a signal name (or group of names?)
+        "Goto BSV"      _B     f.tcl  "Goto BSV" "EventTrigger UDR_GOTO_BSV"
+        "Goto V"        _V     f.tcl  "Goto V"   "EventTrigger UDR_GOTO_V"
+}
+
+Menu Tools
+{
+    "New Waveform"            _N  f.exec "createWaveformWindow"
+    no-label        		  f.separator
+    "Waveform Compare"        _W  f.menu "Compare"
+    "Error Viewing"           _E  f.menu "Messages"
+    no-label                      f.separator
+    "Browse Structure Signal..."  _w  f.exec "hbInvokeBrowseSignal"
+    "Watch Signals..."         _i  f.exec      "dbgShowWatch"
+    "Register..."              _e  f.exec "dbgOpenRegWindow2" 
+    "Memory..."               _M  f.exec "hbInvokeMemory"
+    "MDA..."		      _D  f.exec "hbInvokeMDA"
+    "Trace X"                 _X  f.exec "wvTraceX"
+    "Event Sequence..."  _S    f.exec   "wvEventSequence"
+    "Active Fan-In Cone"     _A  f.exec "wvActiveFanIn"
+    "Bus Contention" 	      _B  f.exec "wvBusContention"
+    "Contention By Time Range..."  _T  f.exec "wvBusContentionTimeRange"
+    "List X..."               _L  f.exec "hbTraceUnknown"    
+    no-label                      f.separator
+    "Preferences..."           _P  f.exec "wvPreference"
+    no-label                      f.separator
+    "nCompare..."             _C  f.exec "wvInvokenCompare"
+    "New PureView..."         _V  f.exec "wvPureView"
+}
+
+Menu Signal
+{
+    "Undo"      	      _U  f.exec "editUndo"
+    no-label        		  f.separator
+    "Get Signals..."          _G  f.exec "getSignal"
+    "Get All Signals"         _A  f.exec "getAllSignals"
+    no-label        		  f.separator
+    "Cut"       	      _t  f.exec "editCut"
+    "Copy"      	      _C  f.exec "editCopy"
+    "Paste"     	      _P  f.exec "editPaste"
+    "Move"      	      _M  f.exec "editMove"
+    no-label        	          f.separator
+    "Find..."     	      _F  f.exec "findSignal"
+    "Select Error Signals"    _r  f.exec "wcSelectErrors"
+    "Select All"    	      _l  f.exec "selectAll"
+    "Deselect All"            _D  f.exec "unselect"
+    no-label                      f.separator
+    "Select Group Mode(Group/Signal)" @check _S f.exec "selectGrpMode"
+    no-label        		  f.separator
+    "Comment"                     _m   f.menu "Comment"
+    no-label        		  f.separator
+    "Expand Bus..."           _x  f.exec "expandBus"
+##    "Partial Bus..."          _P  f.exec "partialBus"
+    "Edit Bus..."               _E f.exec "editBus"
+    "Create Bus..."           _B  f.exec "createBus"
+    "Set Adjust Bus..."       _j  f.exec "fmtAdjustBus" 
+    "Logical Operation..."    _L  f.exec "expression"
+    #"Event..."                _v  f.exec "event"
+    #"Complex Event..."        _o  f.exec "complexEvent"
+    "Event..."              _v  f.exec "Event"
+}
+
+
+Menu Comment
+{
+    "Insert"                     _I     f.exec   "insertCmtArea"
+    "Add Square Box"             _S     f.exec    "addSquareBox"
+    "Add Attached Square Box"    _A     f.exec    "addAttSquareBox"
+    "Add Period Box"             _P     f.exec    "addPeriodBox"
+    "Add Arrow Period Box"       _r     f.exec    "addAPeriodBox"
+    
+}
+
+Menu Notation
+{
+    "Unsigned"  _U f.exec "notationUnsigned"
+    "Signed 2's Complement"  _2 f.exec "notation2Comp"
+    "Signed 1's Complement"  _1 f.exec "notation1Comp"
+    "Signed Magnitude" _M f.exec "notationMagnitude"
+}
+
+
+Menu Format
+{
+    "Binary"                  _B  f.exec "radixBin"
+    "Octal"                   _O  f.exec "radixOct"
+    "Hexadecimal"             _H  f.exec "radixHex"
+    "Decimal"                 _D  f.exec "radixUDec"
+    "ASCII"                   _A  f.exec "radixAsc"
+    "IEEE-754 Floating Point" _7  f.exec "radix754"
+    no-label                      f.separator
+    "staticAliasMap1"                    f.exec "AliasMap1m"
+    "staticAliasMap2"                    f.exec "AliasMap2m"
+    "staticAliasMap3"                    f.exec "AliasMap3m"
+    "staticAliasMap4"                    f.exec "AliasMap4m"
+    "staticAliasMap5"                    f.exec "AliasMap5m"
+    "staticAliasMap6"                    f.exec "AliasMap6m"
+    "staticAliasMap7"                    f.exec "AliasMap7m"
+    "Add Alias from File..."   _F  f.exec "fmtAddAlias"
+    "Add Alias from Program..." _P  f.exec "fmtAddAliasFromProgram"
+    "Remove Alias"            _R  f.exec "fmtDelAlias"
+    "Browse Alias..."           _w  f.exec "fmtEditAlias"
+}
+
+Menu View
+{
+##    "Glitch"        @uncheck  _G  f.exec "glitchSwitch"
+##    no-label        		  f.separator
+    "Toolbar..."	_T f.exec "configToolbar"
+    no-label                      f.separator	
+    "Hierarchical Name"       @uncheck _H f.exec "hierarchyName"
+    "Values at Cursor/Marker" @uncheck _V f.exec "displayBothValue"
+    "Leading Zeros" @uncheck  _d  f.exec "leadingZero"
+    "Display Glitch" @uncheck _D  f.exec "dispGlitch"
+    "Dense Block Drawing"  @check    _B  f.exec "denseBlockDrawing"
+    "All File Time Range" @uncheck _g f.exec "allFileTimeRange"
+    no-label        		  f.separator
+    "Grid on Rising Edge"     _R  f.exec "gridRiseEdge"
+    "Grid on Falling Edge"    _F  f.exec "gridFallEdge"
+    "Grid on Cycle Time..."   _y  f.exec "gridCycleTime"
+    "Grid Count"    @uncheck  _C  f.exec "gridCount"
+    "Remove Grid"   	      _m  f.exec "removeGrid"
+    no-label        		  f.separator
+    "Zoom"       	      _Z  f.menu "WaveZoom"
+    "Pan"        	      _P  f.menu "WavePan"
+    "Last View"               _L  f.exec "lastView"
+    no-label        		  f.separator
+    "Signal Event Report..."  _S  f.exec "signalReport"
+    #"Reports"                 _o  f.menu "SignalReport"   
+    "Go To Group ..."         _G  f.exec "gotoGroup"
+}
+
+#Menu SignalReport       
+#{
+#   "Signal Event Report..."   _S  f.exec "signalReport"     
+#   "List X at Cursor Time..." _S  f.exec "signalListXReport" 
+#}
+
+Menu WaveZoom
+{
+    "Zoom In"           _I      f.exec "zoomIn"
+    "Zoom Out"          _O      f.exec "zoomOut"
+    "Zoom All"          _A      f.exec "zoomAll"
+    "Zoom Cursor"       _C      f.exec "zoomCursor"
+    "Zoom Window..."    _W      f.exec "zoomWindow"
+}
+ 
+Menu WavePan
+{
+    "Pan Left"          _L      f.exec "leftPage"
+    "Pan Right"         _R      f.exec "rightPage"
+    "Pan Up"            _U      f.exec "upPage"
+    "Pan Down"          _D      f.exec "downPage"
+}
+
+
+Menu Window
+{
+    "Tile Waveform"     _T      f.exec "tileWindow"
+    "Sync Waveform View" @uncheck       _y      f.exec "syncWindow"
+    "Sync Vertical Scrolling" @uncheck  _V      f.exec "syncVerticalScroll"
+    "Change To Primary" _C      f.exec "changePrimaryWin"
+    no-label            	f.separator
+    "Horizontal Split"  _H      f.exec "waveHorizontalSplit"
+#   "Vertical Split"    _V      f.exec "waveVerticalSplit"
+    "Stop Split"        _S      f.exec "waveStopSplit"
+    no-label                    f.separator
+    "1."        _1      f.exec  "windowCache1"
+    "2."        _2      f.exec  "windowCache2"
+    "3."        _3      f.exec  "windowCache3"
+    "4."        _4      f.exec  "windowCache4"
+    "5."        _5      f.exec  "windowCache5"
+    "6."        _6      f.exec  "windowCache6"
+    "7."        _7      f.exec  "windowCache7"
+    "Others..." _O      f.exec  "windowCacheOthers"
+}
+
+Menu Compare
+{
+    "Options..."                _O  f.exec "wcGetOptions"
+    no-label            	    f.separator
+    "Compare 2 Signals"         _2  f.exec "wcCompareTwo"
+    "Compare Selected Signals"  _S  f.exec "wcCompareSelected"
+    "Compare Displayed Signals" _D  f.exec "wcCompareDisplayed"
+#    "Compare All Signals"      _A  f.exec "wcCompareAll"
+    "Compare Two Groups..."     _T  f.exec "wcCompareGroup"
+#    "Compare Scopes"           _C  f.exec "wcCompareScope"
+    "Compare Signals From File..."  _F  f.exec "wcGetSignalsAndCompare"
+}
+
+Menu Messages
+{
+    "Load File..."  		_L  f.exec "msfLoadErrorFile"
+    "Select Error Types..."     _S  f.exec "msfErrMsgTypes"
+    no-label            	    f.separator
+    "Display Error Mark"    @check  _M  f.exec "wcTurnErrors"
+    "Display Error Description" @check  _D  f.exec "msfTurnAutoMode"
+    "Select Message-Attached Signals"   _A  f.exec "msfSelectErrors"
+##    "Display Message Symbols"   @check  _M  f.exec "msfTurnErrors"
+}
+
+Menu Analog
+{
+    "Overlay"           _O  f.exec "analogOverlap"
+    "Highlight Signals..."   _H  f.exec "analogOverlapHighlight"
+    "Unhighlight"            _g  f.exec "analogOverlapUnhighlight"   
+    "Auto Fit"      	      @uncheck  _u  f.exec "analogAutoFit"
+    "Auto Color/Pattern"      @uncheck  _n  f.exec "analogAutoPattn"
+    no-label                	            f.separator
+    "Display Delta Y"         @uncheck  _Y  f.exec "displayDeltaY"
+    no-label                f.separator
+    "Zoom Value..."     _Z  f.exec "analogZoom"
+    "Vertical Fit"      _F  f.exec "analogZoomAll"
+    "Auto 100% Vertical Fit"  @uncheck  _r  f.exec "analogAuto100VertFit"
+    "Ruler..."          _R  f.exec "analogRuler"
+    "Set Search Analog Value" _V f.exec "analogSearchValue" 
+    "Wave Slew..."      _W  f.exec "waveSlew" 
+    no-label                f.separator
+    "Piecewise Constant/Linear"    _P  f.exec "analogPiecewise"
+    "Select Analogs"    _S  f.exec "analogSelectAll"
+    "Fit Selected"      _i  f.exec "analogFit"
+    no-label                f.separator
+    "Format & Precision..." _m  f.exec "analogFmtPrecision"
+    "Average/Min/Max/RMS..."_A  f.exec "anaAverageValue"
+    "Convert to Analog..." _C f.exec "analogAnalog"
+    "Analog to Digital..."  _D  f.exec "analogDigital"
+    "Analog Expression..."  _E  f.exec "analogExp"
+    "Load Hsim..."         _L    f.exec "analogHsimFFT"
+    "FFT..."            _T  f.exec "analogFFT"
+}
+
+Menu Other
+{
+    "Display Time Stamp" f.exec "qdsTagMode"
+    "Format"        f.exec "changeFormat"
+    "Cursor"        f.exec "jumpToCursor"
+    "Marker"        f.exec "jumpToMarker"
+    "questJump"     f.exec "questJumpToTrigger"
+#    "2Point"       f.exec "zoom2Point"
+    "byChange"      f.exec "byChange"
+    "byRising"      f.exec "byRising"
+    "byFalling"     f.exec "byFalling"
+    "byGlitch"      f.exec "byGlitchWindow"
+    "byAnaValue"    f.exec "byAnaValue"
+    "byValue"       f.exec "byValue"
+    "byCmpError"    f.exec "byCmpError"
+    "byEvent"       f.exec "byEvent"
+    "bySuccess"     f.exec "bySuccess"   
+    "byFailure"     f.exec "byFailure"
+    "byStart"       f.exec "byStart"
+#    "addAtCursor"  f.exec "addMarkerAtCursor"
+#    "addAtMarker"  f.exec "addMarkerAtMarker"
+#    "piecewise linear" f.exec "analogPieceLinear"
+#    "piecewise constant"   f.exec "analogPieceConstant"
+#    "vertical Zoom"    f.exec "analogVZoom"
+    "Exit"              f.exec "turboWaveExit"
+#    "Deselect"          f.exec "unselect"
+    "Create"            f.exec "createWaveformWindow"
+    "Zoom Cursor"       f.exec "zoomCursorFromDeltaB"
+    "Curve RB Clicked"  f.exec "curveRightButtonClicked"
+    "wvDumpAU"                       f.exec  "auLogAll"
+    "wvDumpAU -signal"           f.exec  "auLogSignal"
+    "wvDumpAU -selected"       f.exec  "auLogSelected"
+    "wvDumpAU -value"            f.exec  "auLogValue"
+    "wvDumpAU -event"            f.exec  "auLogEvent"
+    "wvDumpAU -file"            f.exec  "auLogFiles"
+    "wvDumpAU -view"            f.exec  "auLogView"
+}
+
+Menu Help
+{
+#    "Help Topics"       _H      f.exec   "waveHelpTopic"
+#    "Quick Start"       _Q      f.exec   "waveHelpStart"
+#    "Application Notes" _A      f.exec   "waveHelpApp"
+    "Installation & Sys Adm" _I      f.exec   "waveInstall"
+    "Tutorial"          _T      f.exec   "waveHelpTutorial"
+    "Command Reference" _C      f.exec   "waveHelpReference"
+    "nCompare"          _n      f.exec   "waveHelpnCompare"
+    no-label                    f.separator
+    "About FSDB"        _F      f.exec   "fsdbAbout"
+    "About Debussy"     _D      f.exec   "waveHelpAbout"
+    "Help"			f.exec   "waveHelp"
+}
+
+Menu DigitalFormatPopUp
+{
+    "Format"                             f.title
+    no-label                             f.separator
+    "Binary"                             @uncheck _B f.exec "digitalFBin"
+    "Octal"                              @uncheck _O f.exec "digitalFOct"
+    "Hexadecimal"                        @uncheck _H f.exec "digitalFHex"
+    "Decimal"                            @uncheck _D f.exec "digitalFUDec"
+    "ASCII"                              @uncheck _A f.exec "digitalFAsc"
+    "IEEE-754 Floating Point"            @uncheck _7 f.exec "digitalF754"
+    "Notation"                           _N f.menu "Notation1"
+    no-label                             f.separator
+    "staticAliasMap1"                          @uncheck f.exec "AliasMap1"
+    "staticAliasMap2"                          @uncheck f.exec "AliasMap2"
+    "staticAliasMap3"                          @uncheck f.exec "AliasMap3"
+    "staticAliasMap4"                          @uncheck f.exec "AliasMap4"
+    "staticAliasMap5"                          @uncheck f.exec "AliasMap5" 
+    "staticAliasMap6"                          @uncheck f.exec "AliasMap6"
+    "staticAliasMap7"                          @uncheck f.exec "AliasMap7"
+    "Browse Alias..."                            f.exec "newfmtEditAlias"
+    "Remove Alias"                       f.exec "RemoveAliasMap" 
+    no-label                             f.separator
+    "Analog"                             @uncheck _a f.exec "digitalFAnalog"
+    "Invert"                             @uncheck _v f.exec "digitalFInvert"
+    no-label                             f.separator
+    "Local Format..."                       _L f.exec "LocalFormat"
+    no-label                             f.separator
+#    "Binary"                             @uncheck _B f.exec "digitalFBinD"
+#    "Octal"                              @uncheck _O f.exec "digitalFOctD"
+#    "Hexadecimal"                        @uncheck _H f.exec "digitalFHexD"
+#    "Decimal"                            @uncheck _D f.exec "digitalFUDecD"
+#    "ASCII"                              @uncheck _A f.exec "digitalFAscD"
+#    no-label                             f.separator
+    "staticAliasMap1L"                          @uncheck f.exec "AliasMap1D"
+    "staticAliasMap2L"                          @uncheck f.exec "AliasMap2D"
+    "staticAliasMap3L"                          @uncheck f.exec "AliasMap3D"
+    "staticAliasMap4L"                          @uncheck f.exec "AliasMap4D"
+    "staticAliasMap5L"                          @uncheck f.exec "AliasMap5D" 
+    "staticAliasMap6L"                          @uncheck f.exec "AliasMap6D"
+    "staticAliasMap7L"                          @uncheck f.exec "AliasMap7D"
+    "Remove Local Alias"                       f.exec "RemoveAliasMapD" 
+    no-label                             f.separator
+    "Copy Value String"			 f.exec "CopyValueString"
+}
+
+Menu Notation1
+{
+    "Unsigned"  @uncheck _U f.exec "notationFUnsigned"
+    "Signed 2's Complement"  @uncheck _2 f.exec "notationF2Comp"
+    "Signed 1's Complement"  @uncheck _1 f.exec "notationF1Comp"
+    "Signed Magnitude" @uncheck _M f.exec "notationFMagnitude"
+}
+
+Menu VoltageFormatPopUp
+{
+    "Format"            f.title
+    no-label        	f.separator
+    "mV"        @uncheck    f.exec "voltageFmV"
+    "V"         @uncheck    f.exec "voltageFV"
+}
+
+Menu CurrentFormatPopUp
+{
+    "Format"            f.title
+    no-label        	f.separator
+    "uA"        @uncheck    f.exec "currentFuA"
+    "mA"        @uncheck    f.exec "currentFmA"
+    "A"         @uncheck    f.exec "currentFA"
+}
+
+Menu DiDtFormatPopUp
+{
+    "Format"            f.title
+    no-label        	f.separator
+    "uA"      @uncheck    f.exec "didtFuuans"
+    "mA"      @uncheck    f.exec "didtFmuans"
+    "A"      @uncheck    f.exec "didtFuans"
+}
+
+Menu AnalogExpFormatPopUp
+{
+    "Format"            f.title
+    no-label        	f.separator
+    "u"     @uncheck    f.exec "analogExpFuuans"
+    "m"     @uncheck    f.exec "analogExpFmuans"
+    "_"     @uncheck    f.exec "analogExpFuans"
+    "K"     @uncheck    f.exec "analogExpFkuans"
+}
+
+Menu GroupPopUp
+{
+    "Signal"            f.title
+    no-label        	f.separator
+    "Rename"            f.exec          "renameSignal"
+    "Move"   	    	f.exec 		"popupMove"
+    "Set Signal Cursor" f.exec 		"gpSetSigCursor"
+    "Add Group"         f.exec          "groupAddPopUp"
+    "Collapse Group"    f.exec          "groupCollapsePopUp"
+    no-label        	f.separator
+    "Drag" 		f.exec 		"gpSimulateDrag"
+    "Drop" 		f.exec 		"gpSimulateDrop"
+    no-label            f.separator
+    "Cut"               f.exec          "popupCut"
+    "Copy"              f.exec          "popupCopy"
+    "Paste"             f.exec          "popupPaste"
+    "Copy Signal's FullPath" f.exec     "popupCopyToClipboard"
+    "Expand Bus"        f.exec          "popupexpandBus"
+    "Edit Bus"          f.exec          "popupeditBus"
+    "Create Bus"        f.exec          "popupcreateBus" 
+    "Adjust Bus"        f.exec          "popupadjustBus" 
+    no-label        	f.separator
+#    "Active Trace" 	f.exec          "wvActiveTrace"
+#    "Bus Contention" 	f.exec          "wvBusContention"
+    no-label        	f.separator
+    "Add Comment"       f.exec           "addComment" 
+    "Add Blank"         f.exec           "addBlank"
+}
+
+Menu CSMRegister
+{
+    "Format"                                f.title
+  no-label                                  f.separator
+    "Binary"                    @check  _B  f.exec      "regRadixToBin"
+    "Octal"                     @check  _O  f.exec      "regRadixToOct"
+    "Hexadecimal"               @check  _H  f.exec      "regRadixToHex"
+    "ASCII"                     @check  _A  f.exec      "regRadixToAsc"
+    "Unsigned Decimal"          @check  _U  f.exec      "regRadixToUDec"
+    "Signed 2's Complement"     @check  _2  f.exec      "regRadixToDec2C"
+    "Signed 1's Complement"     @check  _1  f.exec      "regRadixToDec1C"
+    "Signed Magnitude"          @check  _M  f.exec      "regRadixToDecSM"
+}
+
+#
+# key binding descriptions
+#
+
+Keys turboKeyBinding
+{
+
+<Key>a   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     active
+<Key>k   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     createBus
+<Key>L   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     reread
+<Key>l   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     lastView
+<Key>M   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     usrMarker
+<Key>o   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     openFile
+<Key>g   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     getSignal
+<Key>h   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     hierarchyName
+<Key>s   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     snap
+<Key>Delete   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     editCut
+<Key>Insert   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     editPaste
+<Key>r   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     restoreSignal
+<Key>c   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     changeColor
+<Key>t   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     cycleChangeColor
+<Key>f   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     zoomAll
+<Key>z   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     zoomOut
+<Key>Z   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     zoomIn
+<Key>d   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     unselect
+<Key>n   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     nextEvent
+<Key>F   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     analogZoomAll
+<Key>N   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     previousEvent
+<Key>U   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     otherEventUp
+<Key>D   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     otherEventDown
+<Key>m   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     editMove
+<Key>e   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     jumpToEnd
+<Key>b   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     jumpToBegin
+<Key>i   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     wvEventSequenceAllSigs
+<Key>j   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     wvEventSequenceMultReg
+<Key>E   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     wvEventSequence
+<Key>G   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     dispGlitch
+<Key>B   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     denseBlockDrawing
+
+<Key>Right  Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     rightFullPage
+<Key>Left   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     leftFullPage
+<Key>Down   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     downPage
+<Key>Up     Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     upPage
+<Key>PageDown   Value_Main|Curve_Main|Value_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     downPage
+<Key>PageUp     Value_Main|Curve_Main|Value_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     upPage
+<Key>Home     Value_Main|Curve_Main|Value_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     topPage
+<Key>End     Value_Main|Curve_Main|Value_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     bottomPage
+Ctrl<Key>l   Value_Main|Curve_Main|Value_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     leftPage
+Ctrl<Key>r   Value_Main|Curve_Main|Value_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     rightPage
+
+<Key>x      Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     fixDelta
+<Key>y      Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     keepCursorAtCenter 
+
+Ctrl<Key>c  Legend_Main|Curve_Main|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     gpSimulateDrag_bindKey 
+Ctrl<Key>v  Legend_Main|Curve_Main|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left     f.exec     gpSimulateDrop_bindKey 
+Ctrl<Key>a  Legend_Main|Legend_Split_Upper f.exec    selectAll 
+
+Ctrl<Key>D   Value_Main|Value_Split_Upper   f.exec     debugDrop
+
+Ctrl<Key>L   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     dumpNodes
+Ctrl<Key>h   Legend_Main|Legend_Split_Upper f.exec popupCopyToClipboard 
+Ctrl Shift<Key>Home   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec     gdDumpWindow
+
+Ctrl Shift<Key>a   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec    auLogAll
+Ctrl Shift<Key>g   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec    auLogSignal
+Ctrl Shift<Key>s   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec    auLogSelected
+Ctrl Shift<Key>v   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec    auLogValue
+Ctrl Shift<Key>e   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec    auLogEvent
+Ctrl Shift<Key>f   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec    auLogFiles
+Ctrl Shift<Key>w   Value_Main|Legend_Main|Curve_Main|Value_Split_Upper|Legend_Split_Upper|Curve_Split_Upper|Curve_Split_Left      f.exec    auLogView
+#nDetect
+    Ctrl Shift<Key>x      *                       f.exec     lxPrtListResult
+}
+#
+# Button binding descriptions
+#
+
+# NOTE:
+# If you bind the "up" or "down" button to a command, it will be invoked
+# either on the "up" or "down" button, and also on the "click" event.
+# But, if you bind the "click" event to a command, it will be invoked
+# only on the "click" event and won't be invoked on the "up" or "down" event.
+
+Buttons turboButtonBinding
+{
+
+    <Btn1Click2>   Legend_Main              f.exec     legendClick2
+    <Btn1Click2>   Legend_Split_Upper       f.exec     legendClick2
+    <Btn3Up>       Legend_Main              f.exec     groupPopUp
+    <Btn3Up>       Legend_Split_Upper       f.exec     groupPopUp
+    
+    <Btn3Up>       Value_Main               f.exec     changeFormat
+    <Btn3Up>       Value_Split_Upper        f.exec     changeFormat
+    
+    <Btn1Up>       Curve_Main               f.exec     curveWinLeftButtonClick
+    <Btn1Up>       Curve_Split_Upper        f.exec     curveWinLeftButtonClick
+    <Btn1Up>       Curve_Split_Left         f.exec     curveWinLeftButtonClick
+    Shift<Btn1Up>  Curve_Main               f.exec     setTraceCursor
+    Shift<Btn1Up>  Curve_Split_Upper        f.exec     setTraceCursor
+    Shift<Btn1Up>  Curve_Split_Left         f.exec     setTraceCursor
+    <Btn2Up>       Curve_Main               f.exec     curveWinMiddleButtonClick
+    <Btn2Up>       Curve_Split_Upper        f.exec     curveWinMiddleButtonClick
+    <Btn2Up>       Curve_Split_Left         f.exec     curveWinMiddleButtonClick
+    <Btn3Down>     Curve_Main               f.exec     curveRightButtonClicked
+    <Btn3Down>     Curve_Split_Upper        f.exec     curveRightButtonClicked
+    <Btn3Down>     Curve_Split_Left         f.exec     curveRightButtonClicked
+}
+

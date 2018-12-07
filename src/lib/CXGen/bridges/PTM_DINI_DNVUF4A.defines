@@ -1,0 +1,90 @@
+/// -*-bsv-*-
+
+import SceMi        :: *;
+import Xilinx       :: *;
+import XilinxPCIE   :: *;
+import Clocks       :: *;
+import DefaultValue :: *;
+import TieOff       :: *;
+import PTMClocks    :: *;
+
+`define BridgeParamsDcl \
+	  Clock pci_sys_clk_p  \
+	, Clock pci_sys_clk_n  \
+	, Reset pci_sys_reset  \
+	, Clock xtor_clk
+
+`define BridgeParams \
+	  pci_sys_clk_p  \
+	, pci_sys_clk_n  \
+	, pci_sys_reset  \
+	, xtor_clk
+
+typedef DNVUF4A_FPGA      ToLink;
+
+(* synthesize *)
+(* default_clock_osc = "CLK_step_clk" *)
+module [Module] ptm_bridge #(`BridgeParamsDcl)(SceMiBridge);
+   let uclk <- exposeCurrentClock();
+   let urst <- exposeCurrentReset();
+
+   let ed   <- mkEdgeDetector(xtor_clk);
+   let cclk_en = ed.b;
+
+   let pci_sys_reset_n <- mkResetInverter(pci_sys_reset, clocked_by noClock);
+
+   SceMiVUPCIE3NoClkArgsNoClock pcie_args;
+   pcie_args.pci_sys_clk_p = pci_sys_clk_p;
+   pcie_args.pci_sys_clk_n = pci_sys_clk_n;
+   pcie_args.pci_sys_reset = pci_sys_reset_n;
+   pcie_args.ref_clk       = uclk;
+   pcie_args.link_type     = PCIE_VIRTEXU;
+
+   (*hide*)
+   SceMiVUPCIEIfc#(Bridge, 4) _m <- buildSceMi(scemi_bridge(uclk,urst, cclk_en), pcie_args);
+   Bridge bridge =  _m.orig_ifc;
+
+   mkTieOff(_m.noc_cont);
+
+   rule drive_memory_calibration;
+      _m.isDDRReady(False);
+   endrule
+
+   // -----
+
+   Bit#(28) topCount = 150_000_000; // 1 sec for 150MHz
+   Reg#(Bit#(28)) cnt <- mkReg(topCount);
+   Reg#(Bool) heartbeat <- mkRegU;
+   (*no_implicit_conditions, fire_when_enabled*)
+   rule decCnt (cclk_en);
+      let newCnt = cnt - 1;
+      if (newCnt == 0) begin
+	 newCnt = topCount;
+	 heartbeat <= !heartbeat;
+      end
+      cnt <= newCnt;
+   endrule
+
+   let inReset <- isResetAsserted;
+
+   ReadOnly#(Bool) _heartbeat         <- mkNullCrossing(noClock, heartbeat);
+   ReadOnly#(Bool) _isLinkUp          <- mkNullCrossing(noClock, _m.isLinkUp);
+   ReadOnly#(Bool) _isOutOfReset      <- mkNullCrossing(noClock, !inReset);
+   ReadOnly#(Bool) _isOutOfResetLocal <- mkNullCrossing(noClock, _m.isOutOfReset);
+
+   // -----
+
+   interface toDut = bridge;
+
+   interface ToLink toLink;
+      interface pcie = _m.pcie;
+      method cprsnt = 1;
+      method cwake  = 0;
+      method leds = zeroExtend({pack(_heartbeat)
+				,pack(_isOutOfResetLocal)
+				,pack(_isOutOfReset)
+				,pack(_isLinkUp)
+				});
+   endinterface
+
+endmodule

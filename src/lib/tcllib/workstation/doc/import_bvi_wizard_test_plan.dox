@@ -1,0 +1,462 @@
+/**
+
+  @page _import_bvi_wizard_test_plan_ Test Plan 
+
+@section _import_bvi_wizard_test_plan_introduction_  Introduction
+
+@subsection _import_bvi_wizard_test_plan_indentifier_ Document Identifier
+
+This document represents the test plan for the <b>Import BVI Wizard</b>
+subtask of @b Bluespec @b Workstation.
+
+@subsection _import_bvi_wizard_test_plan_definition_of_terms_ Definition of Terms and Acronyms
+        - @b BVI - A special sub-language that associates Verilog ports with
+          Bluespec methods
+        - @b BSV - Bluespec System Verilog
+        - @b BSC - Bluespec System Verilog compiler
+        - @b Blue @b (tcl/wish) - Bluespec extension for tcl/wish interpreter
+
+@subsection _import_bvi_wizard_test_plan_overview_ Overview
+
+This tool provides means to build a graphical "import BVI wizard" which will
+guide the user through the process of creating an import BVI module with the
+final step to create BSV file which will contain the module and optionally the
+interface definitions for the module. 
+
+Tests for the <b>Import BVI Wizard</b> are divided into two independent
+phases:
+        - @ref _import_bvi_wizard_test_plan_GUI_tests_
+        - @ref _import_bvi_wizard_test_plan_tcl_command_tests_
+
+The following types of tests should be created for GUI tests:
+        - @b Positive @b tests - tests which provide the golden output.
+        - @b Negative @b tests - tests which provide typical invalid input and
+          assure that a clear and adequate error is reported.
+
+For automated tests there will be only @b Positive @b tests.
+
+@subsection _import_bvi_wizard_test_plan_scope_ Scope 
+
+The section @ref  _import_bvi_wizard_test_plan_test_environment_usage_
+describes the testing environment usage. The section @ref
+_import_bvi_wizard_test_plan_test_environment_structure_ describes the test
+environment structure. The section @ref
+_import_bvi_wizard_test_plan_tools_used_by_suite_ defined tools which are
+used in the test suite. The section @ref
+_import_bvi_wizard_test_plan_functionality_to_be_tested_ defines the test
+cases for graph visualization functionality. The section @ref
+_import_bvi_wizard_test_plan_GUI_tests_ defines the test cases for
+Workstation. The section @ref _import_bvi_wizard_test_plan_tcl_command_tests_
+defines the test cases for Workstation command line.
+
+@subsection _import_bvi_wizard_test_plan_references_ References
+
+@anchor _import_bvi_wizard_test_plan_docs_
+[1].  @ref _workstation_prd_ - Product requirement document for Bluespec
+Workstation\n
+[2].  @ref _workstation_fspec_ - Functional specification document for
+Bluespec Workstation\n
+@anchor _workstation_devspec_bsv_docs_    
+[3].  reference_guide_rev_30_march_2007.pdf - bluespec system verilog reference
+guide. \n
+[4].  bsv_user_guide_rev_30_march_2007.pdf - bluespec system verilog user
+guide. \n
+@anchor _workstation_devspec_iwidgets_library_
+[5].  http://incrtcl.sourceforge.net/iwidgets/iwidgets.html - the iWidgets
+library.
+[6].  workstation/doc/import_bvi_wizard_prd.odt - product requirement document for the Import BVI Wizard subtask of Bluespec Workstation. \n
+[7].  workstation/doc/import_bvi_wizard_fspec.odt - functional specification document for the Import BVI Wizard subtask of Bluespec Workstation. \n
+[8].  workstation/docs/workstation_schedule.planner - Schedule for Bluespec
+Workstation project\n
+
+@section _import_bvi_wizard_test_plan_test_environment_usage_ Test Environment Usage
+
+Dejagnu based (expect based tests) test-suite is used as a test environment.
+
+To run the import BVI wizard tests the following should be performed:
+- change to the $BLUESPECDIRtsuite/bsc.bluetcl/workstation/import_bvi_tests/positive_tests directory
+- call "make localcheck" command from command line.
+
+Test results can be found in following files:
+ - testrun.log represents the full log generated after tests execution
+ - testrun.sum represents the summary
+
+@section _import_bvi_wizard_test_plan_test_environment_structure_ Test Environment Structure
+
+All tests for import BVI wizard are located under $BLUESPECDIR/testsuite/bsc.bluetcl/workstation/import_bvi_tests (hereinafter < IMPORT_BVI_WIZARD_TESTS_DIR >) directory.
+This directory is divided into two branches to group positive and negative tests
+ - < IMPORT_BVI_WIZARD_TESTS_DIR >/positive_tests
+ - < IMPORT_BVI_WIZARD_TESTS_DIR >/negative_tests
+
+@note Currently only positive tests will be provided as import BVI wizard automated tests. All negative cases will be checked manually. 
+
+All positive tests are located under < IMPORT_BVI_WIZARD_TESTS_DIR >/positive_tests directory. The tests are provided with unique name. The following files are associated with each test
+- < test_name >_test.tcl contains the test steps itself,
+- < test_name >_test.tcl.bluespec-out.expected represents the expected BSV file,
+  which should be generated as a results of verilog module importing using
+  import BVI wizard.
+
+Actual BSV file, generated after test steps execution, is stored as < test_name >_test.tcl.bluespec-out.out.
+
+Test status is reported based on the BSV files comparison.
+
+@section _import_bvi_wizard_test_plan_tools_used_by_suite_ Tools Used by Test-suite
+@section _import_bvi_wizard_test_plan_functionality_to_be_tested_ Functionality to be Tested
+
+@section _import_bvi_wizard_test_plan_GUI_tests_ GUI Tests
+
+GUI testing will be done manually.
+
+@b Positive @b tests
+
+Test1:  
+        - Open "Import BVI Wizard" window\n
+                - Make sure that "<-Back" button is disabled\n
+        - Press "Read Verilog" button\n
+                - Make sure that "Read Verilog" dialog is opened\n
+        - Choose any valid verilog file\n
+                - Make sure that the verilog information is brought into the wizard\n
+        - Press "Next->" button\n
+                - Make sure that "Bluespec module definition" screen is opened\n
+        - Set a valid module name\n
+        - Set a valid interface name\n
+        - Press "Next->" button\n
+                - Make sure that "Method Port Binding" screen is opened\n
+        - Press "Auto Create From Verilog" button\n
+                - Make sure that methods/interfaces are created\n
+        - Press "Next->" button\n
+                - Make sure that "Combinational Path" screen is opened\n
+        - Set any Input and Output port in the Path\n
+        - Press "Next->" button\n
+                - Make sure that "Scheduling Annotations" screen is opened\n
+        - Press "Next->" button\n
+                - Make sure that "Finish" screen is opened\n
+                - Make sure that "Check" button is disabled\n
+                - Make sure that "Next->" button is renamed to "Finish"\n
+        - Specify a file name.\n
+        - Press "Finish" button\n
+                - Make sure that the specified file is created\n
+
+Test2:
+        - Open "Import BVI Wizard" window\n
+        - Press "Read Verilog" button\n
+                - Make sure that "Read Verilog" dialog is opened\n
+        - Choose any valid verilog file\n
+                - Make sure that the verilog information is brought into the wizard\n
+        - Press "Save List To File" dialog\n
+                - Make sure that "Save List To File" dialog is opened\n
+        - Specify a file name\n
+        - Press OK\n
+        - Press "Read From File" button\n
+                - Make sure that "Read From File" dialog is opened\n
+        - Chose the file which was specified in "Save List To File" dialog\n
+        - Press OK\n
+                - Make sure that the same information is brought into the wizard\n
+
+Test3: 
+        - Open "Import BVI Wizard" window\n
+        - Press "Add +" button in the Parameter tab\n
+                - Make sure that the field for parameter is added\n
+        - Press "+" button in the parameter field\n
+                - Make sure that the field for parameter is added\n
+        - Press "-" button in the parameter field\n
+                - Make sure that the current field for parameter is removed\n
+        - Try the mentioned operations for Input/Output/Inout tabs.
+
+Test4: 
+        - Open "Import BVI Wizard" window\n
+        - Press "Read Verilog" button\n
+        - Load any valid verilog file from "Read Verilog" dialog\n
+        - Press "Next->" button\n
+                - Make sure that "Bluespec module definition" screen is opened\n
+        - Press "Add +" button in the Provisos field\n
+                - Make sure that the field for provisos is added\n
+        - Press "+" button in the provisos field\n
+                - Make sure that the field for provisos is added\n
+        - Press "-" button in the provisos field\n
+                - Make sure that the current field for provisos is removed\n
+        - Try the mentioned operations for Package import, Bluespec module
+          arguments fields and for Input Clock/Reset tabs.
+
+Test5: 
+        - Open "Import BVI Wizard" window\n
+        - Press "Read Verilog" button\n
+        - Load any valid verilog file from "Read Verilog" dialog\n
+        - Press "Next->" button\n
+                - Make sure that "Bluespec module definition" screen is opened\n
+        - Set a valid module name\n
+        - Set a valid interface name\n
+        - Press "Next->" button\n
+                - Make sure that "Method Port Binding" screen is opened\n
+        - Press "Add Method" button\n
+                - Make sure that the field for method definition is added\n
+        - Press "Remove Selected" button\n
+                - Make sure that the field is removed\n
+        - Try the mentioned operations for "Add Port", "Add Subinterface"
+          buttons.
+
+Test6: 
+        - Open "Import BVI Wizard" window\n
+        - Press "Read Verilog" button\n
+        - Load any valid verilog file from "Read Verilog" dialog\n
+        - Press "Next->" button\n
+                - Make sure that "Bluespec module definition" screen is opened\n
+        - Set a valid module name\n
+        - Set a valid interface name\n
+        - Press "Next->" button\n
+                - Make sure that "Method Port Binding" screen is opened\n
+        - Press "Auto Create From Verilog" button\n
+                - Make sure that methods/interfaces are created\n
+        - Press "Next->" button\n
+                - Make sure that "Combinational Path" screen is opened\n
+        - Press "Add +" button in the Path field\n
+                - Make sure that the field for Path is added\n
+        - Press "+" button in the Path field\n
+                - Make sure that the field for Path is added\n
+        - Press "-" button in the Path field\n
+                - Make sure that the current field for Path is removed\n
+        - Try the mentioned operations for Input and Output fields.
+
+
+@b Negative @b tests \n
+Negative tests are divided according to the steps of the wizard.
+
+        <b>Verilog Module Overview</b>
+
+Test1:
+        - Open "Import BVI Wizard" window\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Press "Next->" button\n
+                - Make sure that an error is generated\n
+        - Press "Save List To File" button\n
+                - Make sure that an error is generated\n
+        - Specify any module name\n
+        - Press "Add +" button in the Parameter tab\n
+                - Make sure that the field for parameter is added\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+
+Test2:
+        - Open "Import BVI Wizard" window\n
+        - Specify any module name\n
+        - Press "Add +" button in the Inout tab\n
+                - Make sure that the field for Inout is added\n
+        - Press "Check" button\n
+            - Make sure that the appropriate error is generated\n
+
+Test3:
+        - Open "Import BVI Wizard" window\n
+        - Specify any module name\n
+        - Press "Add +" button in the Input tab\n
+                - Make sure that the field for Input is added\n
+        - Press "Add +" button in the Output tab\n
+                - Make sure that the field for Output is added\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+
+Test4:
+        - Open "Import BVI Wizard" window\n
+        - Specify any module name\n
+        - Press "Add +" button in the Parameter tab\n
+        - Press "Add +" button in the Input tab\n
+        - Press "Add +" button in the Output tab\n
+        - Press "Add +" button in the Inout tab\n
+        - Specify any name in the "Name" field of the Parameter tab\n
+        - Specify the same name in the "Name" field of the Parameter tab\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Try the mentioned operations for all tab combinations.
+
+Test5:
+        - Open "Import BVI Wizard" window\n
+        - Specify any module name\n
+        - Press "Add +" button in the Inout tab\n
+        - Specify any name in the "Name" field of the Inout tab\n
+        - Press "Add +" button in the Parameter tab\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+
+        <b>Bluespec Module Definition</b>\n
+        The following steps are needed before starting the tests for this step:
+        - Open "Import BVI Wizard" window\n
+        - Press "Read Verilog" button\n
+        - Choose any valid verilog file\n
+                - Make sure that the verilog information is brought into the wizard\n
+        - Press "Next->" button\n
+                - Make sure that "Bluespec module definition" screen is opened\n
+
+Test1:
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify a module name from keywords\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Try the mentioned operations for interface entry.
+
+Test2:
+        - Specify a valid module name\n
+        - Specify a valid interface name\n
+        - Press "Add +" button in the Package Import tab\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Try the mentioned operations for Provisos, Bluespec module arguments,
+          fields and for Input Clock/Reset tabs.\n
+
+        <b>Method Port Binding</b>\n
+        The following steps are needed before starting the tests for this step:
+        - Open "Import BVI Wizard" window\n
+        - Press "Read Verilog" button\n
+        - Choose any valid verilog file\n
+                - Make sure that the verilog information is brought into the wizard\n
+        - Press "Next->" button\n
+                - Make sure that "Bluespec module definition" screen is opened\n
+        - Set a valid module name\n
+        - Set a valid interface name\n
+        - Press "Next->" button\n
+                - Make sure that "Method Port Binding" screen is opened\n
+
+Test1:
+        - Press "Add Subinterface" button\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify an interface name\n
+        - Press "Add Subinterface" button\n
+        - Specify the same interface name\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+
+Test2:
+        - Press "Add Method" button\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify a method name\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify a method type\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Add an Arguments field\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify a BSV type in Arguments field\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify a Verilog Name in Arguments field not from the list\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify a valid Verilog Name in Arguments field\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify Enable field as in Verilog Name of Arguments field\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Press "Add Method" button\n
+        - Specify the same method name\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify a Verilog Name in Arguments field the same as Verilog Name of
+          the first method\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify a Verilog Name in Arguments field the same as Enable of the
+          first method\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+
+        <b>Combinational Path</b>\n
+        The following steps are needed before starting the tests for this step:
+        - Open "Import BVI Wizard" window\n
+        - Press "Read Verilog" button\n
+        - Choose any valid verilog file\n
+                - Make sure that the verilog information is brought into the wizard\n
+        - Press "Next->" button\n
+                - Make sure that "Bluespec module definition" screen is opened\n
+        - Set a valid module name\n
+        - Set a valid interface name\n
+        - Press "Next->" button\n
+                - Make sure that "Method Port Binding" screen is opened\n
+        - Press "Auto Create From Verilog" button\n
+                - Make sure that methods/interfaces are created\n
+        - Press "Next->" button\n
+                - Make sure that "Combinational Path" screen is opened\n
+
+Test1:
+        - Add a field in Input field\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify the Input port\n
+        - Add a field in Output field\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+        - Specify the Output port\n
+        - Add a field in Input field\n
+        - Specify the Input port as in the first one\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+
+
+        <b>Scheduling Annotations</b>\n
+        The following steps are needed before starting the tests for this step:
+        - Open "Import BVI Wizard" window\n
+        - Press "Read Verilog" button\n
+        - Choose any valid verilog file\n
+                - Make sure that the verilog information is brought into the wizard\n
+        - Press "Next->" button\n
+                - Make sure that "Bluespec module definition" screen is opened\n
+        - Set a valid module name\n
+        - Set a valid interface name\n
+        - Press "Next->" button\n
+                - Make sure that "Method Port Binding" screen is opened\n
+        - Press "Auto Create From Verilog" button\n
+                - Make sure that methods/interfaces are created\n
+        - Press "Next->" button\n
+                - Make sure that "Combinational Path" screen is opened\n
+        - Set any Input and Output port in the Path\n
+        - Press "Next->" button\n
+                - Make sure that "Scheduling Annotations" screen is opened\n
+
+Test1:
+        - Delete any annotation field\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+
+
+        <b>Finish</b>\n
+
+        - Open "Import BVI Wizard" window\n
+        - Press "Read Verilog" button\n
+        - Choose any valid verilog file\n
+                - Make sure that the verilog information is brought into the wizard\n
+        - Press "Next->" button\n
+                - Make sure that "Bluespec module definition" screen is opened\n
+        - Set a valid module name\n
+        - Set a valid interface name\n
+        - Press "Next->" button\n
+                - Make sure that "Method Port Binding" screen is opened\n
+        - Press "Auto Create From Verilog" button\n
+                - Make sure that methods/interfaces are created\n
+        - Press "Next->" button\n
+                - Make sure that "Combinational Path" screen is opened\n
+        - Set any Input and Output port in the Path\n
+        - Press "Next->" button\n
+                - Make sure that "Scheduling Annotations" screen is opened\n
+        - Press "Next->" button\n
+                - Make sure that "Finish" screen is opened\n
+        - Press "Check" button\n
+                - Make sure that the appropriate error is generated\n
+
+
+
+@section _import_bvi_wizard_test_plan_tcl_command_tests_ Authomated Tests
+
+Each test is represented by Tcl script which contains import_bvi class 
+commands to be executed (see @ref _import_bvi_wizard_test_plan_test_environment_structure_). 
+
+@section _import_bvi_wizard_fspec_dependencies_ Dependencies, Assumptions, Risks
+
+See the appropriate section of the Functional specification document for import BVI wizard.
+
+*/
+
+// vim:syntax=doxygen:et:shiftwidth=8:tabstop=8:

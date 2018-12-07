@@ -1,0 +1,382 @@
+
+/**
+
+@page menu_reference Menu Reference
+
+        - @ref _main_window_menu_
+        - @ref _project_files_window_menu_
+        - @ref _package_window_menu_
+        - @ref _type_browser_window_menu_
+        - @ref _module_browser_window_menu_
+        - @ref _schedule_analysis_window_menu_
+ 
+@section _main_window_menu_ Main Window Menu
+
+Following are the Main Window menu items:\n
+
+@ref _main_project_menu_\n
+@ref _edit_menu_\n
+@ref _build_menu_\n
+@ref _window_menu_\n
+@ref _message_menu_\n
+@ref _help_menu_\n
+
+@subsection _main_project_menu_ Project
+
+@b New...
+
+Displays the New Project dialog where project name, directory and search paths should be specified.
+
+@b Open...
+
+Displays the Open Project dialog where *.bspec file should be selected.
+
+@b Save
+
+Saves the changes applied to the current project.
+
+@b Save @b As...
+
+Opens the Save As dialog where another name and location should be specified for the current project.
+
+@b Options...
+
+Opens the Project Options dialog where the project settings can be changed/set. The dialog consists of five tabs :
+  - Compiler 
+  - Search Path
+  - Simulator
+  - Editor
+  - Waveform Viewer
+
+In the Compiler tab the compilation type is set to either bsc or make.\n
+If the compilation type is set to make then the main target should be specified.
+Also clean and full clean targets can be specified in order to be called under Build->Clean and Build->Full Clean actions.\n
+If the compilation via bsc is chosen then either Bluesim or Verilog specification should be set. For the Bluesim specification the Bluesim and .bo/.bi/.ba files locations should be specified. The same way for the Verilog specification the Verilog and .bo/.bi/.ba files locations should be specified.\n
+
+In the Search Path tab a @ref _search_paths_ can be added, removed or dislocated.\n
+
+In the Simulator tab one of following simulators should be chosen:
+
+  - iverilog
+  - modelsim
+  - vcsim
+
+In the Editor tab either @b gvim or @b emacs editor should be set.
+
+
+@b Top @b File...
+
+Opens the Top File dialog where the top file and top module should be specified.
+
+@b Close
+
+Closes the currently open project. If it has not been saved than a dialog will be opened asking whether to save the changes, discard or cancel the action.
+
+@b Quit
+
+Quits the Workstation.
+
+@subsection _edit_menu_ Edit
+
+@b Copy
+
+Writes the selection into the buffer.
+
+@b Paste
+
+Reads from the buffer and writes into the Command window.
+
+@subsection _build_menu_ Build
+
+@b Compile
+
+Compiles the current project.
+
+@b Link 
+
+Links the current project.
+
+@b Simulate
+
+Simulates the current project.
+
+@b Waveform @b Viewer
+
+Launches the waveform viewer. This action is not supported yet.
+
+@b Clean
+
+Cleans the last compilation/link results.
+
+@b Full @b Clean
+
+Cleans the last compilation/link/simulation results and log files.
+
+@subsection _window_menu_ Window
+
+@b Project @b Files
+
+Opens/Unminimizes the Project Files window and brings it up to the top.
+
+@b Editor @b Window
+
+Opens/Unminimizes the Editor window and brings it up to the top.
+
+@b Package @b Window
+
+Opens/Unminimizes the Package window and brings it up to the top.
+
+@b Type @b Browser
+
+Opens/Unminimizes the Type Browser window and brings it up to the top.
+
+@b Module @b Browser
+
+Opens/Unminimizes the Module Browser window and brings it up to the top.
+
+@b Schedule @b Analysis
+
+Opens/Unminimizes the Schedule Analysis window and brings it up to the top.
+
+@b Import @b BVI @b Wizart
+
+Opens/Unminimizes the Import BVI Wizart window and brings it up to the top.
+
+@b Minimize @b All
+
+Minimizes all currently open windows.
+
+@b Close @b All
+
+Closes all currently open windows.
+
+@subsection _message_menu_ Message
+
+@b Find
+
+Opens the Find dialog which searches for the specified string in the log window.
+
+@b Save
+
+Opens the Save dialog which saves the contents of the log in the specified location.
+
+@b Clear
+
+Clears the contents of the log window.
+
+@subsection _help_menu_ Help 
+
+@b Contents
+
+Opens Help Contents window.
+
+@b About
+
+Opens the Help About dialog.
+
+@section _project_files_window_menu_ Project Files Window Menu
+
+Following are the Project Files Window menu items:\n
+
+@ref _project_menu_\n
+@ref _file_menu_\n
+
+@subsection _project_menu_ Project
+
+@b Compile
+
+Compiles the entire project.
+
+@b Refresh
+
+Updates the information for current project.
+
+@b Close
+
+Closes the Project Files window.
+
+@subsection _file_menu_ File
+
+@b New 
+
+Opens the New File dialog where the file name and location should be specified.
+
+@b Edit
+
+Launches the editor on the selected file.
+
+@b Refresh
+
+Updates the information for the selected file.
+
+@b Compile
+
+Compiles the selected file without dependencies.
+
+@b Compile @b With @b Deps
+
+Compiles the selected file with dependencies.
+
+@section _package_window_menu_ Package Window Menu
+
+Following are the Package Window menu items:\n
+
+@ref _package_menu_\n
+@ref _package_view_menu_\n
+
+@subsection _package_menu_ Package
+
+@b Load...
+
+Opens the Load Package dialog which contains the list of all @ref _project_ packages. 
+
+@b Reload
+
+Reloads all loaded packages.
+
+@b Refresh
+
+Refreshes the Package Hierarchy
+
+@b Import @b Hierarchy...
+
+Shows the import hierarchy for the selected packege or the top package in a separate window.
+
+@b Search...
+
+Opens the Package Search dialog which searches for the specified string within the definition of all packages.
+
+@b Close
+
+Closes the Package window.
+
+
+@subsection _package_view_menu_ View
+
+@b Expand
+
+Expands the selected item from the Package Hierarchy.
+
+@b Collapse
+
+Collapses the selected item Package Hierarchy
+
+@b Collapse @b All
+
+Collapses the hierarchy view to only the package list.
+
+@b Send @b to @b Type
+
+Shows the selected type in the Type Browser Window.
+
+@b View @b Source
+
+Launches the editor on the definition of the selected item of the Package hierarchy.
+
+@section _type_browser_window_menu_ Type Browser Window Menu
+
+Following are the Type Browser Window menu items:\n
+
+@ref _type_menu_\n
+@ref _type_view_menu_\n
+
+@subsection _type_menu_ Types
+
+@b Add...
+
+Opens the Add Type dialog which contains list of all @ref _project_ types. The selected type will be added to the Type hierarchy.
+
+@b Remove
+
+Removes the selected type from the Type hierarchy.
+
+@b Close
+
+Closes the Type Browser window.
+
+@subsection _type_view_menu_ View
+
+@b Expand
+
+Expands the selected item from the Type hierarchy.
+
+@b Collapse
+
+Collapses the selected item from the Type hierarchy.
+
+@b Collapse @b All
+
+Collapses the Type hierarchy to show only the first level.
+
+@b View @b Source
+
+Launches the editor on the definition of the selected item from the Type hierarchy.
+
+@section _module_browser_window_menu_ Module Browser Window Menu
+
+Following are the Module Browser Window menu items:\n
+
+@ref _module_menu_\n
+@ref _module_view_menu_\n
+
+@subsection _module_menu_ Module
+
+@b Load...
+
+Opens the Load Module dialog which contains the list of all @ref _project_ modules. The selected module will be loaded and shown in the left pane of the Module Browser Window.
+
+@b Reload
+
+Reloads the currently loaded module.
+
+@b Show @b Schedule...
+
+Opens the Schedule Analysis Window.
+
+@b Search...
+
+Opens the Search Module dialog which searches for the specified string through the @ref _module_ hierarchy.
+
+@b Close
+
+Closes the Module Browser window.
+
+@subsection _module_view_menu_ View
+
+@b Expand
+
+Expands the selected node from the module hierarchy.
+
+@b Collapse
+
+Collapses the selected node from the module hierarchy.
+
+@b Collapse @b All
+
+Collapses the Module hierarchy to show only loaded module.
+
+@section _schedule_analysis_window_menu_ Schedule Analysis Window Menu
+
+@subsection _schedule_analysis_module_menu_ Module
+
+@b Load...
+
+Opens the Load Module dialog which contains the list of all @ref _project_ modules. The selected module will be loaded and shown in the left pane of the Module Browser Window.
+
+@b Reload
+
+Reloads the currently loaded module.
+
+@b Search...
+
+Opens the Search Module dialog which searches for the specified string through the _module_ hierarchy.
+
+@b View @b Source
+
+Launches the editor on the definition of the selected rule in the Rule Order tab of the Schedule Analysis Window.
+
+@b Close 
+
+Closes the Schedule Analysis window.
+
+*/

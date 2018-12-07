@@ -1,0 +1,165 @@
+/**
+
+@page _graph_visualization_use_cases_ Use Cases
+
+@section _uc_introduction_  Introduction
+
+@subsection _uc_introduction_document_identifier_ Document Identifier
+
+This document describes various use case scenarios for the @b Graph @b Visualization subtask of @b Bluespec @b Workstaion.
+
+@subsection _uc_introduction_definitions_ Definitions of Terms and Acronyms
+
+        - @b BSV - Bluespec System VerilogV
+        - @b BSC - Bluespec System Verilog compiler
+        - @b BlueWish - Bluespec wrapper for Tcl/Tk
+
+@subsection _uc_introduciton_overview_ Overview
+
+The goal of this document is to describe use case scenarios which will be
+provided by the Graph Visualization subtask of the Bluespec Workstation (see
+@ref _workstation_docs_ "[1]", @ref _workstation_docs_ "[2]"). Ideally it
+should cover all use cases of the tool including corner cases (e.g @ref _use_case11_ "Use case 11").\n
+
+Brief description of the graph visualization task is given in the PRD (see @ref
+_graph_task_docs_ "[8]").\n
+Each use case is preceded with the following steps:
+        - Launch the Bluespec Workstation
+        - Open/Create project
+        - Compile the project
+        - Load a module
+
+@subsection _uc_introduction_scope_ Scope 
+
+From  @ref _use_case1_ "Use case 1" to @ref _use_case11_ "Use case 11" use case
+scenarios are described. Section @ref _uc_dependencies_assumptions_risks_
+describes dependencies from other projects/tools, assumptions and risks.
+Section @ref _prd_effort_estimations_ provides effort estimations.
+
+@subsection _uc_introduction_references_ References
+
+@anchor _workstation_docs_
+[1].  workstation/docs/prd.odt - Product requirement document for Bluespec
+Workstation\n
+[2].  workstation/docs/fspec.odt - Functional specification document for
+Bluespec Workstation\n
+@anchor _graphviz_packages_
+[3].  http://www.graphviz.org - graphviz packages\n
+[4].  http://www.graphviz.org/cgi-bin/man?tcldot -  Tcldot package man page\n
+@anchor _bsv_docs_
+[5].  reference_guide_rev_30_march_2007.pdf - Bluespec System Verilog reference
+guide\n
+[6].  bsv_user_guide_rev_30_march_2007.pdf - Bluespec System Verilog user
+guide\n
+@anchor _workstation_schedule_
+[7].  workstation/docs/workstation_schedule.planner - Schedule for Bluespec
+Workstation project\n
+@anchor _graph_task_docs_
+[8].  @ref _graph_visualization_prd_ - Product Requirement
+document for the graph visualization subtask of Bluespec Workstation\n
+
+@section _use_case1_ Use case 1 : View scheduling graphs for the currently loaded module
+
+        - Open the Schedule Graphs window
+        - View different types of graphs
+        - View Conflict graph
+        - View Execution Order graph
+
+@section _use_case2_ Use case 2 : View the specified group of rules/methods in a separate graph
+
+        - Open the Schedule Graphs window
+        - View the Conflict graph
+        - Specify a group of rules (e.g. rules which names start with the same
+        (specified) pattern)
+        - View the specified group of rules in a separate graph 
+
+@section _use_case3_ Use case 3 : View the rules/methods related to the specified rule/method
+
+        - Open the Schedule Graphs window
+        - View Conflict graph
+        - Specify a rule/method
+        - View only rules/methods (nodes) connected to a given rule/method (via
+        a distance < n)
+
+@section _use_case4_ Use case 4 : Remove the specified rules/methods
+
+        - Open the Schedule Graphs window
+        - View the Urgency graph
+        - Specify a group of rules/methods
+        - Remove the specified group from the graph and view the result graph
+        in a separate window
+
+@section _use_case5_ Use case 5 : Remove the specified group of edges
+
+        - Open the Schedule Graphs window
+        - View the Conflict graph
+        - Specify a group of edges (e.g. edges which represent conflicts in one
+        direction)
+        - Remove the specified group from the graph and show the result graph
+
+@section _use_case6_ Use case 6 : Show the specified group of edges
+
+        - Open the Schedule Graphs window
+        - View the Conflict graph
+        - Specify a group of edges (e.g. edges which represent complete
+        conflicts)
+        - Show only the specified group in a separate graph
+
+@section _use_case7_ Use case 7 : Highlight the specified rule/method
+
+        - Open the Schedule Graphs window
+        - View Execution graph
+        - Highlight (in a color/font) the specified rule/method
+
+@section _use_case8_ Use case 8 : Highlight group of rules/methods
+
+        - Open the Schedule Graphs window
+        - View Execution graph
+        - Specify group of rules/methods
+        - Highlight (in a color/font) the specified group
+
+@section _use_case9_ Use case 9 : Highlight specified edge
+
+        - Open the Schedule Graphs window
+        - View any graph
+        - Highlight (in a color/font) the edge which joins the given pair of
+        rules/methods
+
+@section _use_case10_ Use case 10 : Search for cycles
+
+        - Open the Schedule Graphs window
+        - View any graph
+        - Search for any cycles containing a specified rule/method
+        - Show found cycles in a separate graph
+
+@section _use_case11_ Use case 11 : View "huge" graphs (i.e with "huge amount" of nodes)
+
+        - Open the Schedule Graphs window
+        - View a graph with a "huge amount" of nodes 
+        - The graph should be opened in a "reasonable" period of time
+        - It should be possible to view the whole graph (in the scrolled canvas)
+
+@todo Clarify the term "huge", e.g graphs with greater than 1000 nodes can be
+considered as huge.
+
+@todo After experiments specify a concrete period of time.
+
+@section _uc_dependencies_assumptions_risks_ Dependencies, Assumptions, Risks
+
+As the graph visualization is a sub-task for Bluespec Workstation, it inherits
+dependencies from Workstation (see @ref _workstation_docs_ "[1]", @ref
+_workstation_docs_ "[2]").\n
+The only dependency specific for this task is the compatibility of TclDot
+package with BlueWish interpreter.\n
+The functional and development specifications should be reviewed/accepted by
+Bluspec to avoid major rework. 
+
+@section _prd_effort_estimations_  Effort Estimations
+
+After describing the Use cases the initial effort estimations for the whole
+task remain the same, latter is given in the corresponding section of PRD (see
+@ref _graph_task_docs_ "[8]").
+
+*/
+
+// vim:syntax=doxygen:et:shiftwidth=8:tabstop=8:

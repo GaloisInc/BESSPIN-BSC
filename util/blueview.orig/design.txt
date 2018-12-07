@@ -1,0 +1,5 @@
+Future design:
+
+       gTreeInfo - index list of hiearchy.. use tree bwidget
+
+       gNetInfo  - nets for each instance

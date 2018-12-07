@@ -1,0 +1,34 @@
+
+
+`define __FAKE_DATA False
+`define __FAMILY    KINTEX7
+`define __ICAP_CNT  1
+`define __ICAP_LCL  0
+`ifdef SCEMI_TCP
+       `define __FAKE_DATA True
+`endif 
+`ifdef SCEMI_PCIE_VIRTEX6
+       `define __FAMILY VIRTEX6
+`endif
+`ifdef SCEMI_PCIE_KINTEX7
+       `define __FAMILY KINTEX7
+`endif
+`ifdef SCEMI_PCIE_VIRTEX7
+       `define __FAMILY KINTEX7
+`endif
+`define READBACKCORE(nm, clk_cfg) Empty nm  <- mkRdBackControl(`__FAMILY, `__FAKE_DATA, clk_cfg)
+`ifdef BOARD_B2000T
+       `define __ICAP_CNT 4
+       `define __ICAP_LCL 0
+       `define READBACKCORE(nm, clk_cfg) Empty nm  <- mkRdBackControls(`__ICAP_CNT, `__ICAP_LCL, `__FAMILY, `__FAKE_DATA, clk_cfg)
+`endif
+`ifdef BOARD_DH2000TQ
+       `define __ICAP_CNT 4
+       `define __ICAP_LCL 0
+       `define READBACKCORE(nm, clk_cfg) Empty nm  <- mkRdBackControls(`__ICAP_CNT, `__ICAP_LCL, `__FAMILY, `__FAKE_DATA, clk_cfg)
+`endif
+`ifdef BOARD_DNV7F2A
+       `define __ICAP_CNT 4
+       `define __ICAP_LCL 2
+       `define READBACKCORE(nm, clk_cfg) Empty nm  <- mkRdBackControls(`__ICAP_CNT, `__ICAP_LCL, `__FAMILY, `__FAKE_DATA, clk_cfg)
+`endif

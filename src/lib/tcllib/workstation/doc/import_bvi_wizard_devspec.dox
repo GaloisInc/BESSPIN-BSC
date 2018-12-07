@@ -1,0 +1,384 @@
+
+/**
+
+  @page _import_bvi_wizard_devspec_ Development Specification 
+	
+
+@section _import_bvi_wizard_fspec_introduction_  Introduction
+
+
+@subsection _import_bvi_wizard_fspec_introduction_document_id_ Document Identifier
+
+This is a development specification document for the <b>Import BVI Wizard</b>
+subtask of @b Bluespec @b Workstation.
+
+
+@subsection _import_bvi_wizard_devspec_introduction_definition_of_terms_ Definition of Terms and Acronyms
+
+        - @b BVI - A special sub-language that associates Verilog ports with
+          Bluespec methods
+        - @b BSV - Bluespec System Verilog
+        - @b BSC - Bluespec System Verilog compiler
+
+
+@subsection _import_bvi_wizard_devspec_introduction_owerview_ Overview
+
+
+@subsection _import_bvi_wizard_devspec_introduction_scope_ Scope 
+
+Section @ref _import_bvi_wizard_devspec_problem_statement_ describes the problem
+statement. Overview of solution is described in section
+@ref _import_bvi_wizard_devspec_overview_of_solution_. Section
+@ref _import_bvi_wizard_devspec_components_ describes the library of basic components. 
+In section @ref _import_bvi_wizard_devspec_window_ implementation of general window system is described. 
+
+@subsection _import_bvi_wizard_devspec_introduction_references_ References
+
+@anchor _import_bvi_wizard_devspec_docs_
+[1].  workstation/doc/import_bvi_wizard_prd.odt - product requirement document for the Import BVI Wizard subtask of Bluespec Workstation. \n
+[2].  workstation/doc/import_bvi_wizard_fspec.odt - functional specification document for the Import BVI Wizard subtask of Bluespec Workstation. \n
+@anchor _workstation_devspec_bsv_docs_    
+[3].  reference_guide_rev_30_march_2007.pdf - bluespec system verilog reference
+guide. \n
+[4].  bsv_user_guide_rev_30_march_2007.pdf - bluespec system verilog user
+guide. \n
+@anchor _workstation_devspec_iwidgets_library_
+[5].  http://incrtcl.sourceforge.net/iwidgets/iwidgets.html - the iWidgets
+library.
+
+
+@section _import_bvi_wizard_devspec_problem_statement_ Problem Statement
+
+The functionality and implementation requirements are described in the Product
+Requirements document [1].
+Descriptions of graphical user interface is given in the Functional
+Specification document [2]. \n
+
+The goal of this document is to describe the implementation details of proposed solution.
+
+
+@section _import_bvi_wizard_devspec_overview_of_solution_ Overview of Solution
+
+The entire implementation is done with Tcl/Tk using Iwidgets library.  The
+graphical interface is implemented using Tk and Iwidgets-4.0 library.  Both GUI
+actions and Tcl commands handlers are implemented as Tcl procedures.  Basic GUI
+components used in the Import BVI Wizard subtask of Bluespec Workstation are
+implemented as object-oriented library.  Each of those components is a wrapper
+class which provides a specific interface and hides implementation details.
+
+@section _import_bvi_wizard_devspec_components_ Basic components library implementation
+
+Following classes are used as library components:
+        - Menubar - @ref _import_bvi_wizard_devspec_components_menubar_
+        - Tabnotebook - @ref _import_bvi_wizard_devspec_components_tabnotebook_
+        - Dialog - @ref _import_bvi_wizard_devspec_components_dialog_
+        - Selection dialog - @ref
+        _import_bvi_wizard_devspec_components_selection_dialog_
+        - Messagebox - @ref _import_bvi_wizard_devspec_components_messagebox_
+
+@subsection _import_bvi_wizard_devspec_components_menubar_ Class base::menubar
+
+This class represents a configurable menubar.  It is inherited from
+iwidgets::Menubar.  Following public methods are provided by base::menubar :
+        - add_menubutton {n t u} - Adds menubutton to menubar
+                - n - name of menubutton
+                - t - title of menubutton
+                - u - number of the underlined letter
+        - add_command {n t u h f e} - Adds command to menubutton
+                - n - name of menubutton
+                - t - title of the menubutton
+                - u - number of the underlined letter
+                - h - help string
+                - f - function to be executed
+                - e - state to be set
+        - set_state {m i s}
+                - m - name of menu
+                - i - index of menu-item
+                - s - state to be set
+
+@subsection _import_bvi_wizard_devspec_components_tabnotebook_ Class base::tabnotebook
+
+This class represents a configurable tabnotebook.  It is inherited from
+iwidgets::Tabnotebook.  Following public method is provided by base:: :
+        - add_label {p c} - Adds a label to toolbar 
+                - p - name of the label
+                - c - command to be executed when selecting the tab
+
+@subsection _import_bvi_wizard_devspec_components_dialog_ Class base::dialog
+
+This class represents a configurable dialog.  It is inherited from
+iwidgets::Dialog.  Following public methods are provided by base::dialog :
+        - add_label {n t f} - Adds a label to the dialog 
+                - n - name of the label
+                - t - text of the label
+                - f - font of the label
+        - add_checkbutton {f b t} - Adds a checkbutton to the dialog
+                - f - name of the frame
+                - b - name of the checkbutton
+                - t - text of the button
+        - add_entryfield {f n l} - Adds an entryfield to the dialog
+                - f - name of the frame
+                - n - name of the entryfield
+                - l - label of the entryfield
+        - add_browse_entryfield {f n l c} - Adds an entryfield with browse button
+                - f - name of the frame
+                - n - name of the entryfield
+                - l - label of the entryfield
+                - c - command to be executed under button press                
+        - method insert_in_entryfield {entryname string} - Inserts the
+        specified string into entryfield 
+                - entryname name of the entryfield 
+                - string the text to be inserted into entryfield 
+
+
+@subsection _import_bvi_wizard_devspec_components_selection_dialog_ Class base::selection_dialog
+
+This class represents a configurable selection dialog. It is inherited from
+iwidgets::Selectiondialog. Following public methods are provided by
+base::selection_dialog :
+        - update {l} - Updates the selection list 
+                - l - the updated list
+        - get_selection {} - Returns the selection
+
+@subsection _import_bvi_wizard_devspec_components_messagebox_ Class base::messagebox
+
+This class represents a configurable messagebox. It is inherited from
+iwidgets::Messagebox. Following public methods are provided by base::messagebox
+:
+        - add_type {t b f} - Adds a message type 
+                - t -  name of the message type
+                - b - background color of the message
+                - f - foreground color of the message
+
+
+@section _import_bvi_wizard_devspec_window_ General window system implementation
+
+The wizard window hierarchy consists of following screens :
+        - Verilog Module Overview - @ref
+          _import_bvi_wizard_devspec_window_scr1_ 
+        - Bluespec Module Definition - @ref
+          _import_bvi_wizard_devspec_window_scr2_
+        - Method Port Binding - @ref _import_bvi_wizard_devspec_window_scr3_ 
+        - Combinational Paths - @ref _import_bvi_wizard_devspec_window_scr4_ 
+        - Scheduling Annotations - @ref _import_bvi_wizard_devspec_window_scr5_ 
+        - Finish - @ref _import_bvi_wizard_devspec_window_scr6_ 
+
+All the screens are implemented in import_bvi_wizard class.
+
+The main window includes an instantiation of base::menubar class.
+
+It also contains a status bar component, which is a Tk label widget.
+The class mport_bvi_wizard provides following public procedures/methods :
+
+        - close {} -  Closes the Import BVI Wizard 
+        - change_menu_status {m n st} - Changes the menu status for the Import
+          BVI Wizard
+                - m the name of menu from Module Browser window
+                - n the number of menu action from menu
+                - st the status of menu action
+        - action_next {} - Switches to the next step
+        - action_back {} - Switches to the previous step
+        - action_check {} - Checks the conditions of the current step
+
+
+@subsection _import_bvi_wizard_devspec_window_scr1_ Verilog Module Overview screen 
+
+The following public procedures/methods are used at this step of the wizard:
+        - add_verilog_parameter_field {n {p ""}} - Adds a fields in
+          Parameter tab of the screen
+                - n the field name
+                - p the parent widget name
+        - add_verilog_input_field {n {p ""}} - Adds a fields in
+          Input tab of the screen
+                - n the field name
+                - p the parent widget name
+        - add_verilog_output_field {n {p ""}} - Adds a fields in Output
+          tab of the screen
+                - n the field name
+                - p the parent widget name
+        - get_verilog_parameter {} - Returns the content of the verilog
+          parameter tab
+        - get_verilog_input {} - Returns the content of the verilog
+          input tab
+        - get_verilog_output {} -  Returns the content of the verilog
+          output tab
+        - open_verilog {verilog} - Openes Read Verilog dialog
+                - verilog boolean variable if the given file is verilog file or
+                  not
+        - read_verilog {file} - Read the verilog file
+                -file the file name
+        - find_param_input_output {string} - Finds the parameters, inputs,
+          outputs from the string
+                - string the given string
+        - remove_param_input_output {} - Removes the parameter, input, output
+          fields from the screen
+                - string the given string
+        - fill_param_input_output {vname vinp vout vparam} - Adds the
+          parameter, input, output fields in the Verilog overview tab
+                - vname the list of module names read from verilog file
+                - vinp verilog inputs 
+                - vout verilog outputs
+                - vparam verilog parameters
+        - action_check {} - Checks for duplicate names from the Paremeter,
+          Inputs and Outputs tabs of the screen. 
+
+@subsection _import_bvi_wizard_devspec_window_scr2_ Bluespec Module Definition screen 
+
+The following public procedures/methods are used at this step of the wizard:
+        
+        - add_bluespec_package_import_field {n {p ""}} - Adds a field for
+          package import
+                - n the field name
+                - p the parent widget name
+        - add_bluespec_provisos_field {n {p ""}} - Adds a field for provisos
+                - n the field name
+                - p the parent widget name
+        - add_bluespec_module_args_field {n {p ""}} - Adds a field for module
+          arguments
+                - n the field name
+                - p the parent widget name
+        - add_bluespec_parameter_binding {n} - Adds a fields in Parameter tab
+          of the screen
+                - name the field name
+        - add_bluespec_input_clock_field {n {p ""} {c ""} {cg ""}} - Adds a
+          fields in Input clock tab of the screen
+                - n the field name
+                - p the parent widget name
+                - c the list of input port names which are defined as clock
+                - cg the list of input port names which are defined as
+                clock gate
+        - select_default_clock {} - Deselects all currently selected
+          checkbuttons and selects the checkbutton
+        - add_bluespec_input_reset_field {n {p ""} {r ""} {be ""}} - Adds a
+          fields in Input reset tab of the screen
+                - n the field name
+                - p the parent widget name
+                - r the list of input port names which are defined as reset
+                - be the list of BSV expressions
+        - select_default_reset {} - Deselects all currently selected
+          checkbuttons and selects the checkbutton
+        - get_bluespec_module_name {} - Returns the contents of the Module name
+          entry
+        - get_bluespec_interface_name {} - Returns the content of the Interface
+          entry
+        - get_bluespec_package_import {} - Returns the content of the Package
+          import field
+        - get_bluespec_provisos {} - Returns the content of the Provisos field
+        - get_bluespec_module_args {} - Returns the content of the Module
+          arguments field
+        - get_bluespec_parameter_binding {} - Returns the content of the
+          Parameter Binding tab
+        - get_bluespec_input_clock {} - Returns the content of the Input Clock
+          tab
+        - get_bluespec_input_reset {} - Returns the content of the Input Reset
+          tab
+        - action_check {} - Checks for valid Bluespec module and interface name,
+          builds output string and generates. A file with an empty interface
+          and import BVI definitions is cretaed. The import BVI will contain
+          the module name (with arguments), interface name, provisos and
+          default clock/reset.
+
+
+@subsection _import_bvi_wizard_devspec_window_scr3_ Method Port Binding screen 
+
+The following public procedures/methods are used at this step of the wizard:
+
+        - check_method_port_window {} - Checks the conditions of method port
+          binding screen.
+        - create_method_bindings_frame {f} - Creates the Method port bindings
+          frame
+                - f the frame for the field
+        - create_port_bindings_frame {f} - Creates the Method port bindings
+          frame
+                - f the frame for the field
+        - create_interface_bindings_frame {f} - Creates the Method port bindings
+          frame
+                - f the frame for the field
+        - add_method_binging_args_field {f n {p ""}} - Adds a Method bindings
+          fields in Method port binding
+                - f the frame for the field
+                - n the field name
+                - p the parent widget name
+        - add_port_binding_field {f name {parent ""}} - Adds a Port bindings
+          fields in Method port binding
+                - f the frame for the field
+                - name the field name
+                - parent the parent widget name
+        - get_method_binging_args {} - Returns the content of  the Method
+          Bindings part 
+        - get_port_binding {} - Returns the content of the Port Bindings part
+        - get_subinterface_binding {} - Returns the content of the Subinterface
+          Bindings part
+        - configure_interface_list {} - Removes the subinterfaces from the list
+          which have no subinterface
+        - write_subinterface_into_file {p_ifc id} - Writes the definitions of
+        interfaces at the third step of the wizard into a temporary file
+                - p_ifc the frame name of the parent interface
+                - id the id of the file to be written
+        - write_methods_into_file {mname id} - Writes the definitions of
+          methods at the third step of the wizard into a temporary file
+                - mname the frame name of the method
+                - id the id of the file to be written
+        - action_check {} - Checks the conditions of the current step
+
+
+@subsection _import_bvi_wizard_devspec_window_scr4_ Combinational Paths screen 
+
+The following public procedures/methods are used at this step of the wizard:
+
+        - add_combinational_path_field {f n {p ""}} - Adds a Combinational path
+          field
+                - f the frame for the field
+                - n the field name
+                - p the parent widget name
+        - add_combinational_path_input_field {f n {p ""}} - Adds a
+          Combinational path Input field
+                - f the frame for the field
+                - n the field name
+                - p the parent widget name
+        - add_combinational_path_output_field {f n {p ""}} - Adds a
+          Combinational path Output field
+                - f the frame for the field
+                - n the field name
+                - p the parent widget name
+        - get_combinational_path_input_outpu {} - Returns the list which
+          contains the inputs and output
+        - action_check {} - Checks the conditions of the current step
+        - method check_combinational_path_window {} - Checks the conditions of
+          combinational path screen.
+        - write_path_into_file {p id} - Writes the definitions of combinational
+          paths for verilog input and output ports at the 4-th step of the
+          wizard into a temporary file
+                - p the list which contains the path names
+                - id the id of the file to be written
+
+@subsection _import_bvi_wizard_devspec_window_scr5_ Scheduling Annotations
+
+The following public procedures/methods are used at this step of the wizard:
+
+        - get_scheduling_annotation {} - returns the list which contains the
+          method names and the annotation between them
+        - check_scheduling_annotation_window {} - Checks the conditions
+          of scheduling annotation screen.
+        - write_annotations_into_file {s id} - Writes the definitions of
+          scheduling annotations between bsv methods at the 5-th step of the
+          wizard into a temporary file
+                - s the list which contains the method names and the
+                  annotation between them
+                - id the id of the file to be written
+
+
+@subsection _import_bvi_wizard_devspec_window_scr6_ Finish
+
+The following public procedures/methods are used at this step of the wizard:
+        - remove_not_selected_interface {i} - Removes the given interfaces
+          from the list
+                - i the interface list to be removed
+
+
+@section _import_bvi_wizard_devspec_dependencies_ Dependencies, Assumptions, Risks
+@todo
+
+*/
+
+// vim:syntax=doxygen:et:shiftwidth=8:tabstop=8:

@@ -1,0 +1,14 @@
+Read in a file of 'exceptions' showing paths to be ignored.
+
+Add functionality: trace logic cones:
+- backwards from moduleInst input
+- forwards  from moduleInst output
+
+analyseNets:
+ 'fanout' analysis needs to be careful about bitselect
+ ops.  E.g., a 'bit explode' operation may be expressed as an 8-way
+ fanout to 8 'bitselect' operations, each selecting a different wire.
+ This is not a true fanout.
+ Also, bitReplicate should contribute to fanout
+
+Parser: recover on syntax error

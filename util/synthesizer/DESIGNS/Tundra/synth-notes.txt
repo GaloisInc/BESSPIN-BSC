@@ -1,0 +1,9 @@
+The Makefile checks out the source code from bsc/trunk/testsuite/bsc.bsv_examples/pong, and builds the design in the current directory. Make clean removes everything produced by this step.
+
+synthesize_magma uses a slightly modified version* of make_mantle_script.tcl to create a script (run.tcl) for magma. This script contains instructions to create a line similar to: "RSLT-123  OK: 123e-10 456e-10 789", where 123e-10 is the slack (in seconds), 456e-10 the area (in um^2), and 789 the CPU time (in seconds). If this line is found in the output, the first part is stripped away (using the script dropfirstarg), and the rest is stored in the result file. Otherwise an error message is stored in the result file.
+
+The synthesis is done in the temporary directory given as argument to synthesize_magma.
+
+
+(*) The difference is that the verilog file meta_harden.v is added to the list of verilog files. 
+

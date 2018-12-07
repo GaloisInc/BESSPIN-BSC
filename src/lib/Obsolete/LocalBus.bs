@@ -1,0 +1,249 @@
+package LocalBus(
+	LBAddr, LBSReg(..), LBSModule,
+	LBReg, lbs, lbRegRO, lbRegRW,
+	Accum(..), lbAccum,
+	lbsOffset, lbsCollect,
+	----
+	LBASync, LBAModule,
+	mkLBA, lbaCollect
+	) where
+import List
+import Counter
+import ModuleCollect
+import ClientServer
+import GetPut
+import RAM
+
+--@ This package is not intended for public use with BSV0.5; it is provided
+--@ solely to support ``legacy'' code in some demonstration packages.
+--@ The public package is LBus, {\it q.v.}
+
+ --@ \subsubsection{LocalBus}
+ --@ \index{LocalBus@\te{LocalBus} (package)|textbf}
+ --@ 
+ --@ The \te{LocalBus} package provides a way to create registers
+ --@ that are accessible through some type of local bus (e.g., PCI).
+ --@ 
+ --@ The local bus registers are collected automagically in a
+ --@ \te{ModuleCollect} monad.  An \te{LBSModule sa sd} corresponds to a
+ --@ \te{Module} except that it also keeps a set of registers.
+ --@ The address is $sa$ bits wide and the data is $sd$ bits wide.
+
+ --@ # 1
+type LBSModule sa sd i = ModuleCollect (LBSReg sa sd) i
+
+ --@ The \te{LBSReg} type is normally never seen by a user of the
+ --@ \te{LBSModule}; it is only needed when creating new kinds
+ --@ of local bus registers.
+ --@ This \te{LBSReg} interface is what the local bus uses to access
+ --@ a register.
+ --@ \index{LBSReg@\te{LBSReg} (interface)|textbf}
+ --@ # 4
+interface LBSReg sa sd =
+    lbsAddr :: LBAddr sa             -- address of the register
+    lbsSet  :: Bit sd -> Action      -- set method
+    lbsGet  :: ActionValue (Bit sd)  -- get method
+ --@ Note that the \te{lbsGet} method allows an action to
+ --@ be performed when the local bus reads the value.  This allows
+ --@ implementing, e.g., clear-on-read registers.
+
+ --@ 
+ --@ The type \te{LBAddr} is the address used to get and set register
+ --@ from the local bus.  (This type is exported abstractly.)
+ --@ \index{LBAddr@\te{LBAddr} (type)|textbf}
+ --@ # 2
+data LBAddr sa = LBAddr (Bit sa)
+    deriving (Literal, Eq, Bits)
+
+unLBAddr :: LBAddr sa -> Bit sa
+unLBAddr (LBAddr a) = a
+
+ --@ \begin{itemize}
+ --@ \item{Creating registers}
+type LBReg sa sd i = (LBSReg sa sd, i)
+
+lbs :: Module (LBReg sa sd i) -> LBSModule sa sd i
+lbs m = 
+   module
+    (lbr, r) :: (LBReg sa sd i) <- liftModule m
+    addToCollection lbr
+    return r
+
+regRO :: (Bits r sr, Add k sr sd) => LBAddr sa -> r -> Module (LBReg sa sd (Reg r))
+regRO addr x =
+  module
+    r :: Reg r <- mkReg x
+    interface -- Pair
+       (interface LBSReg
+		lbsAddr  = addr
+		lbsSet _ = noAction
+		lbsGet   = return (zeroExtend (pack r))
+	,
+	asReg r
+       )
+
+ --@ The \te{lbRegRO} function creates a register that looks like
+ --@ a normal register in the module that creates it, but it is also
+ --@ accessible from the local bus at the given address.
+ --@ From the local bus the register is read-only; attempts to write it
+ --@ have no effect.
+ --@ The created register has to have a bit width small than or equal to the
+ --@ local bus width.  If it is smaller it will padded with zeroes on the left.
+ --@ \index{lbRegRO@\te{lbRegRO} (function)|textbf}
+ --@ # 1
+lbRegRO :: (Bits r sr, Add k sr sd) => LBAddr sa -> r -> LBSModule sa sd (Reg r)
+lbRegRO a x = lbs (regRO a x)
+
+regRW :: (Bits r sr, Add k sr sd) => LBAddr sa -> r -> Module (LBReg sa sd (Reg r))
+regRW addr x =
+  module
+    r :: Reg r <- mkReg x
+    interface -- Pair
+       (interface LBSReg
+		lbsAddr  = addr
+		lbsSet v = r := (unpack (truncate v))
+		lbsGet   = return (zeroExtend (pack r))
+	,
+	asReg r
+       )
+
+ --@ The \te{lbRegRW} function creates a register that looks like
+ --@ a normal register in the module that creates it, but it is also
+ --@ accessible from the local bus at the given address.
+ --@ \index{lbRegRW@\te{lbRegRW} (function)|textbf}
+ --@ # 1
+lbRegRW :: (Bits r sr, Add k sr sd) => LBAddr sa -> r -> LBSModule sa sd (Reg r)
+lbRegRW a x = lbs (regRW a x)
+
+{-
+regRC :: (Bits a sa) => LBAddr n -> a -> Module (LBReg n a (Reg a))
+regRC addr x = do
+    r :: Reg a <- mkReg x
+    let lbIfc =
+	    interface LBSReg
+		lbsAddr  = addr
+		lbsSet v = r := v
+		lbsGet   = do
+			r := x
+			return r
+    return (lbIfc, r)
+-}
+
+ --@ The \te{lbsOffset} function can be used to add an offset to all local
+ --@ bus register addresses in an \te{LBSModule}.
+ --@ \index{lbsOffset@\te{lbsOffset} (function)|textbf}
+ --@ # 1
+lbsOffset :: LBAddr sa -> LBSModule sa sd i -> LBSModule sa sd i
+lbsOffset (LBAddr o) = mapCollection
+	(\ r -> interface LBSReg
+		    lbsAddr = LBAddr (unLBAddr r.lbsAddr + o)
+		    lbsSet = r.lbsSet
+		    lbsGet = r.lbsGet
+	)
+
+----------
+
+ --@ # 3
+interface Accum n =
+    add   :: Bit n -> Action
+    value :: Bit n
+
+accum :: (Add k i sd) => LBAddr n -> Bit k -> Module (LBReg n sd (Accum k))
+accum addr x =
+  module
+    c :: Counter k <- mkCounter x
+    interface -- Pair
+       (interface LBSReg
+	      lbsAddr = addr
+	      lbsSet x = c.setF (truncate x)
+	      lbsGet = do
+		c.setC 0
+		return (zeroExtend c.value)
+	,
+	interface Accum
+	      add   = c.inc
+	      value = c.value
+       )
+
+ --@ \index{lbAccum@\te{lbAccum} (function)|textbf}
+ --@ # 1
+lbAccum :: (Add k i sd) => LBAddr n -> Bit k -> LBSModule n sd (Accum k)
+lbAccum a x = lbs (accum a x)
+
+
+ --@ \item{\bf Collecting registers together}
+ --@ The external interface of a local bus is RAM-like.
+ --@ It is through this interface that register accesses normally happen.
+ --@ # 1
+type LBASync sa sd = RAM (LBAddr sa) (Bit sd)
+
+ --@ Given a \te{LBSModule} with a set of register we can extract
+ --@ the local bus (RAM-like) interface and the normal interface.
+ --@ \index{lbsCollect@\te{lbsCollect} (function)|textbf}
+ --@ # 1
+lbsCollect :: LBSModule sa sd i -> Module (LBASync sa sd, i)
+lbsCollect lm =
+  module
+    (i, lbs) :: (i, List (LBSReg sa sd)) <- getCollection lm
+    (sget, sput) :: (Get (Bit sd), Put (Bit sd)) <- mkGetPut
+    interface -- Pair
+       (interface Server
+		request =
+                 interface Put
+                  put (Read a) =
+		    foldr (\ lbi r -> if lbi.lbsAddr == a then action { x <- lbi.lbsGet; sput.put x } else r) noAction lbs
+		  put (Write (address, value)) =
+		    foldr (\ lbi r -> if lbi.lbsAddr == address then lbi.lbsSet value else r) 
+		          noAction
+		          lbs
+		response = sget
+	,
+	i
+       )
+
+----------
+
+ --@ The \te{LBSModule} is used to collect individual registers.
+ --@ Once the registers have been collected into an \te{LBASync}
+ --@ interface these interfaces can be collected together.
+ --@ # 1
+type LBAModule sa sd i = ModuleCollect (LBASync sa sd) i
+
+ --@ The \te{mkLBA} function make a \te{LBAModule} out of the result from
+ --@ \te{lbsCollect}.
+ --@ \index{mkLBA@\te{mkLBA} (function)|textbf}
+ --@ # 1
+mkLBA :: Module (LBASync sa sd, i) -> LBAModule sa sd i
+mkLBA m =
+  do
+    (lba, i) :: (LBASync sa sd, i) <- liftModule m
+    addToCollection lba
+    return i
+
+ --@ The \te{lbaCollect} function combines local bus register clusters.
+ --@ It introduces a one cycle latency on both request and response.
+ --@ \index{lbaCollect@\te{lbaCollect} (function)|textbf}
+ --@ # 2
+lbaCollect :: (Bits (RAMreq (LBAddr sa) (Bit sd)) sreq) =>
+              LBAModule sa sd i -> Module (LBASync sa sd, i)
+lbaCollect lm =
+  module
+    (i, lbs) :: (i, List (LBASync sa sd)) <- getCollection lm
+    ram <- joinServersBC lbs
+    ram' <- mkRequestBuffer ram
+    interface (ram', i)
+
+{-
+ --@ The \te{LBAAtModule} module represents modules located at a
+ --@ a particular place in the local bus address space.
+ --@ # 1
+type LBAAtModule m n a i = ModuleCollect (LBAddr m, LBASync n a) i
+
+ --@ Set the address space location.
+ --@ # 1
+lbaSetAddr :: LBAddr m -> LBAModule n a i -> LBAAtModule m n a i
+lbaSetAddr a m = _
+
+-}
+
+--@ \end{itemize}

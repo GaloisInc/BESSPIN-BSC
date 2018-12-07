@@ -1,0 +1,10 @@
+Document: bluespec-emvm
+Title: Emulation App User Manual
+Author: Bluespec, Inc.
+Abstract: This document describes Bluespec’s Emulation App, including
+ Bluespec SystemVerilog (BSV) sup- port for co-emulation in the SCE-MI
+ standard.
+Section: Programming
+
+Format: PDF
+Files: /usr/share/doc/bluespec-__RELEASE_NUM__-doc/emVM.pdf.gz

@@ -1,0 +1,128 @@
+#!/bin/sh
+
+select_signals() { awk '
+BEGIN {
+    FS = " "
+}
+/\$scope/ {
+    name[namecount] = $3
+    namecount++
+    if (namecount == 1)
+	cur_name = $3
+    else
+	cur_name = cur_name "." $3
+#    print $0, cur_name
+    use_name = cur_name
+    sub(/^Tb\./,"", use_name)
+    next
+}
+/\$upscope/ {
+    namecount--
+    cur_name = substr(cur_name, 1, length(cur_name) - length (name[namecount]) - 1)
+#    print $0, cur_name
+    next
+}
+/WILL_FIRE| [DQ]_OUT |CAN_FIRE| EN| whas | wval | ENQ | DEQ | wget | wset | FULL_N| EMPTY_N/ {
+    this_name = use_name "." $5
+    to_mark[this_name] = $4
+    if ($4 in from_mark)
+	from_mark[$4] = from_mark[$4] " " this_name
+    else
+	from_mark[$4] = this_name
+#    print "found: ", this_name, "=", $4
+    next
+}
+/^#/ {
+    if (nlines) {
+	isort(savelines, nlines)
+	for (i = 1 ; i <= nlines ; i++)
+	    print savelines[i]
+	nlines = 0
+    }
+    print
+    next
+}
+/^[01]/ {
+    try_mark = substr($0, 2, length($1))
+    v = substr($0, 1, 1)
+#    print try_mark, $0
+    if (try_mark in from_mark) {
+#	print from_mark[try_mark], substr($0,1,1), try_mark, $0
+#	print from_mark[try_mark], substr($0,1,1)
+	s = from_mark[try_mark]
+	if (index(s, " "))
+	{
+	    delete a
+	    split(s, a)
+	    for (one in a)
+	    {
+		nlines++
+		savelines[nlines] = a[one] " " v
+	    }
+	}
+	else
+	{
+	    nlines++
+	    savelines[nlines] = from_mark[try_mark] " " v
+	}
+    }
+    next
+}
+
+#stolen from man page
+#insertion sort of A[0..n]
+function isort( A, n,    i, j, hold)
+{
+  for( i = 2 ; i <= n ; i++)
+  {
+    hold = A[j = i]
+    while ( A[j-1] > hold )
+    { j-- ; A[j+1] = A[j] }
+    A[j] = hold
+  }
+  # sentinel A[0] = "" will be created if needed
+}
+
+END {
+    for (x in to_mark) print x, to_mark[x] >> "'"$1.sig"'"
+}' $1 > $1.sel
+}
+
+
+
+if [ "$#" -lt 3 -o \
+     ! -f "$1" -o ! -r "$1" -o \
+     ! -f "$2" -o ! -r "$2" ] ; then
+    echo "$# \$# "
+    echo "$0 <c_vcd_file> <verilog_vcd_file> <diff_out_file>"
+    exit 2
+fi
+
+rm -f $1.sig
+select_signals $1
+sort -o $1.sig $1.sig
+rm -f $2.sig
+select_signals $2
+sort -o $2.sig $2.sig
+join -t ' ' -1 1 -2 1 -v 1 $1.sig $2.sig > /tmp/sedit$$
+join -t ' ' -1 1 -2 1 -v 2 $1.sig $2.sig > /tmp/wedit$$
+if [ -f "/tmp/sedit$$" -a -s "/tmp/sedit$$" ] ; then
+awk '
+FNR == 1 { nf++ }
+nf == 1 {
+    dont_want[i] = $1
+    i++
+    next
+}
+nf == 2 {
+    for (x in dont_want)
+	if (dont_want[x] == $1)
+	    next
+    print
+}
+' /tmp/sedit$$ $1.sel > $1.eel ;
+else
+cp $1.sel $1.eel ;
+fi
+diff -u $1.eel $2.sel > $3
+# rm /tmp/sedit$$

@@ -1,0 +1,9 @@
+Document: bluespec-kpns
+Title: Bluespec SystemVerilog Known Problems and Solutions
+Author: Bluespec, Inc.
+Abstract: This document records known issues in the Bluespec
+ SystemVerilog compiler and how they can be worked around.
+Section: Programming
+
+Format: PDF
+Files: /usr/share/doc/bluespec-__RELEASE_NUM__-doc/kpns.pdf.gz

@@ -1,0 +1,7 @@
+The release build script is ./build-release.sh
+
+Run it with no arguments to see usage.
+
+The script calls sargebuild.mk to do its actual work.
+
+The script relies on permanent Debian sarge chroots in /home/sarge{32,64} on bluetinder.

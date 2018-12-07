@@ -1,0 +1,194 @@
+-- Copyright 2000--2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id$
+
+package ClockConv(
+	ClockConv, clockConv,
+	Clock,
+	Closed, close) where
+import GetPut
+import Connectable
+
+--@ \subsubsection{ClockConv}
+--@ \index{ClockConv@\te{ClockConv} (package)|textbf}
+--@ 
+--@ The \te{ClockConv} package adds the ability to have a part
+--@ of a design clocked with a different clock and to cross between the
+--@ clock domains.
+
+--@ The \te{Clock} type is used to specify the clock to be used for
+--@ a ``module''.  The \te{Clock} type is abstract and there are no
+--@ operations to create a clock value.  This means that only clocks
+--@ supplied from the outside can be used.
+--@ Externally the \te{Clock} type is represented by two wires: the reset (MSB) and the clock (LSB).
+--@ \index{Clock@\te{Clock} (type)|textbf}
+--@ \begin{libverbatim}
+--@ typedef union tagged { ... } Clock ...;
+--@ \end{libverbatim}
+data Clock
+    = Clock RawReset RawClock
+    deriving (Bits)
+type RawClock = Bit 1
+type RawReset = Bit 1
+
+-----
+
+--@ The class \te{ClockConv} is used to collect those types
+--@ that can cross a clock domain boundary.
+--@ \index{ClockConv@\te{ClockConv} (class)|textbf}
+--@ \begin{libverbatim}
+--@ typeclass ClockConv #(type a);
+--@ \end{libverbatim}
+class ClockConv a
+  where
+    conv :: RawClock -> RawReset -> a -> Module a
+
+
+--@ The \te{clockConv} function takes a \te{Module} and gives
+--@ back a \te{Module} of the same type, but which is clocked by the
+--@ given clock instead of the default clock.
+--@ \index{clockConv@\te{clockConv} (function)|textbf}
+--@ \begin{libverbatim}
+--@ function Module#(a) clockConv(Clock c, Module#(a) mkModule);
+--@ \end{libverbatim}
+clockConv :: (ClockConv a) => Clock -> Module a -> Module a
+clockConv (Clock r c) m =
+  do
+    i :: a <- primModuleClock c r m
+    conv c r i
+
+primitive primModuleClock :: Bit 1 -> Bit 1 -> a -> a
+primitive primCLK :: Bit 1
+primitive primRSTN :: Bit 1
+
+--@ The \te{Get} interface can cross a clock boundary.
+--@ \begin{libverbatim}
+--@ instance ClockConv #(Get#(a))
+--@   provisos (Bits#(a, sa));
+--@ \end{libverbatim}
+instance (Bits a sa) => ClockConv (Get a)
+  where
+    conv :: RawClock -> RawReset -> Get a -> Module (Get a)
+    conv c r g = do
+	(ccg, ccp) :: (Get a, Put a) <- primModuleClock c r mkConv
+	g <-> ccp
+	return ccg
+
+--@ The \te{Put} interface can cross a clock boundary.
+--@ \begin{libverbatim}
+--@ instance ClockConv #(Put#(a))
+--@   provisos (Bits#(a, sa));
+--@ \end{libverbatim}
+instance (Bits a sa) => ClockConv (Put a)
+  where
+    conv :: RawClock -> RawReset -> Put a -> Module (Put a)
+    conv c r p = do
+	(ccg, ccp) :: (Get a, Put a) <- primModuleClock c r mkConvR
+	p <-> ccg
+	return ccp
+
+--@ Pairs of interfaces that each can cross a clock boundary can also cross
+--@ together.
+--@ \begin{libverbatim}
+--@ instance ClockConv #(Tuple2 #(a, b))
+--@   provisos (ClockConv#(a), ClockConv#(b));
+--@ \end{libverbatim}
+instance (ClockConv a, ClockConv b) => ClockConv (a, b)
+  where
+    conv :: RawClock -> RawReset -> (a, b) -> Module (a, b)
+    conv c r (ia, ib) = do
+	ia' :: a <- conv c r ia
+	ib' :: b <- conv c r ib
+	return (ia', ib')
+
+interface VGP n =
+    vgval :: Bit n
+    vgrdy :: Bit 1
+    vgdeq :: PrimAction
+    vpput :: Bit n -> PrimAction
+    vprdy :: Bit 1
+
+mkVGP :: Bit 1 -> Bit 1 -> Module (VGP n)
+mkVGP clk rstn =
+    module verilog "change_clock" (("size",valueOf n)) "in_clk" "in_rstn" (("out_clk", clk) , ("out_rstn", rstn)) {
+        vgval = "out_data";
+	vgrdy = "out_ready";
+	vgdeq = "out_strobe";
+	vpput = "in_data" "in_strobe";
+	vprdy = "in_ready";
+    } [ vpput <> [vgval, vgrdy, vgdeq, vprdy ],
+	vgdeq <> [vgval, vgrdy, vpput, vprdy ],
+	[vgval, vgrdy, vprdy] <> [vgval, vgrdy, vprdy]
+      ]
+
+mkVGPR :: Bit 1 -> Bit 1 -> Module (VGP n)
+mkVGPR clk rstn =
+    module verilog "change_clock" (("size",valueOf n)) "out_clk" "out_rstn" (("in_clk", clk) , ("in_rstn", rstn)) {
+        vgval = "out_data";
+	vgrdy = "out_ready";
+	vgdeq = "out_strobe";
+	vpput = "in_data" "in_strobe";
+	vprdy = "in_ready";
+    } [ vpput <> [vgval, vgrdy, vgdeq, vprdy ],
+	vgdeq <> [vgval, vgrdy, vpput, vprdy ],
+	[vgval, vgrdy, vprdy] <> [vgval, vgrdy, vprdy]
+      ]
+
+mkConv :: (Bits a sa) => Module (Get a, Put a)
+mkConv = mkConvAux mkVGP
+
+mkConvR :: (Bits a sa) => Module (Get a, Put a)
+mkConvR = mkConvAux mkVGPR
+
+mkConvAux :: (Bits a sa) =>
+	  (Bit 1 -> Bit 1 -> Module (VGP sa)) -> Module (Get a, Put a)
+mkConvAux mk =
+  module
+    vgp :: VGP sa <- mk primCLK primRSTN
+    interface -- Pair
+       (interface Get
+	    get = do
+		    fromPrimAction vgp.vgdeq
+		    return (unpack vgp.vgval)
+		when (unpack vgp.vgrdy)
+	,
+	interface Put
+	    put x = fromPrimAction (vgp.vpput (pack x))
+		when (unpack vgp.vprdy)
+       )
+
+-----
+
+--@ The \te{Closed} type constructor allows values of the type to be
+--@ constructed with the \te{close} function, but there is no way to
+--@ further interact with the closed value.
+--@ Nothing happens when \te{close} is applied value, but the only thing
+--@ that the result can be used for is to export it from a module.
+--@ Closed values are allowed to cross clock boundaries, and nothing happens
+--@ to them.  This means that a subinterface of a module that is in a different 
+--@ clock domain can be made accessible at the top level.
+--@ \index{Closed@\te{Closed} (type)|textbf}
+--@ \begin{libverbatim}
+--@ interface Closed #(type a);
+--@ \end{libverbatim}
+interface Closed a
+  =
+    closed :: a
+
+--@ \index{close@\te{close} (function)|textbf}
+--@ \lineup
+--@ \begin{libverbatim}
+--@ function Closed#(a) close(a x);
+--@ \end{libverbatim}
+close :: a -> Closed a
+close x = interface Closed
+		closed = x
+
+--@ \lineup
+--@ \begin{libverbatim}
+--@ instance ClockConv #(Closed#(a));
+--@ \end{libverbatim}
+instance ClockConv (Closed a)
+  where
+    conv _ _ i = return i
+

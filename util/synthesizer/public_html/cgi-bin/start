@@ -1,0 +1,4 @@
+#!/bin/bash
+
+/usr/bin/runhugs -h10M /export/home/synthesizer/SCRIPTS/Haskell/StartBatchCGI.hs
+

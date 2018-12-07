@@ -1,0 +1,12 @@
+#!/bin/sh
+TARGET=bluenoc
+PLAT=`${BLUESPECDIR}/bin/bsenv platform`
+
+BLUESPECEXEC=${BLUESPECDIR}/bin/${PLAT}/$TARGET
+
+if [ ! -x $BLUESPECEXEC ] ; then
+    echo "Error $TARGET executable not found BLUESPECEXEC  $BLUESPECEXEC"
+    exit 1;
+fi
+
+exec $BLUESPECEXEC "$@"

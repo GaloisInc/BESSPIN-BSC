@@ -1,0 +1,69 @@
+#!/bin/bash
+
+#############################################################################
+# NOTE!!!!!!!!!
+# If you're looking at this file to see how to add designs to the synthesizer
+# system, then you've come to the wrong design. Please have a look at the
+# pong design instead, which is set up in a much better way.
+#############################################################################
+
+PERIOD=$1
+UTIL=$2
+VOLCANO=$3
+TEMPDIR=$4
+RSLTFILE=$5
+
+ROOTDIR=/export/home/synthesizer/DESIGNS/UTMI/UTMI/
+
+STDLIBFILES="GatedClock.v SyncResetA.v SyncWire.v MakeClock.v ClockMux.v SyncHandshake.v SyncFIFO.v SyncBit.v FIFO2.v SyncBit1.v SyncBit05.v SyncBit15.v SyncRegister.v SyncReset.v SizedFIFO.v ClockDiv.v SyncPulse.v RegAligned.v MakeResetA.v GatedClockDiv.v"
+
+############################################################################
+# This design is not parameterized. Output error message if someone is
+# trying to change the parameters
+
+if [ $PERIOD != "2083.0p" ] ; then
+  echo "FAIL: This design has multiple clock domains, and is not parameterized on clock frequency. Please reset the period to 2083 ps (it's now set to $PERIOD). If you really really really want to change the clock frequencies, then do it all over the run.tcl file." >> $RSLTFILE
+  exit 1
+fi
+
+if [ $UTIL != 50 ] ; then
+  echo "FAIL: This design is not parameterized. Please reset the utilization to 50 percent (it's now set to $PERIOD percent), or change the run.tcl file." >> $RSLTFILE
+  exit 1
+fi
+
+if [ $VOLCANO != "/tools/magma/lib/tsmc18gl.volcano/" ] ; then
+  echo "FAIL: This design is not parameterized. Please reset the volcano to /tools/magma/lib/tsmc18gl.volcano/ (it's now set to $VOLCANO) or change the run.tcl file." >> $RSLTFILE
+  exit 1
+fi
+
+#############################################################################
+
+for f in $STDLIBFILES
+do
+  cp $BLUESPECDIR/Verilog/$f $ROOTDIR
+done
+
+pushd $ROOTDIR
+export LM_LICENSE_FILE=27000@indigo
+/tools/magma/current/common/bin/mantle < ../run.tcl &> mantle_output.txt
+popd
+
+if [ -n "`grep "ERROR:" $ROOTDIR/*.rpt`" ]; then
+  echo "FAIL: synthesis" >> $RSLTFILE
+  cat $ROOTDIR/mantle_output.txt >> $RSLTFILE
+  exit 1
+elif [ -n "`grep "ERROR:" $ROOTDIR/mantle_output.txt`" ]; then
+  echo "FAIL: synthesis" >> $RSLTFILE
+  cat $ROOTDIR/mantle_output.txt >> $RSLTFILE
+  exit 1
+elif [ -z "`grep "RSLT-123" $ROOTDIR/mantle_output.txt`" ]; then
+  echo "FAIL: synthesis" >> $RSLTFILE
+  echo "synthesize_magma script cannot find line beginning with RSLT-123 in mantle output:" >> $RSLTFILE 
+  cat $ROOTDIR/mantle_output.txt >> $RSLTFILE
+  exit 1
+else
+  ./dropfirstarg `grep "RSLT-123" $ROOTDIR/mantle_output.txt` >> $RSLTFILE
+fi
+
+
+

@@ -1,0 +1,672 @@
+#!/usr/bin/env python
+
+#
+# Generate project and script file for building a design with XST.
+#
+# Copyright Bluespec, Inc. 2009
+#
+
+import os
+import os.path
+import sys
+import optparse
+import subprocess
+import glob
+
+if sys.hexversion < 0x02050000:
+  sys.exit("Python 2.5 or newer is required to run this program.")
+
+# VIVADO Special Modules
+SPECIAL_MODS = [
+  'GatedClock',
+  'RegFile',
+  'MakeClock',
+  'SizedFIFO',
+  'BRAM1',
+  'BRAM1BE',
+  'BRAM1BELoad',
+  'BRAM1Load',
+  'BRAM2',
+  'BRAM2BE',
+  'BRAM2BELoad',
+  'BRAM2Load'
+  ]
+
+# Which families use Vivado for synthesis
+def usesVivado(family):
+  return (family == 'kintex7' or
+          family == 'virtex7' or
+          family == 'artix7' or
+          family == 'virtexU' or
+          family == 'kintexU')
+
+# Which families require UltraScale libraries
+def usesUltraScaleLibraries(family):
+  return (family == 'virtexU' or family == 'kintexU')
+
+# ################################################################
+# Option parsing
+
+# Used for generating error messages due to incorrect option usage
+class Usage(Exception):
+  def __init__(self, status=0, msg=None):
+    self.status = status
+    self.msg = msg
+
+# Subclass optparse.OptionParser to make it throw an exception
+# instead of calling sys.exit()
+class MyOptionParser(optparse.OptionParser):
+  def exit(self, status=0, msg=None):
+    raise Usage(status, msg)
+
+# Create an option parser for this script
+def mkOptionParser():
+  parser = MyOptionParser(usage='usage: %prog [options] top_module board part family device package speed',
+                          version='%prog 1.0',
+                          description='Prepare input files for an XST synthesis run.'
+                         );
+  parser.add_option('--project-root',
+                    dest='project_root',
+                    help='Base directory for the current project', metavar='DIR')
+  parser.add_option('--bpath',
+                    dest='bpath',
+                    help='BSC colon-separated search path for intermediate files', metavar='PATH')
+  parser.add_option('--bdir',
+                    dest='bdir',
+                    help='BSC bi/bo directory', metavar='DIR')
+  parser.add_option('--vdir',
+                    dest='vdir',
+                    help='BSC RTL output directory', metavar='DIR')
+  parser.add_option('--edir',
+                    dest='edir',
+                    help='RTL edit output directory', metavar='DIR')
+  parser.add_option('--outdir',
+                    dest='outdir',
+                    help='script output directory', metavar='DIR')
+  parser.add_option('--vlib',
+                    dest='libdirs', action='append', default=[],
+                    help='search directory for Verilog files', metavar='DIR')
+  parser.add_option('--idir',
+                    dest='idir', action='append', default=[],
+                    help='+incdir+ directory for Verilog files', metavar='DIR')
+  parser.add_option('--xV',
+                    dest='xV', action='append', default=[],
+                    help='extra verilog flags', metavar='DIR')
+  parser.add_option('--define',
+                    dest='define', action='append', default=[],
+                    help='define verilog macro', metavar='DIR')
+  parser.add_option('--import',
+                    dest='imports', action='append', default=[],
+                    help='file for additional import', metavar='FILE')
+  parser.add_option('--vfile',
+                    dest='vfile',
+                    help='verilog file', metavar='FILE')
+  parser.add_option('--ngcfile',
+                    dest='ngcfiles', action='append', default=[],
+                    help='NGC file', metavar='FILE')
+  parser.add_option('--dcpfile',
+                    dest='dcpfiles', action='append', default=[],
+                    help='DCP file', metavar='FILE')
+  parser.add_option('-l', '--logic',
+                    action='store_true', dest='logic', default=False,
+                    help='create a logic allocation file when building bitstream')
+  parser.add_option('-p', '--preserve',
+                    action='store_true', dest='preserve', default=False,
+                    help='set options so as to maximize preserved signals for ChipScope debugging')
+  parser.add_option('--readback',
+                    action='store_true', dest='readback', default=False,
+                    help='synthesize the rtl and generate necessary files for readback debugging')
+  parser.add_option('-r', '--rtl',
+                    action='store_true', dest='rtl', default=False,
+                    help='create an edif file after rtl elaboration')
+  parser.add_option('-c', '--ooc',
+                    action='store_true', dest='ooc', default=False,
+                    help='synthesize as an out-of-context module')
+  parser.add_option('--synth-strategy',
+                    dest='synthstrategy', help='set synthesis strategy', metavar='STRING')
+  parser.add_option('--impl-strategy',
+                    dest='implstrategy', help='set implementation strategy', metavar='STRING')
+  parser.add_option('--exclude',
+                    dest='excludes', action='append', default=[],
+                    help='files to exclude from add_file list', metavar='FILE')
+  parser.add_option('--prodesign-socket',
+                    dest='prodesign_socket', help='set ProDesign board PCIe socket used', metavar='STRING')
+  parser.add_option('--top-fpga-file',
+                    dest='top_fpga_file', help='set the top file for fpga synthesis', metavar='FILE')
+  parser.add_option('--top-fpga-module',
+                    dest='top_fpga_module', help='set the top fpga module for fpga synthesis', metavar='STRING')
+  return parser
+
+
+# Utility function to expand variables and normalize paths for a file
+def fix_path(p0):
+  if p0 == None:
+    return None
+  p1 = os.path.expanduser(p0)
+  p2 = os.path.expandvars(p1)
+  p3 = os.path.normpath(p2)
+  p4 = os.path.realpath(p3)
+  return p4
+
+# ##################################################################
+# Core program logic
+
+# Exception classes used to handle error conditions
+
+
+# ##################################################################
+# Top-level program sequencing
+
+# The main entry point for the program
+def main(argv=None):
+  if argv is None:
+    argv = sys.argv
+
+  try:
+    # process command line arguments
+    parser = mkOptionParser()
+    opts, args = parser.parse_args()
+
+    # ensure that all required arguments were given
+    if len(args) != 7:
+      raise Usage(1,"Require 7 arguments: top_module, board, part, family, device, package, and speed")
+    (top_module,board,part,family,device,package,speed) = args
+
+    top_package = top_module
+    if opts.top_fpga_module:
+      top_module = opts.top_fpga_module
+
+    # get the BLUESPECDIR value
+    bsdir = os.getenv('BLUESPECDIR')
+    if bsdir == None:
+      print >>sys.stderr, "$BLUESPECDIR environment variable is not set"
+      return 1
+
+    # run the listFiles TCL script
+    colon = ":"
+    listfiles_cmd = [os.path.join(bsdir,'tcllib','bluespec','listVlogFiles.tcl')]
+    if opts.bdir:
+      listfiles_cmd += ['-bdir', opts.bdir]
+    if opts.vdir:
+      listfiles_cmd += ['-vdir', opts.vdir]
+    if opts.bpath:
+      bpath = opts.bpath
+    else:
+      bpath = '+'
+    if usesVivado(family):
+      bpath = os.path.join(bsdir, 'Verilog.Vivado') + ':' + bpath
+    if opts.libdirs:
+      bpath = colon.join(opts.libdirs) + ':' + bpath
+    if bpath != '+':
+      listfiles_cmd += ['-p', bpath]
+    listfiles_cmd += [top_package]
+    listfiles_cmd += [top_module]
+
+    print "*****"
+    print "Subcommand: %s" % ' '.join(listfiles_cmd)
+    print "*****"
+    scr = subprocess.Popen(listfiles_cmd, stdout=subprocess.PIPE)
+    files = scr.communicate()[0]
+    if scr.returncode != 0:
+      print >> sys.stderr, 'listVlogFiles.tcl script failed'
+      return scr.returncode
+
+    category = None
+    file_entries = []
+    checkpoint_entries = []
+    for f in files.splitlines():
+      if f.isspace():
+        continue
+      elif f.startswith('#'):
+        continue
+      elif f.startswith('<'):
+        continue
+      elif f.startswith('--'):
+        idx = f.find('-- Analyzing Verilog file')
+        if idx != -1:
+          idx += 26
+          idx_end = f.find('(VERI')
+          fn = f[idx:idx_end-1]
+          full_fn = fix_path(fn)
+          file_entries += ['%s' % full_fn]
+        continue
+      elif f.find('analyzing included file') != -1:
+        idx = f.find('analyzing included file')
+        idx += 24
+        idx_end = f.find('(VERI')
+        fn = f[idx:idx_end-1]
+        full_fn = fix_path(fn)
+        file_entries += ['%s' % full_fn]
+        continue
+      elif f.startswith('/'):
+        file_entries += ['%s' % f]
+        continue
+      elif any(x in f for x in opts.excludes):
+        print "Excluding %s" % f
+        continue
+      else:
+        continue
+        #file_entries += ['%s' % f]
+
+    # added explicitly given imports
+    # but first, remove any for which there's an explicit import
+    # (in case the import is an alternate version to use)
+    for f in opts.imports:
+      if f.isspace():
+        continue
+      else:
+        file_entries = list(filter(lambda fname: os.path.basename(fname) != os.path.basename(f), file_entries))
+        file_entries += ['%s' % f]
+
+    # added explicitly given ngcfiles
+    for f in opts.ngcfiles:
+      if f.isspace():
+        continue
+      else:
+        file_entries += ['%s' % f]
+
+    # added explicitly given dcpfiles
+    for f in opts.dcpfiles:
+      if f.isspace():
+        continue
+      else:
+        checkpoint_entries += ['%s' % f]
+
+    # compute file name(s)
+    if opts.rtl:
+      tcl_file_name = top_module + '.rtl.tcl'
+    elif opts.ooc:
+      tcl_file_name = top_module + '.ooc.tcl'
+    else:
+      tcl_file_name = top_module + '.pa.tcl'
+    ace_file_name  = top_module + '_ace.cmd'
+    prog_file_name = top_module + '_jtag.cmd'
+    bsd_file_name  = 'unknown_sram.bsd'
+    if opts.top_fpga_module:
+      bit_file_name  = opts.top_fpga_module + '.bit'
+    else:
+      bit_file_name  = top_module + '.bit'
+    xise_file_name = top_module + '_build_xise.tcl'
+    list_file_name = top_module + '.files'
+
+    if opts.outdir:
+      full_tcl_file_name   = os.path.join(opts.outdir, tcl_file_name)
+      full_ace_file_name   = os.path.join(opts.outdir, ace_file_name)
+      full_prog_file_name  = os.path.join(opts.outdir, prog_file_name)
+      full_bsd_file_name   = os.path.join(opts.outdir, bsd_file_name)
+      full_xise_file_name  = os.path.join(opts.outdir, xise_file_name)
+      full_list_file_name  = os.path.join(opts.outdir, list_file_name)
+      full_pre_file_name   = os.path.join(opts.outdir, 'pre_synth.tcl')
+      full_post_file_name  = os.path.join(opts.outdir, 'post_synth.tcl')
+    else:
+      full_tcl_file_name = tcl_file_name
+      full_ace_file_name  = ace_file_name
+      full_prog_file_name = prog_file_name
+      full_bsd_file_name  = bsd_file_name
+      full_xise_file_name = xise_file_name
+      full_list_file_name = list_file_name
+      full_pre_file_name  = 'pre_synth.tcl'
+      full_post_file_name = 'post_synth.tcl'
+
+    # The RTL option is used to generate an EDIF for Readback and it
+    # operates on a version of the source code which has been tweaked
+    # to preserve as many user signals as possible.  The creation of
+    # that version happens in the 'build' script and it needs to know
+    # the names of all the source files, so here we create that list.
+    #
+    # XXX The condition on this ought to be "if opts.rtl", however I suspect
+    # XXX that the intent is for the "pa.tcl" step to generate the list of
+    # XXX files, because the user might want the file for other reasons?
+    #
+    if not opts.rtl:
+      list_file = open(full_list_file_name,'w')
+      print "Writing %s." % full_list_file_name
+      for entry in file_entries:
+        root, ext = os.path.splitext(os.path.basename(entry))
+        path = os.path.dirname(entry)
+        if (ext != '.ngc'):
+          print "Examining %s (%s/%s)\n" % (entry, root, family)
+          if root in SPECIAL_MODS and usesVivado(family):
+            list_file.write(os.path.join(path+'.Vivado', root + '.v') + '\n')
+          else:
+            list_file.write(entry + '\n')
+      list_file.close()
+
+    if usesVivado(family):
+      #  write out the .tcl file
+      tcl_file = open(full_tcl_file_name,'w')
+      print "Writing %s." % full_tcl_file_name
+
+      tcl_file.write('if {[ file exists ./%s ]} {\n' % top_module)
+      tcl_file.write('  # if the project directory exists, delete it and create a new one\n')
+      tcl_file.write('  file delete -force ./%s\n' % top_module)
+      tcl_file.write('}\n')
+      tcl_file.write('file delete -force ./%s.bit\n' % top_module)
+      tcl_file.write('\n')
+      tcl_file.write('create_project %s ./%s -part %s\n' % (top_module,top_module,part))
+      tcl_file.write('set_property design_mode RTL [current_fileset -srcset]\n')
+      if board == 'KCU105':
+        tcl_file.write('set_property board_part "xilinx.com:kcu105:part0:1.1" [current_project]\n');
+
+      if usesUltraScaleLibraries(family) and (board == 'VCU108' or board == 'KCU105'):
+        tcl_file.write('set_property XPM_LIBRARIES {XPM_CDC} [current_project]\n');
+
+      for entry in file_entries:
+        mod = entry
+        if opts.rtl and entry.find('.v') != -1:
+          mod = 'elab_source/%s' % os.path.basename(entry)
+        elif entry.find('.v') != -1:
+          root, ext = os.path.splitext(os.path.basename(mod))
+          path = os.path.dirname(mod)
+          if root in SPECIAL_MODS and usesVivado(family):
+            mod = os.path.join(path+'.Vivado', root + '.v')
+        tcl_file.write('add_file -norecurse {' + mod + '}\n')
+
+      if opts.top_fpga_file:
+        tcl_file.write('add_file -norecurse {' + os.path.join(opts.project_root, opts.vdir, opts.top_fpga_file) + '}\n')
+      if opts.vfile:
+        vfile_abs = os.path.join(opts.project_root, opts.vdir, opts.vfile)
+        if vfile_abs not in file_entries:
+          tcl_file.write('add_file -norecurse {' + vfile_abs + '}\n')
+
+#      tcl_file.write('add_files ' + os.path.join(bsdir, 'Verilog') + '\n')
+#      if usesVivado(family):
+#        tcl_file.write('add_files ' + os.path.join(bsdir, 'Verilog.Vivado') + '\n')
+#      if opts.vdir:
+#        tcl_file.write('add_files ' + os.path.join(opts.project_root, opts.vdir) + '\n')
+      if opts.edir:
+        tcl_file.write('add_files ' + os.path.join(opts.project_root, opts.edir) + '\n')
+      for d in opts.libdirs:
+        tcl_file.write('add_files ' + d + '\n')
+      for d in opts.idir:
+        tcl_file.write('add_files ' + d + '\n')
+
+      if not opts.ooc:
+        if board == 'PDV72KR2' and opts.prodesign_socket:
+          tcl_file.write('read_xdc ./%s.xdc\n' % opts.prodesign_socket.lower())
+        tcl_file.write('read_xdc ./default.xdc\n')
+
+      tcl_file.write('\n')
+
+      if opts.top_fpga_module:
+        tcl_file.write('set_property top %s [get_property srcset [current_run]]\n' % opts.top_fpga_module)
+      else:
+        tcl_file.write('set_property top %s [get_property srcset [current_run]]\n' % top_module)
+
+      if opts.rtl:
+        tcl_file.write('\n')
+        tcl_file.write('synth_design -rtl %s\n' % " ".join([ '-verilog_define %s' % d for d in opts.define]))
+        tcl_file.write('write_edif -force %s.rtl\n' % top_module)
+        tcl_file.write('\n')
+        return 0
+
+      if opts.logic:
+        tcl_file.write('set_property STEPS.WRITE_BITSTREAM.ARGS.LOGIC_LOCATION_FILE true [get_runs impl_1]\n')
+      if opts.readback:
+        tcl_file.write('\n## steps for readback debugging\n')
+        tcl_file.write('set_property STEPS.SYNTH_DESIGN.TCL.PRE  ../../../%s [get_runs synth_1]\n' % 'pre_synth.tcl')
+        tcl_file.write('set_property STEPS.OPT_DESIGN.TCL.POST ../../../%s [get_runs impl_1]\n' % 'post_synth.tcl')
+        tcl_file.write('set_param messaging.defaultLimit 200000\n')
+      if opts.preserve or opts.readback:
+        tcl_file.write('\n## Vivado options to preserve signals for debugging\n')
+        tcl_file.write('set_property STEPS.SYNTH_DESIGN.ARGS.FSM_EXTRACTION off [get_runs synth_1]\n')
+        tcl_file.write('set_property STEPS.SYNTH_DESIGN.ARGS.KEEP_EQUIVALENT_REGISTERS true [get_runs synth_1]\n')
+        tcl_file.write('set_property STEPS.SYNTH_DESIGN.ARGS.NO_LC true [get_runs synth_1]\n')
+        tcl_file.write('set_property STEPS.SYNTH_DESIGN.ARGS.FLATTEN_HIERARCHY none [get_runs synth_1]\n')
+      tcl_file.write('\n')
+      tcl_file.write('set_property strategy %s [get_runs synth_1]\n' % opts.synthstrategy)
+      tcl_file.write('set_property strategy %s [get_runs impl_1]\n' % opts.implstrategy)
+      tcl_file.write('## prevent Vivado from encoding FSMs -- causes random crashes\n')
+      tcl_file.write('set_property STEPS.SYNTH_DESIGN.ARGS.FSM_EXTRACTION off [get_runs synth_1]\n')
+      tcl_file.write('\n');
+
+      if opts.ooc:
+        tcl_file.write('# Add -no_ibuf option\n')
+        tcl_file.write('set_property -name {STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS} -value {-no_iobuf} -objects [get_runs synth_1]\n')
+        tcl_file.write('\n')
+        # For now, do top-level synthesis
+        #tcl_file.write('# Select OOC synthesis for %s\n' % top_module)
+        #tcl_file.write('# and set a property to prevent Vivado from looking for a new top file\n')
+        #tcl_file.write('set_property source_mgmt_mode None [current_project]\n')
+        #tcl_file.write('create_fileset -blockset -define_from %s %s\n' % (top_module, top_module))
+        #tcl_file.write('\n')
+        #synth_run = '%s_synth_1' % top_module
+        synth_run = 'synth_1'
+        tcl_file.write('launch_runs %s\n' % synth_run)
+        tcl_file.write('wait_on_run %s\n' % synth_run)
+        tcl_file.write('open_run %s -name netlist_1\n' % synth_run)
+        tcl_file.write('opt_design -verbose\n')
+        tcl_file.write('file copy -force %s/%s.runs/%s/runme.log ./synth.log\n' % (top_module, top_module, synth_run))
+        tcl_file.write('report_timing_summary -file post_synth_timing_summary.rpt\n')
+        tcl_file.write('report_utilization -file ./%s_utilization_synth.rpt\n' % top_module)
+        tcl_file.write('write_verilog -mode design %s.vg -force\n' % top_module)
+        return 0
+
+      tcl_file.write('synth_design -bufg 32 -rtl -name rtl_1 %s\n' % " ".join([ '-verilog_define %s' % d for d in opts.define]))
+      for entry in checkpoint_entries:
+        root, ext = os.path.splitext(os.path.basename(entry))
+        tcl_file.write('read_checkpoint -incremental %s\n' % entry)
+      tcl_file.close()
+      if opts.readback:
+        tcl_file = open(full_pre_file_name,'w')
+        tcl_file.write('file copy -force "../../../icap_fsm7.txt" "."\n')
+        tcl_file.close()
+        tcl_file = open(full_post_file_name,'w')
+        tcl_file.write('write_edif -force synth_netlist\n')
+        tcl_file.close()
+    else:
+      #  write out the .tcl file
+      tcl_file = open(full_tcl_file_name,'w')
+      print "Writing %s." % full_tcl_file_name
+
+      tcl_file.write('if {[ file exists ./%s ]} {\n' % top_module)
+      tcl_file.write('  # if the project directory exists, delete it and create a new one\n')
+      tcl_file.write('  file delete -force ./%s\n' % top_module)
+      tcl_file.write('}\n')
+      tcl_file.write('file delete -force ./%s.bit\n' % top_module)
+      tcl_file.write('\n')
+      tcl_file.write('create_project %s ./%s -part %s\n' % (top_module,top_module,part))
+      tcl_file.write('set_property design_mode RTL [get_filesets sources_1]\n')
+      for entry in file_entries:
+        mod = entry
+        if opts.rtl and entry.find('.v') != -1:
+           mod = 'elab_source/%s' % os.path.basename(entry)
+        tcl_file.write('add_file -norecurse ' + mod + '\n')
+
+      if not opts.ooc:
+        tcl_file.write('add_file -fileset [current_fileset -constrset] -norecurse ./default.xcf\n')
+        tcl_file.write('read_ucf ./default.ucf\n')
+
+      tcl_file.write('\n')
+      tcl_file.write('set_property top %s [get_property srcset [current_run]]\n' % top_module)
+      tcl_file.write('\n')
+
+      if opts.rtl:
+        tcl_file.write('open_rtl_design\n')
+        tcl_file.write('write_edif %s.rtl\n' % top_module)
+        tcl_file.write('\n')
+        return 0
+
+      if opts.ooc:
+        print >>sys.stderr, "OOC synthesis not supported for ISE"
+        return 1
+
+      tcl_file.write('set_property strategy %s [get_runs synth_1]\n' % opts.synthstrategy)
+      tcl_file.write('set_property strategy %s [get_runs impl_1]\n' % opts.implstrategy)
+      tcl_file.write('\n');
+      tcl_file.write('set_property add_step bitgen [get_runs impl_1]\n')
+      tcl_file.write('\n')
+      tcl_file.write('config_run impl_1 -program map -option -mt -value on\n')
+      tcl_file.write('config_run impl_1 -program par -option -mt -value 4\n')
+      tcl_file.write('config_run impl_1 -program trce -option -u -value 30\n')
+      if opts.logic:
+        tcl_file.write('config_run impl_1 -program bitgen -option -l -value 1\n')
+      if opts.preserve or opts.readback:
+        tcl_file.write('\n## xst options to preserve signals for debugging\n')
+        tcl_file.write('set_property steps.xst.args.opt_level 0 [get_runs synth_1]\n')
+        tcl_file.write('set_property steps.xst.args.register_balancing no [get_runs synth_1]\n')
+        tcl_file.write('set_property steps.xst.args.equivalent_register_removal no [get_runs synth_1]\n')
+        tcl_file.write('set_property -name {steps.xst.args.More Options} -value {-fsm_extract no} -objects [get_runs synth_1]\n')
+        tcl_file.write('set_property steps.map.args.u true [get_runs impl_1]\n')
+      tcl_file.write('\n')
+      tcl_file.close()
+
+    # write out the ace .cmd file
+    ace_file = open(full_ace_file_name,'w')
+    print "Writing %s." % full_ace_file_name
+    ace_file.write('setMode -acecf\n')
+    ace_file.write('addCollection -name "%s"\n' % board)
+    ace_file.write('addDesign -version 6 -name "cfg6"\n')
+    ace_file.write('addDeviceChain -index 0\n')
+    ace_file.write('setCurrentDesign -version 6\n')
+    ace_file.write('setCurrentDeviceChain -index 0\n')
+    ace_file.write('addDevice -p 1 -file %s\n' % bit_file_name)
+    ace_file.write('generate -active %s\n' % board)
+    ace_file.write('quit\n')
+    ace_file.close()
+
+    # write out bsd file if necessary
+    # write out the jtag .cmd file and bsd files if DN10GHXTLL board
+    if board == "10GHXTLL":
+      bsd_file = open(full_bsd_file_name,'w')
+      bsd_file.write('entity generated_unknown_sram is\n')
+      bsd_file.write('\n')
+      bsd_file.write('generic (PHYSICAL_PIN_MAP : string := "X_PACKAGE");\n')
+      bsd_file.write('\n')
+      bsd_file.write('port (TCK: in bit; TDI: in bit; TDO: out bit; TMS: in bit);\n')
+      bsd_file.write('\n')
+      bsd_file.write('use STD_1149_1_2001.all;\n')
+      bsd_file.write('attribute Component_Conformance of unknown_sram : entity is "STD_1149_1_2001";\n')
+      bsd_file.write('\n')
+      bsd_file.write('attribute PIN_MAP of unknown_sram : entity is PHYSICAL_PIN_MAP;\n')
+      bsd_file.write('\n')
+      bsd_file.write('constant X_PACKAGE:PIN_MAP_STRING := "TCK : 1," & "TDI : 2," & "TDO : 3," & "TMS : 4";\n')
+      bsd_file.write('attribute Tap_Scan_In of TDI: signal is true;\n')
+      bsd_file.write('attribute Tap_Scan_Mode of TMS: signal is true;\n')
+      bsd_file.write('attribute Tap_Scan_Out of TDO: signal is true;\n')
+      bsd_file.write('attribute Tap_Scan_Clock of TCK: signal is (6.0e06, BOTH);\n')
+      bsd_file.write('\n')
+      bsd_file.write('attribute Instruction_Length of unknown_sram: entity is 3;\n')
+      bsd_file.write('attribute Instruction_Opcode of unknown_sram: entity is "BYPASS (111)";\n')
+      bsd_file.write('attribute Instruction_Capture of unknown_sram: entity is "XXX";\n')
+      bsd_file.write('attribute Boundary_Length of unknown_sram: entity is 1;\n')
+      bsd_file.write('attribute Boundary_Register of unknown_sram: entity is "0 (BC_1, *, control, 0)";\n')
+      bsd_file.write('\n')
+      bsd_file.write('end unknown_sram;\n')
+      bsd_file.close()
+
+      prog_file = open(full_prog_file_name,'w')
+      print "Writing %s." % full_prog_file_name
+      prog_file.write('setMode -bscan\n')
+      prog_file.write('setCable -port auto\n')
+      prog_file.write('Identify -inferir\n')
+      prog_file.write('identifyMPM\n')
+      prog_file.write('assignFile -p %d -file %s\n' % (3, bsd_file_name))
+      prog_file.write('assignFile -p %d -file %s\n' % (4, bsd_file_name))
+      prog_file.write('assignFile -p %d -file %s\n' % (5, bsd_file_name))
+      prog_file.write('assignFile -p %d -file %s\n' % (6, bsd_file_name))
+      prog_file.write('assignFile -p %d -file %s\n' % (1, bit_file_name))
+      prog_file.write('program -p %d\n' % 1)
+      prog_file.write('quit\n')
+      prog_file.close()
+
+    elif board == "10GK7LL":
+      bsd_file = open(full_bsd_file_name,'w')
+      bsd_file.write('entity generated_unknown_sram is\n')
+      bsd_file.write('\n')
+      bsd_file.write('generic (PHYSICAL_PIN_MAP : string := "X_PACKAGE");\n')
+      bsd_file.write('\n')
+      bsd_file.write('port (TCK: in bit; TDI: in bit; TDO: out bit; TMS: in bit);\n')
+      bsd_file.write('\n')
+      bsd_file.write('use STD_1149_1_2001.all;\n')
+      bsd_file.write('attribute Component_Conformance of unknown_sram : entity is "STD_1149_1_2001";\n')
+      bsd_file.write('\n')
+      bsd_file.write('attribute PIN_MAP of unknown_sram : entity is PHYSICAL_PIN_MAP;\n')
+      bsd_file.write('\n')
+      bsd_file.write('constant X_PACKAGE:PIN_MAP_STRING := "TCK : 1," & "TDI : 2," & "TDO : 3," & "TMS : 4";\n')
+      bsd_file.write('attribute Tap_Scan_In of TDI: signal is true;\n')
+      bsd_file.write('attribute Tap_Scan_Mode of TMS: signal is true;\n')
+      bsd_file.write('attribute Tap_Scan_Out of TDO: signal is true;\n')
+      bsd_file.write('attribute Tap_Scan_Clock of TCK: signal is (6.0e06, BOTH);\n')
+      bsd_file.write('\n')
+      bsd_file.write('attribute Instruction_Length of unknown_sram: entity is 3;\n')
+      bsd_file.write('attribute Instruction_Opcode of unknown_sram: entity is "BYPASS (111)";\n')
+      bsd_file.write('attribute Instruction_Capture of unknown_sram: entity is "XXX";\n')
+      bsd_file.write('attribute Boundary_Length of unknown_sram: entity is 1;\n')
+      bsd_file.write('attribute Boundary_Register of unknown_sram: entity is "0 (BC_1, *, control, 0)";\n')
+      bsd_file.write('\n')
+      bsd_file.write('end unknown_sram;\n')
+      bsd_file.close()
+
+      prog_file = open(full_prog_file_name,'w')
+      print "Writing %s." % full_prog_file_name
+      prog_file.write('setMode -bscan\n')
+      prog_file.write('setCable -port auto\n')
+      prog_file.write('Identify -inferir\n')
+      prog_file.write('identifyMPM\n')
+      prog_file.write('assignFile -p %d -file %s\n' % (3, bsd_file_name))
+      prog_file.write('assignFile -p %d -file %s\n' % (1, bit_file_name))
+      prog_file.write('program -p %d\n' % 1)
+      prog_file.write('quit\n')
+      prog_file.close()
+
+    else:
+      prog_file = open(full_prog_file_name,'w')
+      print "Writing %s." % full_prog_file_name
+      prog_file.write('setMode -bscan\n')
+      prog_file.write('setCable -port auto\n')
+      prog_file.write('identify\n')
+      if board == "ML605":
+        position = 2
+      elif board == "ML507" or board == "XUPV5":
+        position = 5
+      else:
+        position = 1
+      prog_file.write('assignFile -p %d -file %s\n' % (position,bit_file_name))
+      prog_file.write('program -p %d\n' % position)
+      prog_file.write('quit\n')
+      prog_file.close()
+
+    # write out a xise script to generate an ise project file
+    xise_file = open(full_xise_file_name,'w')
+    print "Writing %s." % full_xise_file_name
+    xise_file.write('#!/usr/bin/env xtclsh\n\n')
+    xise_file.write('file delete -force %s.xise\n' % top_module)
+    xise_file.write('project new %s.xise\n' % top_module)
+    xise_file.write('project set "Device Family" "%s"\n' % family)
+    xise_file.write('project set "Device" "%s"\n' % device)
+    xise_file.write('project set "Package" "%s"\n' % package)
+    xise_file.write('project set "Speed Grade" "-%s"\n' % speed)
+    xise_file.write('project set "Synthesis Tool" "XST (VHDL/Verilog)"\n')
+    xise_file.write('project set "Simulator" "ISim (VHDL/Verilog)"\n')
+    xise_file.write('\n')
+
+    # files
+    for entry in file_entries:
+      xise_file.write('xfile add "%s"\n' % entry)
+    xise_file.write('xfile add "%s"\n' % 'default.ucf')
+
+    # project settings
+
+    # done
+    xise_file.write('project close')
+    xise_file.close()
+
+    # make the scripts executable
+    xise_cmd = "chmod +x %s" % full_xise_file_name
+    subprocess.Popen(xise_cmd, shell=True, stdout=subprocess.PIPE, stdin=None, stderr=subprocess.PIPE).wait()
+
+    # a successful return code
+    return 0
+
+  # Handle command-line option errors
+  except Usage, usage:
+    if usage.msg:
+      print >>sys.stderr, usage.msg
+      print >>sys.stderr, 'for help use --help'
+    return usage.status
+
+# For non-interactive invocations, call main() and use its return value
+# as the exit code.
+if __name__ == '__main__':
+  sys.exit(main())

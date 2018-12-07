@@ -1,0 +1,34 @@
+# Ignore Haskell files that are auto-generated and not checked in
+BuildVersion.hs
+BuildSystem.hs
+
+# Ignore C files that are auto-generated and not checked in
+bluetcl_stub.c
+bluetcl_stub.h
+bluewish_stub.c
+bluewish_stub.h
+test_hdr.cxx
+
+# Ignore bluewish.hs copy of bluetcl.hs
+bluewish.hs
+
+# Ignore the generated executables
+bsc
+bluetcl
+bluewish
+checkbi
+dumpbo
+dumpba
+bsc2bsv
+bsv2bsc
+showrules
+vcdcheck
+scemilink
+# Ignore the specific builds that the above executables link to
+bsc_ghc6_opt*
+bsc_only_dev*
+tcl_dev_blue*
+scemilink_dev_scemilink
+# Ignore the generated wrapper script
+bsc-wrapper
+

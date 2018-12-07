@@ -1,0 +1,198 @@
+# Makefile ASSUMES that vendor/tcktk has been built.   Dependencies are not checked
+
+.PHONY: default
+default: all
+
+PWD := $(shell pwd)
+TOP := $(PWD)/../../../..
+
+VENDOR = $(TOP)/vendor
+
+# definitions for platform dependent variables
+include $(TOP)/platform.mk
+
+# Install directory
+PREFIX ?= $(TOP)/inst
+LIBDIRI=$(PREFIX)/lib/tcllib
+SOLIBDIR=$(LIBDIRI)/lib.$(KERNELNAME)$(W32or64)
+LIBDIRS=$(TOP)/src/lib/tcllib
+SCEMILIB=$(PREFIX)/lib/SceMi/readback
+
+RM ?= rm -f
+LN ?= ln -sf
+INSTALL ?= install
+
+# location for object files
+OBJDIR := obj-$(KERNELNAME)$(W32or64)
+
+CXXFLAGS += -I. 
+
+################################# Location for TCL include files ###############
+TCL_ROOT ?= $(VENDOR)/tcltk/inst
+TCL_INCLUDE  = $(TCL_ROOT)/include
+TCL_LIB      = $(TCL_ROOT)/lib
+
+### ############## BOOST link ############################
+
+# ifeq ($(OSTYPE), Darwin)
+
+# # for Mac OS X, use the locally installed boost library
+# BOOST_INC = /opt/local/include
+# # some systems don't have the mt version
+# ifeq ($(wildcard /opt/local/lib/libboost_regex-mt.a),)
+# BOOST_LIB = /opt/local/lib/libboost_regex.a
+# else
+# BOOST_LIB = /opt/local/lib/libboost_regex-mt.a
+# endif
+
+# else
+
+# # non-Mac
+# BOOST_LIB = $(VENDOR)/boost/boost_regex.a
+# BOOST_INC = $(VENDOR)/boost/include
+
+# endif
+
+# Compiler FLAGS
+CFLAGS += -O3
+CFLAGS += -Wall
+CFLAGS += -I . 
+CFLAGS += -fPIC
+CFLAGS += -I$(TOP)/src/lib/SceMi/bsvxactors
+CFLAGS += -I$(TOP)/src/lib/SceMi/BlueNoC
+CFLAGS += -D GZSTREAM_NAMESPACE=gzs
+
+ifeq ($(OSTYPE),$(findstring $(OSTYPE), Darwin darwin))
+# for Mac OS X, add additional directories to the path
+CFLAGS += -I /opt/local/include
+endif
+
+#  Listing of object files
+CXXOBJECTS = 
+
+
+# Special handling for files requiring the tcl.h interface
+TCLOBJECTS =  \
+	Design.o \
+	DataHandler.o \
+	Module.o \
+	Utils.o \
+	TokenMap.o \
+	Netlister.o \
+	Export.o \
+	gzstream.o \
+	designtcl.o 
+
+HEADERS = designtcl.h Design.hpp DataHandler.hpp Module.hpp Vvp.hpp Utils.hpp TokenMap.hpp Netlister.hpp Export.hpp gzstream.hpp
+
+OBJECTS = $(TCLOBJECTS) $(CXXOBJECTS)
+
+CXXOBJECTS := $(addprefix $(OBJDIR)/,$(CXXOBJECTS))
+TCLOBJECTS := $(addprefix $(OBJDIR)/,$(TCLOBJECTS))
+
+ifeq ($(OSTYPE), Darwin)
+SHARED ?= -dynamiclib -undefined dynamic_lookup
+else
+SHARED ?= -shared
+endif
+
+EXEFILES = design
+
+design: design.cc $(OBJDIR)/libdesign.a | $(OBJDIR)
+	$(CXX) -o $@  $(CFLAGS) $+
+
+scheme: scheme.cc
+	$(CXX) -o $@  $(CFLAGS) $+
+
+# top target is shared object file for linking to tcl
+#all: $(OBJDIR) $(OBJDIR)/libreadback.so $(OBJDIR)/libreadback.a $(EXEFILES)
+all: $(OBJDIR) $(OBJDIR)/libdesign.a install
+
+
+# $(OBJDIR)/llparser.o: lllexer.h
+# llparser.h: llparser.cc
+
+# $(OBJDIR)/lllexer.o: llparser.h
+# lllexer.h: lllexer.cc
+
+# llparser.cc: llparser.y
+# lllexer.cc: lllexer.l
+
+# $(OBJDIR)/vchparser.o: vchlexer.h
+# vchparser.h: vchparser.cc
+
+# $(OBJDIR)/vchlexer.o: vchparser.h
+# vchlexer.h: vchlexer.cc
+
+# vchparser.cc: vchparser.y
+# vchlexer.cc: vchlexer.l
+
+
+# %.cc: %.y
+# 	$(YACC) $(YFLAGS) -o $@ $^
+
+# %.cc: %.l
+# 	$(LEX) $(LFLAGS) -o $@ $^
+
+# link to shared object
+# $(OBJDIR)/libreadback.so: $(CXXOBJECTS)  $(TCLOBJECTS)
+# 	$(CXX) -o $@ $(SHARED) $+  $(TCL_LIB)/libtclstub8.5.a $(BOOST_LIB)
+
+
+
+$(OBJDIR)/libdesign.a: $(CXXOBJECTS)  $(TCLOBJECTS) 
+	$(AR) vq $@ $^
+
+
+# Static pattern rule for compiling
+$(CXXOBJECTS): $(OBJDIR)/%.o: %.cpp *.hpp | $(OBJDIR)
+	$(CXX) -O3 -c -o $@ $(CFLAGS) $<
+
+# $(OBJDIR)/edif.oo : edif.c $(OBJDIR)
+# 	gcc -O3 -static -fPIC -c -o $(OBJDIR)/edif.oo $<
+
+# $(OBJDIR)/savelib.oo : savelib.c $(OBJDIR)
+# 	gcc -O3 -static  -fPIC -c -o $(OBJDIR)/savelib.oo $<
+
+# $(OBJDIR)/createInstMap.oo : createInstMap.c $(OBJDIR)
+# 	gcc -O3 -static  -fPIC -c -o $(OBJDIR)/createInstMap.oo $<
+
+# edif.c : edif.y $(OBJDIR)/EdifData.o
+# 	bison -y -g -t -v -d edif.y 
+# 	cp y.tab.c edif.c
+
+# TCL object need extra flags
+$(TCLOBJECTS): $(OBJDIR)/%.o: %.cpp *.hpp | $(OBJDIR)
+	$(CXX) -c  -o $@  $(CFLAGS) -DUSINGSCEMI -DUSE_TCL_STUBS -I/usr/include/tcl8.5 -I$(TCL_INCLUDE) -I$(LIBDIRS)/include $<
+#	$(CXX) -c  -o $@  $(CFLAGS) -DUSE_TCL_STUBS -I/usr/include/tcl8.5 -I$(TCL_INCLUDE) -I$(LIBDIRS)/include $<
+
+# createInstMap :	ed.h eelibsl.h $(OBJDIR)/createInstMap.oo $(OBJDIR)/edif.oo $(OBJDIR)/EdifData.o $(OBJDIR)/savelib.oo $(OBJDIR)/Utils.o
+# 	$(CC) $(CFLAGS) $(OBJDIR)/createInstMap.oo $(OBJDIR)/edif.oo $(OBJDIR)/EdifData.o $(OBJDIR)/savelib.oo $(OBJDIR)/Utils.o -o createInstMap -lm -lstdc++
+
+
+#TAGS: *.h *.cc $(VERIFIC_INC)/*.h $(wildcard $(addsuffix /*.cpp, $(addprefix $(VERIFIC)/verificsvn/, $(VERIFIC_SRC))))
+#	etags $+
+
+.PHONY: install
+install: realclean $(OBJDIR) $(OBJDIR)/libdesign.a
+	$(INSTALL) -m 755 -d $(SCEMILIB)
+	$(INSTALL) -m 644 $(HEADERS) $(SCEMILIB)
+	$(INSTALL) -m 755 -d $(SOLIBDIR)
+	$(INSTALL) -m 755 $(OBJDIR)/libdesign.a $(SOLIBDIR)
+
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+$(OBJDIR): | realclean
+$(OBJDIR)/libdesign.a: | realclean
+
+.PHONY: clean
+clean:
+	$(RM) $(OBJDIR)/*.o $(OBJDIR)/*.oo  $(OBJDIR)/*.so $(OBJDIR)/*.a
+#	$(RM) llparser.[ch] llparser.cc lllexer.[ch] lllexer.cc llreader
+#	$(RM) vchparser.[ch] vchparser.cc vchlexer.[ch] vchlexer.cc vchreader
+	$(RM) $(EXEFILES)
+
+.PHONY: realclean
+realclean: clean
+	$(RM) -r $(OBJDIR)

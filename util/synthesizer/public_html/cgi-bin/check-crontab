@@ -1,0 +1,30 @@
+#!/bin/bash
+
+echo "Content-type: text/html"
+echo
+echo "<html><head><title>Checking crontab</title></head></body>"
+echo "<h1>Checking crontab</h1>"
+
+echo "<p>Here is the crontab file for synthesizer on bluetinder:</p><table bgcolor=#f0f0f0 width=100%><tr><td><code>"
+
+if ssh -l synthesizer bluetinder "crontab -l" | /export/home/synthesizer/public_html/cgi-bin/addBR ; then
+  echo '</code>'
+else
+  echo 
+  echo '</code><i>ssh returned failure</i>'
+fi
+
+echo '</td></tr></table>'
+
+echo '<p>The crontab file should contain a the following line:</p>'
+echo '<table width=100% bgcolor=#f0f0ff><tr><td><code>'
+cat /export/home/synthesizer/SCRIPTS/crontab.synthesizer | /export/home/synthesizer/public_html/cgi-bin/addBR
+echo '</code></td></tr></table>'
+
+echo '<p>To reinstall a correct crontab, <a href="set-crontab">click here</a></p>'
+
+echo '<p><a href="https://svn.bluespec.com:8080/~synthesizer">Back to synthesizer main page</a></p>'
+
+echo "</body></html>"
+
+

@@ -1,0 +1,5 @@
+# Package is not part of Debian
+bluespec-__RELEASE_NUM__-doc binary: new-package-should-close-itp-bug
+
+# Licenses for included third-party libraries
+bluespec-__RELEASE_NUM__-doc binary: extra-license-file usr/share/doc/bluespec-__RELEASE_NUM__-doc/licenses/*

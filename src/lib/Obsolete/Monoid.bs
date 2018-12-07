@@ -1,0 +1,32 @@
+-- Copyright 2005 Bluespec, Inc.  All rights reserved.
+
+-- $Id: Monoid.bs $
+
+package Monoid(Monoid(..)) where
+
+--@ XXX THIS PACKAGE NOT YET PUBLICLY AVAILABLE WITH BSV0.5
+
+import List
+
+--@ \subsubsection{Monoid}
+--@
+--@ \index{Monoid@\te{Monoid} (package)|textbf}
+--@ (Advanced topic; can be skipped on first reading.)
+--@
+--@ The \te{Monoid} class represents datatypes
+--@ with a unit, \te{mempty}, and associative
+--@ binary operator \te{mappend}.
+--@ #1
+
+class Monoid a
+  where
+    mempty  :: a
+    mappend :: a -> a -> a
+    mconcat :: List a -> a
+
+--@ A \te{List} is a \te{Monoid}.
+instance Monoid (List a)
+  where
+    mempty      = Nil
+    mappend x y = append x y
+    mconcat xs  = concat xs

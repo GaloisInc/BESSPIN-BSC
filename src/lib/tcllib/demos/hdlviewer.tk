@@ -1,0 +1,613 @@
+#!/bin/sh
+# ----------------------------------------------------------------------
+#  DEMO: netlist browser
+# ----------------------------------------------------------------------
+# \
+exec $BLUESPECDIR/bin/bluewish "$0" -- "$@"
+
+
+package require Iwidgets 4.0
+package require BhdlEdit
+
+lappend auto_path $env(BLUESPECDIR)/tcllib/workstation
+
+source $env(BLUESPECDIR)/tcllib/workstation/fonts.tcl
+
+# ------------------------------
+# widget to add a package
+
+set loaded 1
+eval BhdlEdit::netlist analyze $argv +libext+.v -y $env(BLUESPECDIR)/Verilog -y $env(BLUESPECDIR)/Libraries
+
+proc loadVerilog { } {
+    global loaded
+    set typeList {
+	{{Verilog Files} {.v}}
+    }
+    set absfile [tk_getOpenFile -filetypes $typeList]
+
+    # separate the path from the base filename
+    set path [file dirname $absfile]
+    set fname [file tail $absfile]
+    BhdlEdit::netlist init $fname
+    set loaded 1
+}
+
+# ------------------------------
+# # widget to add a type
+
+# iwidgets::promptdialog .pd -title "Add Type" -modality application \
+#     -labeltext "Type:"
+
+# .pd hide Apply
+# .pd hide Help
+
+# proc addType { } {
+#     if {[.pd activate]} {
+# 	set ty [.pd get]
+# 	puts "Adding type $ty"
+
+# 	# add the type
+# 	# XXX is there a way to check for success?
+# 	# XXX and only refresh the widget on success?
+# 	browsetype add $ty
+# 	# refresh the widget
+# 	collapse_all
+#     } else {
+# 	# the user cancelled the dialog
+#     }
+# }
+
+# proc clearTypes { } {
+#     # clear the list
+#     browsetype clear
+#     # refresh the widget
+#     collapse_all
+# }
+
+# ---------------
+# menubar
+
+iwidgets::menubar .mb -helpvariable helpVar -menubuttons {
+    menubutton file -text "File" -underline 0 -menu {
+        options -tearoff false
+
+        command open -label "Load VL" -underline 0 \
+                -command loadVerilog
+
+        separator sep1
+
+        command script -label "Load Script ..." -underline 5 -command {loadScript}
+        command apply  -label "Apply Changes ..." -underline 0 -command {mkApplyDialog}
+
+        separator sep2
+
+        command quit -label "Quit" -underline 0 -command {exit}
+    }
+
+#     menubutton type -text "Type" -menu {
+#         options -tearoff false
+
+#         command add -label "Add" \
+#                 -command addType
+
+#         command clear -label "Clear" \
+#                 -command clearTypes
+#     }
+}
+pack .mb -fill x -side top
+
+# ------------------------------
+# paned window
+
+# place the hierarchy and message text in a paned frame
+
+iwidgets::panedwindow .pw -width 800p -height 600p -orient vertical
+pack .pw -padx 4 -pady 4 -fill both -expand true
+
+proc loadScript {} {
+    puts "TODO load Script proc   dialog to load script file and apply"
+}
+
+
+# ------------------------------
+# type browser
+
+proc getElems {file} {
+    global loaded
+    # puts "Get elems $file"
+    if {$loaded == 0} { return [list] }
+    if { $file != "" } {
+    }
+    if { [catch "BhdlEdit::netlist lsinsts $file " mem] } { set mem [list] }
+    if { [catch "BhdlEdit::netlist lsnets $file " nets] } { set nets [list] }
+
+    set res [list]
+    foreach mpair $mem {
+        set m [lindex  $mpair 0]
+        set module [lindex $mpair 1]
+        # ignore scemi.*oarameter modules
+        if { [regexp  {^mkSceMi.*Parameter$} $module] } { continue }
+        set inst [format "%s  (%s)" [file tail $m] $module]
+        set path $m
+        lappend res [list $path $inst branch]
+    }
+    foreach m $nets {
+        # format is (path <range>? <inoput|output>?)
+        set path [lindex $m 0]
+        set net [file tail $m]
+        lappend res [list $path $net leaf]
+    }
+    return $res
+}
+
+# ---------------
+proc select_node { win uid status } {
+    #puts "selected: $win $uid $status"
+
+    $win selection clear
+    if {$status} {
+	$win selection remove $uid
+    } else {
+	$win selection add $uid
+    }
+}
+# ---------------
+
+#
+# Create the hierarchy mega-widget, adding commands to both the item
+# and background popup menus.
+#
+
+# put it in a new pane
+.pw add "left"
+set pane [.pw childsite "left"]
+
+set h \
+  [iwidgets::hierarchy $pane.h \
+    -querycommand "getElems %n" -visibleitems 30x15 \
+    -selectcommand "select_node $pane.h %n %s"]
+pack $h -side left -expand yes -fill both
+
+$h component itemMenu add command -label "Add Probe" \
+    -command {addProbe [$h current]}
+$h component itemMenu add command -label "Select" \
+    -command {select_node $h [$h current] 0}
+$h component itemMenu add command -label "Deselect" \
+    -command {select_node $h [$h current] 1}
+$h component itemMenu add separator
+$h component itemMenu add command -label "Expand" \
+    -command {expand_node [$h current]}
+$h component itemMenu add command -label "Collapse" \
+    -command {collapse_node [$h current]}
+
+$h component bgMenu add command -label "Expand All" -command expand_all
+$h component bgMenu add command -label "Collapse All" -command collapse_all
+$h component bgMenu add command -label "Clear Selections" \
+    -command {$h selection clear}
+
+
+# ------------------------------
+# Pane to display information about the selected type
+
+# put it in a new pane
+.pw add "right"
+set paneR [.pw childsite "right"]
+
+#set msg "This is a message on the right"
+#set m [message $paneR.m -textvariable msg -anchor nw -width 3i]
+#pack $m -side left -expand yes -fill both
+
+# ------------------------------
+
+proc addProbe {obj} {
+    #puts "adding probe to: $obj"
+    set type [lindex $obj 0]
+    set name [lindex $obj 1]
+    # strip out any extensions to the name
+    set name [lindex $name 0]
+    set name [lindex $name 0]
+
+    if { $type == "leaf" } {
+        regsub -all {[/\[\]:\$]+} $name _ pname
+        #puts "name is $pname"
+        regsub -all {\[[0-9]+:[0-9]+\]} [file tail $name] {} signal
+        set path  [file dirname $name]
+        addProbeX $::x $path $pname $signal
+    } else {
+        addProbeX $::x $name
+        puts stderr "cannot add probe to instance"
+    }
+}
+
+
+############################################################################
+proc addEditFrame {win} {
+    iwidgets::scrolledframe $win.sf -width 5.5i \
+        -hscrollmode static -vscrollmode static
+    pack $win.sf -fill both -expand 1
+    return [$win.sf childsite]
+}
+
+proc addEF {win sub name args } {
+ set name [eval iwidgets::entryfield $win.$sub \
+     -highlightthickness 0  -labelpos w \
+     -labeltext "$name" -width 50 $args]
+ return $name
+}
+
+## Generic edit field
+proc addEdit {win key} {
+    array set XX [lindex [BhdlEdit::editnl dump $key] 0]
+    #puts "------ Key = $key"
+    #parray XX
+    #puts "------"
+
+    set id 1
+    while {[winfo exists $win.fw_$id] } {incr id }
+
+    set top [iwidgets::labeledframe $win.fw_$id -labelpos nw -labeltext $XX(Type)]
+    pack $top -anchor nw -expand 1 -fill x -side top -padx 1 -pady 1
+    set w [$top childsite]
+
+    set lf [frame $w.lf]
+    pack $lf -side left -expand 1 -fill x -anchor nw
+
+    set fields [list]
+    # Have path as the first field
+    set k "Path"
+    lappend fields [addEF $lf w$k $k -state readonly ]
+    setEntryField $lf.w$k $XX($k)
+
+    foreach k [lsort [array names XX]] {
+        if {$k == "Type"} continue
+        if {$k == "Key"} continue
+        if {$k == "Path"} continue
+        lappend fields [addEF $lf w$k $k -state readonly ]
+        setEntryField $lf.w$k $XX($k)
+    }
+    foreach f $fields {
+        pack $f -side top -anchor w
+    }
+    eval iwidgets::Labeledwidget::alignlabels $fields
+
+    ## Right side frame
+    set rf [frame $w.rf ]
+    pack $rf -side right -expand 1 -fill y -anchor ne -pady 0
+    pack [message $rf.m2 -text "$XX(Key)" -anchor ne] -side top -anchor ne
+
+    set bb [iwidgets::buttonbox  $rf.bb -orient vertical -padx 0 -pady 0]
+    $bb add delete -text Delete -command "editDelete $XX(Key) $top" -pady 1 -padx 1
+    pack $bb -side bottom -expand 0 -fill y -anchor se -padx 0 -pady 0
+
+
+    return $top
+}
+
+proc editDelete {key top} {
+    destroy $top
+    BhdlEdit::editnl delete $key
+}
+
+proc addProbeX {win {path ""} {name ""} {sig ""}} {
+
+    set id 1
+    while {[winfo exists $win.fw_$id] } {incr id }
+
+    set top [iwidgets::labeledframe $win.fw_$id -labelpos nw -labeltext {Value Probe}]
+    pack $top -anchor nw -expand 1 -fill x -side top -padx 0 -pady 0
+    set w [$top childsite]
+
+    set lf [frame $w.lf]
+    pack $lf -side left -expand 1 -fill x -anchor nw
+    set entries [list]
+
+    lappend entries  [addEF $lf name "Name" ]
+    setEntryField [lindex $entries end] $name
+
+    lappend entries [addEF $lf path "Path" ]
+    setEntryField [lindex $entries end] $path
+
+    lappend entries  [addEF $lf expr "Expr" ]
+    setEntryField [lindex $entries end] $sig
+    lappend entries  [addEF $lf clk "Clock"]
+    setEntryField [lindex $entries end] CLK
+    lappend entries  [addEF $lf enbl "Enable"]
+    setEntryField [lindex $entries end] "1'b1"
+    lappend entries  [addEF $lf wdth "Width" -state readonly]
+
+    foreach e $entries {
+        pack $e -anchor nw -fill x -expand 1 -side top -pady 1
+    }
+
+    ## Right side frame
+    set rf [frame $w.rf ]
+    pack $rf -side right -expand 1 -fill y -anchor ne -pady 0
+    pack [message $rf.m2 -text "-$id" -anchor ne] -side top -anchor ne
+
+    set bb [iwidgets::buttonbox  $rf.bb -orient vertical -padx 0 -pady 0]
+    $bb add delete -text Delete -padx 1 -pady 1 -command "probeDelete $id $top"
+    $bb add update -text Update -pady 1 -padx 1 -command "probeUpdate $id $top"
+    pack $bb -side bottom -expand 0 -fill x -anchor se -padx 0 -pady 0
+
+    eval iwidgets::Labeledwidget::alignlabels $entries
+
+    return $top
+}
+
+proc probeUpdate { id top} {
+    #puts "probedUpdate $id $top"
+
+    set w [$top childsite]
+    # take info from widget
+    set name [$w.lf.name get]
+    set path [$w.lf.path get]
+    set expr [$w.lf.expr get]
+    set clk  [$w.lf.clk  get]
+    set enbl [$w.lf.enbl get]
+    set oldid [$w.rf.m2 cget -text]
+
+    # TODO Check that not fields are blank
+
+    # execute add probe
+    #puts "BhdlEdit::editnl addprobe $name $path $expr $clk $enbl"
+    if { [catch "BhdlEdit::editnl addprobe $name $path $expr $clk $enbl" err] } {
+        bgerror $err
+    } else {
+        # if ok update fields, delete old probe.
+        if { $oldid > 0 } {
+            #puts "Deleteing old probe $oldid"
+            BhdlEdit::editnl delete $oldid
+        }
+        populateProbe $top $err
+    }
+}
+
+
+proc probeDelete { id top } {
+    # Delete the data and this frame
+    set w [$top childsite]
+
+    set gid [$w.rf.m2 cget -text]
+    if { $gid > 0 } {
+        #puts "deleting $gid"
+        BhdlEdit::editnl delete $gid
+    }
+    destroy $top
+}
+
+proc setEntryField { ef val } {
+    set st [$ef cget -state]
+    $ef configure -state normal
+
+    $ef clear
+    $ef insert end $val
+
+    $ef configure -state $st
+}
+
+proc populateProbe { top probeid } {
+#    puts "populating probe frame $probeid -- $win"
+    array set XX [lindex [BhdlEdit::editnl list $probeid] 0]
+#    parray XX
+    set win [$top childsite]
+
+    setEntryField $win.lf.name $XX(Name)
+    setEntryField $win.lf.path $XX(Path)
+    setEntryField $win.lf.expr $XX(Signals)
+    setEntryField $win.lf.wdth $XX(Width)
+    setEntryField $win.lf.clk  $XX(Clock)
+    setEntryField $win.lf.enbl $XX(Enable)
+    $win.rf.m2 configure -text $XX(Key)
+
+}
+
+proc mkApplyDialog {} {
+
+    set w .applyDialog
+    catch {destroy $w}
+    toplevel $w
+    wm title $w "Apply Changes"
+    wm iconname $w "Apply Changes"
+
+    # files to be aligned
+    set efields [list]
+
+    ##############################
+    ## File sub frame -- suffix and directory -- fileframe
+    set ff [iwidgets::Labeledframe $w.ff -labelpos nw -labeltext "Files"]
+    pack $ff  -anchor nw -expand 1 -fill x
+    set ffcs [$ff childsite]
+    set f1 [frame $ffcs.f1]
+    pack $f1 -anchor nw -expand 1 -fill x
+    # set f1e [addEF $f1 sufix {"File suffix"}]
+    # setEntryField $f1e "_Probed"
+    # lappend efields $f1e
+    # pack $f1e -side left -anchor nw -expand 1 -fill x
+
+    set f2 [frame $ffcs.f2]
+    pack $f2 -anchor nw -expand 1 -fill x
+    set f2e [addEF $f2 outdir {"Output Directory"}]
+    setEntryField $f2e "./"
+    lappend efields $f2e
+    pack $f2e -side left -anchor nw -expand 1 -fill x
+    set br [button $f2.br -text "Browse..." -command "puts Browsing..."]
+    pack $br -side right -anchor ne
+    ##############################
+
+
+    ##############################
+    ## Scemi param file frame
+    set sf [iwidgets::Labeledframe $w.sf -labelpos nw -labeltext "SceMi Param File"]
+    pack $sf -anchor nw -expand 1 -fill x
+    set sfcs [$sf childsite]
+
+    set cb [checkbutton  $sfcs.cb -text {"Update SceMi Params file"} -command [list doSceMiButton $sfcs]]
+    pack $cb -side top -anchor nw -expand 0
+
+    set f3 [frame $sfcs.f3]
+    pack $f3 -anchor nw -expand 1 -fill x
+    set f3e [addEF $f3 infile {"Input File"}]
+    setEntryField $f3e "mkBridge.params"
+    lappend efields $f3e
+    pack $f3e -side left -anchor nw -expand 1 -fill x
+    set br [button $f3.br -text "Browse..." -command "puts Browsing..."]
+    pack $br -side right -anchor ne
+
+    # outputfile
+    set f4 [frame $sfcs.f4]
+    pack $f4 -anchor nw -expand 1 -fill x
+    set f4e [addEF $f4 outfile {"Output File"}]
+    setEntryField $f4e "mkBridge_Probed.params"
+    lappend efields $f4e
+    pack $f4e -side left -anchor nw -expand 1 -fill x
+    set br [button $f4.br -text "Browse..." -command "puts Browsing..."]
+    pack $br -side right -anchor ne
+
+    $cb invoke
+    ##################################
+    ## replay script
+    set rp [iwidgets::Labeledframe $w.rp -labelpos nw -labeltext "Replay script"]
+    pack $rp -anchor nw -expand 1 -fill x
+    set rpcs [$rp childsite]
+    set f5 [frame $rpcs.f5]
+    pack $f5 -anchor nw -expand 1 -fill x
+    #  TODO make the browsing widget a class
+    set f5A [addEF $f5 outdir {"Replay Script"}]
+    setEntryField $f5A "replay_edits.script"
+    lappend efields $f5A
+    pack $f5A -side left -anchor nw -expand 1 -fill x
+    set br [button $f5.br -text "Browse..." -command "puts Browsing..."]
+    pack $br -side right -anchor ne
+
+    #####################################
+    ## Buttons at bottom
+    set bb [iwidgets::buttonbox  $w.bb -padx 0 -pady 0]
+    $bb add save -text "Save To Script" -command "saveAsScript $f5A $f2e $sfcs"
+    $bb add apply -text "Apply" -command "applyChanges $f2e $sfcs"
+    $bb add can -text "Close"  -command "destroy  $w"
+    pack $bb -anchor nw -expand 1 -fill x
+
+    eval iwidgets::Labeledwidget::alignlabels $efields
+
+    return $w
+}
+
+proc applyChanges { dirwin sparamwin} {
+    BhdlEdit::editnl compile
+    foreach e [BhdlEdit::editnl list] {
+        array set XX $e
+        addEdit $::x $XX(Key)
+    }
+    set outdir [$dirwin get]
+
+    if { [catch "BhdlEdit::editnl apply \"$outdir\"" err] } {
+        bgerror $err
+    }
+    set msg "File are in $outdir\n$err"
+
+    # Write out scemi param file is requests
+    eval upvar #0 [$sparamwin.cb cget -variable] bstate
+    if { $bstate } {
+        set infile [$sparamwin.f3.infile get]
+        set outfile [$sparamwin.f4.outfile get]
+        if { [catch "BhdlEdit::editnl updateparams $infile $outfile" err] } {
+            bgerror $err
+        } else {
+            append msg \n "SceMi Param file $infile updated in $err"
+        }
+    }
+
+    tk_messageBox -icon info  -type ok \
+	-title Message -parent .applyDialog \
+	-message $msg
+
+    # update scemi param file
+    # write out changes
+    destroy .applyDialog
+}
+
+proc saveAsScript {scriptnamewin dirwin sparamwin} {
+
+    # TODO use the field/browse button
+    set filename  [$scriptnamewin get]
+
+    set outdir [$dirwin get]
+
+    set infile ""
+    set outfile ""
+    eval upvar #0 [$sparamwin.cb cget -variable] bstate
+    if { $bstate } {
+        set infile [$sparamwin.f3.infile get]
+        set outfile [$sparamwin.f4.outfile get]
+    }
+    writeReplayScript $filename $outdir $infile $outfile
+
+    set msg "Script file has been written to $filename"
+    tk_messageBox -icon info -type ok -title Message -parent .applyDialog \
+	-message $msg
+}
+
+
+proc writeReplayScript {filename outdir infile outfile} {
+    global env
+    global argv
+    set fh [open $filename "w" 0755]
+
+    set scr "#!/bin/sh"
+    lappend scr "# replay script for adding circuit edits"
+    lappend scr "# Generated on: [clock format [clock seconds]]"
+    lappend scr "# \\"
+    lappend scr "exec \$BLUESPECDIR/bin/bluetcl \"\$0\" -- \"\$@\""
+    lappend scr ""
+    lappend scr "package require BhdlEdit"
+    lappend scr "namespace import BhdlEdit::*"
+    lappend scr "netlist analyze $argv +libext+.v -y \$env(BLUESPECDIR)/Verilog -y \$env(BLUESPECDIR)/Libraries"
+    lappend scr ""
+
+    foreach edit [BhdlEdit::editnl replay]  {
+        lappend scr "editnl $edit"
+    }
+    lappend scr "editnl compile"
+    lappend scr "set newfiles \[editnl apply $outdir\]"
+    lappend scr "puts \"Files have been written to $outdir\""
+    lappend scr "puts \$newfiles"
+    if {$infile != ""} {
+        lappend scr "editnl updateparams $infile $outfile"
+        lappend scr "puts \"parameter file has been written to $outfile\""
+    }
+    lappend scr ""
+
+   puts $fh [join $scr "\n"]
+
+   close $fh
+
+}
+
+
+proc doSceMiButton { sfcs } {
+    eval upvar #0 [$sfcs.cb cget -variable] bstate
+    if { $bstate } {
+        $sfcs.f3.infile configure -state normal
+        $sfcs.f4.outfile configure -state normal
+    } else {
+        $sfcs.f3.infile configure -state disabled
+        $sfcs.f4.outfile configure -state disabled
+    }
+}
+
+set x [addEditFrame $paneR]
+pack $paneR -fill both -expand 1
+#pack $paneR.sf -fill both -expand 1
+set bb  [iwidgets::buttonbox  $paneR.bb -padx 0 -pady 0]
+$bb add apply -text "Apply..." -command mkApplyDialog
+$bb add close -text Exit -command exit
+pack $bb -side top -anchor se -fill x -expand 0
+
+addProbeX $x
+#addProbeX $x
+
+catch "BhdlEdit::editnl addprobe _mkBridge_scemi_server_ci_stage0_D_OUT /mkBridge/scemi_server/ci_stage0 D_OUT CLK 1" p
+#puts  [BhdlEdit::editnl list 1]
+#puts $p
+catch "addEdit $x 1"

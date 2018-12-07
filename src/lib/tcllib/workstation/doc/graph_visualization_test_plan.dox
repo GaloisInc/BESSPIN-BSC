@@ -1,0 +1,202 @@
+/**
+
+  @page _graph_visualization_test_plan_ Test Plan 
+
+@section _graph_visualization_test_plan_introduction_  Introduction
+
+@subsection _graph_visualization_test_plan_indentifier_ Document Identifier
+
+This document represents the test plan for the @b Graph @b Visualization
+subtask of @b Bluespec @b Workstation.
+
+@subsection _graph_visualization_test_plan_definition_of_terms_ Definition of Terms and Acronyms
+        - @b BSV - Bluespec System Verilog\n
+        - @b BSC - Bluespec System Verilog compiler\n
+        - @b Blue @b (tcl/wish) - Bluespec extension for tcl/wish interpreter
+
+@subsection _graph_visualization_test_plan_overview_ Overview
+
+This tool provides means to display and manipulate scheduling graphs generated
+by BSC.  Graphs are generated using the @b -shed-dot flag.  Graphs will be
+generated in *.dot format and will be located in the info-dir directory, which
+can be specified from the Compiler tab of the Project Options dialog(see
+ddddd).  Generated graphs will be handled/displayed by the workstation using
+the Tcldot package of graphviz (see @ref
+_graph_visualization_fspec_graphviz_packages_
+"[3]", @ref _graph_visualization_fspec_graphviz_packages_ "[4]").\n
+Tcldot is a TCL library which parses and stores dot files as an in-memory
+representation.  Workstation will read the in-memory graph and visualize it in
+a separate graphical window.  The user will also be able to view the desired
+set of nodes/edges in a separate graph window or just redraw the graph
+accordingly.\n
+There will be 5 kinds of graphs each embraced in a separate dot file (see @ref
+_graph_visualization_fspec_introduction_overview_of_the_funcionality
+"Functional Specification").\n
+
+Tests for the @b Graph @b Visualization task are divided into two independent
+phases:
+        - @ref _graph_visualization_test_plan_GUI_tests_
+        - @ref _graph_visualization_test_plan_tcl_command_tests_
+
+Following types of tests should be created for each of upper described phases:
+        - @b Positive @b tests - tests which provide the golden output.
+        - @b Negative @b tests - tests which provide typical invalid input and
+          assure that a clear and adequate error is reported.
+
+@subsection _graph_visualization_test_plan_scope_ Scope 
+
+The section @ref  _graph_visualization_test_plan_test_environment_usage_
+describes the testing environment usage. The section @ref
+_graph_visualization_test_plan_test_environment_structure_ describes the test
+environment structure. The section @ref
+_graph_visualization_test_plan_tools_used_by_suite_ defined tools which are
+used in test suite. The section @ref
+_graph_visualization_test_plan_functionality_to_be_tested_ defines the test
+cases for graph visualization functionality. The section @ref
+_graph_visualization_test_plan_GUI_tests_ defines the test cases for
+Workstation. The section @ref _graph_visualization_test_plan_tcl_command_tests_
+defines the test cases for Workstation command line.
+
+@subsection _graph_visualization_test_plan_references_ References
+
+@anchor _graph_visualization_test_plan_workstation_docs_
+[1].  @ref _workstation_prd_ - Product requirement document for Bluespec
+Workstation\n
+[2].  @ref _workstation_fspec_ - Functional specification document for
+Bluespec Workstation\n
+@anchor _graph_visualization_test_plan_graphviz_packages_
+[3].  http://www.graphviz.org - graphviz packages\n
+[4].  http://www.graphviz.org/cgi-bin/man?tcldot -  Tcldot package man page\n
+@anchor _graph_visualization_test_plan_bsv_docs_
+[5].  reference_guide_rev_30_march_2007.pdf - Bluespec System Verilog reference
+guide\n
+[6].  bsv_user_guide_rev_30_march_2007.pdf - Bluespec System Verilog user
+guide\n
+@anchor _graph_visualization_test_plan_workstation_schedule_
+[7].  workstation/docs/workstation_schedule.planner - Schedule for Bluespec
+Workstation project\n
+@anchor _graph_visualization_test_plan_graph_task_docs_
+[8].  @ref _graph_visualization_prd_ - Product Requirement
+document for the graph visualization subtask of Bluespec Workstation\n
+[9].  @ref _graph_visualization_use_cases_ - Use Cases document
+for the graph visualization subtask of Bluespec Workstation\n
+
+
+@section _graph_visualization_test_plan_test_environment_usage_ Test Environment Usage
+@section _graph_visualization_test_plan_test_environment_structure_ Test Environment Structure
+@section _graph_visualization_test_plan_tools_used_by_suite_ Tools Used by Test-suite
+@section _graph_visualization_test_plan_functionality_to_be_tested_ Functionality to be Tested
+
+@section _graph_visualization_test_plan_GUI_tests_ GUI Tests
+
+The GUI testing will be done manually.
+
+@b Positive @b tests
+        - Open "Conflict Graph" window\n
+        Open any project, which contents .dot file(s)\n
+        Open "Schedule Analysis" window,\n
+        Click on "Scheduling Graphs" menu button,\n
+        Click on "Conflict" item,\n
+        Make sure "Conflict Graph" window appeared.\n\n
+        - Open "Execution Graph" window\n
+        Open any project, which contents .dot file(s)\n
+        Open "Schedule Analysis" window,\n
+        Click on "Scheduling Graphs" menu button,\n
+        Click on "Execution Order" item,\n
+        Make sure "Execution Graph" window appeared.\n\n
+        - Open "Urgency Graph" window\n
+        Open any project, which contents .dot file(s)\n
+        Open "Schedule Analysis" window,\n
+        Click on "Scheduling Graphs" menu button,\n 
+        Click on "Urgency" item,\n
+        Make sure "Urgency Graph" window appeared.\n\n
+        - Open "Combined Graph" window\n
+        Open any project, which contents .dot file(s)\n
+        Open "Schedule Analysis" window,\n
+        Click on "Scheduling Graphs" menu button,\n
+        Click on "Combined" item,\n
+        Make sure "Combined Graph" window appeared.\n\n
+        - Open "Combined Full Graph" window\n
+        Open any project, which contents .dot file(s)\n
+        Open "Schedule Analysis" window,\n
+        Click on "Scheduling Graphs" menu button,\n
+        Click on "Combined Full" item,\n
+        Make sure "Combined Full Graph" window appeared.\n\n
+        - "Conflict Graph" window test\n
+        Open "Conflict Graph" window,\n
+        Open any project, which contents .dot file(s)\n
+        Make sure the window contents "View" menu button,\n
+        Make sure the window contents "Zoom in" and "Zoom out" buttons,\n
+        Make sure "Conflict" graph appeared in "Conflict Graph" window\n\n
+        - "Execution Graph" window test\n
+        Open "Execution Graph" window,\n
+        Make sure the window contents "View" menu button,\n
+        Make sure the window contents "Zoom in" and "Zoom out" buttons,\n
+        Make sure "Execution" graph appeared in "Execution Graph" window\n\n
+        - "Urgency Graph" window test\n
+        Open "Urgency Graph" window,\n
+        Make sure the window contents "View" menu button,\n
+        Make sure the window contents "Zoom in" and "Zoom out" buttons,\n
+        Make sure "Urgency" graph appeared in "Urgency Graph" window\n\n
+        - "Combined Graph" window test\n
+        Open "Combined Graph" window,\n
+        Make sure the window contents "View" menu button,\n
+        Make sure the window contents "Zoom in" and "Zoom out" buttons,\n
+        Make sure "Combined" graph appeared in "Combined Graph" window\n\n
+        - "Combined Full Graph" window test\n
+        Open "Combined Full Graph" window,\n
+        Make sure the window contents "View" menu button,\n
+        Make sure the window contents "Zoom in" and "Zoom out" buttons,\n
+        Make sure "Combined Full" graph appeared in "Combined Full Graph" \
+                window\n\n
+        - "Conflict Graph" window "View" menu button test\n
+        Open "Conflict Graph" window,\n
+        Click on "View" menu button,\n
+        Make sure prompt menu list is appeared,\n
+        Make sure the prompt menu list contains "Filter Graph" menu action.\n
+        Click on "Filter Graph" menu action and make sure the "Properties" \
+                dialog window is opened.\n\n
+        - "Execution Graph" window "View" menu button test\n
+        Open "Execution Graph" window,\n
+        Click on "View" menu button,\n
+        Make sure prompt menu list is appeared,\n
+        Make sure the prompt menu list contains "Filter Graph" menu action.\n
+        Click on "Filter Graph" menu action and make sure the "Properties" \
+                dialog window is opened.\n\n
+        - "Urgency Graph" window "View" menu button test\n
+        Open "Urgency Graph" window,\n
+        Click on "View" menu button,\n
+        Make sure prompt menu list is appeared,\n
+        Make sure the prompt menu list contains "Filter Graph" menu action.\n
+        Click on "Filter Graph" menu action and make sure the "Properties" \
+                dialog window is opened.\n\n
+        - "Combined Graph" window "View" menu button test\n
+        Open "Combined Graph" window,\n
+        Click on "View" menu button,\n
+        Make sure prompt menu list is appeared,\n
+        Make sure the prompt menu list contains "Filter Graph" menu action.\n
+        Click on "Filter Graph" menu action and make sure the "Properties" \
+                dialog window is opened.\n\n
+        - "Combined Full Graph" window "View" menu button test\n
+        Open "Combined Full Graph" window,\n
+        Click on "View" menu button,\n
+        Make sure prompt menu list is appeared,\n
+        Make sure the prompt menu list contains "Filter Graph" menu action.\n
+        Click on "Filter Graph" menu action and make sure the "Properties" \
+                dialog window is opened.\n\n
+
+@section _graph_visualization_test_plan_tcl_command_tests_ Tcl Command Tests
+
+Workstation provides command line interface with appropriate set of Tcl
+commands.  Each test is represented by Tcl script which contains workstation
+commands to be executed.  Tcl commands will be tested via Dejagnu based
+testsuite (expect based tests).
+
+@section _graph_visualization_fspec_dependencies_ Dependencies, Assumptions, Risks
+
+See the appropriate section of the Graph Visualization Functional specification
+document(@ref _graph_visualization_test_plan_graph_task_docs_"[2]").
+
+*/
+
+// vim:syntax=doxygen:et:shiftwidth=8:tabstop=8:

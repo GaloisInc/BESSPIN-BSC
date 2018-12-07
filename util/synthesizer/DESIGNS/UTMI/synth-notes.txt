@@ -1,0 +1,7 @@
+The makefile checks out the source from bs/marketing/trunk/DAC2005Demos/UTMI and stores it in a subdirectory called UTMI. It then simply calls the makefile from the repository. Make clean removes the subdirectory.
+
+The script synthesize_magma copies needed verilog files from the standard bsc library, and invokes mantle with the standard script run.tcl. This script is not parameterized - being an MCD design it doesn't really makes sense to parameterize on the period. The run.tcl is the one Gaurav has used to synthesize this design, with the small addition that it also produces a line with the results, that the synthesizer system can use.
+
+
+
+

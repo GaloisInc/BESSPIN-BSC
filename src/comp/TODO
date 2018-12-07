@@ -1,0 +1,182 @@
+Warn about rules thrown away (never enabled).
+
+
+Before next stable:
+-------------------
+
+
+
+----------------------------------------------------------------------------
+
+
+Bugs:
+-----
+
+Filter fixity exports to those actually exported.
+
+All types need to be non-abstract to the compiler to generate
+descriptors.
+
+enumeration of Maybe T loops, probably because _ cannot be
+normalized
+
+Circular type definitions loops.
+
+Document TAdd & co.
+
+Is there redex duplication?  Nick's example is still very slow.
+Also, decide how to duplicate redexes with `if'.
+
+-u doesn't work properly if there is a local file with the same name
+as a Prelude file.
+
+
+Improvements:
+-------------
+
+Why are there duplicated mux inputs in the Mips?
+
+Command line not taken into account for -u output check.
+
+Use range info from 0++x (cuts down case statememts).
+	Use ValMap for variables in ordinary traversal.
+
+[Nikhil] Allow contexts on interface method declarations
+
+[Nikhil] Allow contexts on interface types in interface declarations
+
+Make type errors have better tyvars.
+
+Deriving for Bounded for "all" types.
+Deriving for Enum.
+
+CF&SC information could be more accurate, e.g. arrays
+	sub i < upd i x
+	upd i x < upd i x
+
+Warn if a rules is removed.
+
+Warn about overlapping pattern matching.
+
+Better C code.
+
+Expand synonyms in context reduction.
+
+Expand synonyms in interfaces.
+
+Stricter check that deriving is possible.
+
+Find common type expressions in CCode.
+
+use aOpt for module ports.
+
+Do proper name mangling.
+
+allow verilog pragma on polymorphic modules, and
+  generate code for monomorphic instances.
+
+Better temporary identifier.
+
+Generate warning for left out pattern matching cases.
+
+Allow genWrap to know representation of abstract types to generate
+flattened interfaces (ActionValue).
+
+
+Verilog tricks:
+---------------
+Muxing between two constants can be replaced by a concatenation
+of 0,1,x,!x.
+
+If several comparisons with x to different constants occur it
+can me replaced by a decoder and or gates.
+
+Signed < with 0 can use sign bit.
+
+Do similar transformations for | and & as for muxes (splitting at
+++ boundaries, etc.).
+
+Replace nested ifs with primuxes.
+
+(Don't inline small comparisons.)
+
+Transform {x,y} + c  -->  {x+c',y}
+  when c has trainling zeroes.
+
+Join constants in concatenations.
+
+
+Transformations:
+----------------
+
+Use intervals in IExpand.
+
+Use range to eliminate tests.
+
+insert zeroext on extract (see router)
+
+Make an AExpr boolean optimizer to run after aState, this will remove
+some redundant logic.
+
+
+Features:
+---------
+
+Local type synonyms.
+
+Add Ix and Enum classes.
+
+
+Type problems:
+--------------
+
+Type checker problem with instance in Prelude/Convert.bs.old
+
+Kind checker error in Prelude/Convert.bs
+
+Context normalizer loops on arb/loop.bs
+
+
+============================================
+
+Postponed
+---------
+
+! Just $ 1
+	need to change how constructors are done in general
+
+
+
+Done
+----
+* slice muxes to get down the number of inputs.
+	Nick says Verilog synthesis will do this.
+
+* slice registers?  requires some special reg hack.
+	Too register specific
+
+* Nested ifs in actions causes exponential blowup even when not needed.
+
+* &, | needs good precedence levels.
+
+* Use resource scheduler (since the old one is fundamentally broken).
+
+* New syntax for standalone interfaces
+	interface [typeId] { ifcDecl* }
+
+* [Nikhil] Add a primitive that allows selective update of a bit-field.
+Currently we have bit-field extraction from a Bit n type (x[i:j]).
+However, when assembling something using bit-fields, it would be
+useful to have the inverse, i.e., to selectively zap a bit field with
+a new value.
+
+* Use AXExpr for CCode too, turn on some ASyntax opt.
+
+* Flag to disable aggressive mux constant opt.
+
+* Optimize mux enable signals.
+
+* Handle 0 bit comparisons properly.
+
+* AND/OR not flattened after optimizer.
+

@@ -1,0 +1,22 @@
+# Ignore object files and other compiler-output files
+*.o
+*.a
+*.so
+*.d
+*.hi
+*.bi
+*.bo
+*.p_hi
+*.p_o
+*.c_hi
+*.c_o
+
+# Ignore OS X linker output
+*.so.dSYM
+__.SYMDEF SORTED
+
+# Ignore the link to bsc
+bsc
+
+lib/BlueNoC/test_hdr.cxx
+lib/board_support/BlueNoC/bluenoc/bluenoc

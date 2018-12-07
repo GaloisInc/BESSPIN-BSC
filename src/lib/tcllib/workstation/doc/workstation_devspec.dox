@@ -1,0 +1,622 @@
+
+/**
+
+  @page _workstation_devspec_ Development Specification 
+	
+@section _workstation_devspec_introduction_  Introduction
+
+@subsection _workstation_devspec_introduction_document_id_ Document Identifier
+
+This is a development specification for the Bluespec Workstation project.  It
+is a launching point for simulators, compilers, editors and set of tools for
+analysing the output of the compilers and simulators.  The overall tool is
+referred to as Bluespec Workstation, and will be invoked via the unix command
+"bluespec".
+
+@subsection _workstation_devspec_introduction_definition_of_terms_ Definition of Terms and Acronyms
+
+        - @b BSV - Bluespec System Verilog
+        - @b BSC - Bluespec System Verilog compiler
+        - @b Blue @b (tcl/wish) - Bluespec extension for tcl/wish interpreter
+
+@subsection _workstation_devspec_introduction_owerview_ Overview
+
+
+@subsection _workstation_devspec_introduction_scope_ Scope 
+
+Section @ref _workstation_devspec_problem_statement_ describes the problem
+statement. Overview of solution is described in section
+@ref _workstation_devspec_overview_of_solution_. Section
+@ref _workstation_devspec_components_ describes the library of basic components. 
+In section @ref _workstation_devspec_window_ implementation of general window 
+system is described. Tcl commands implementation is described in section
+@ref _workstation_devspec_tcl_commands_. Source code organization is given in 
+section @ref _workstation_devspec_source_code_organization_.
+
+@subsection _workstation_devspec_introduction_references_ References
+
+@anchor _workstation_devspec_workstation_docs_
+[1].  @ref _workstation_prd_ - product requirement document for bluespec
+workstation \n
+[2].  @ref _workstation_fspec_ - functional specification document for bluespec
+workstation \n
+@anchor _workstation_devspec_bsv_docs_    
+[3].  reference_guide_rev_30_march_2007.pdf - bluespec system verilog reference
+guide \n
+[4].  bsv_user_guide_rev_30_march_2007.pdf - bluespec system verilog user
+guide \n
+@anchor _workstation_devspec_iwidgets_library_
+[5].  http://incrtcl.sourceforge.net/iwidgets/iwidgets.html - the iWidgets
+library
+
+@section _workstation_devspec_problem_statement_ Problem Statement
+
+The functionality and implementation requirements are described in the Product
+Requirements document (see @ref _workstation_devspec_workstation_docs_ "[1]").
+Descriptions of graphical user interface and Tcl commands are given in the
+Functional Specification document (see @ref _workstation_devspec_workstation_docs_
+"[2]"). \n
+
+The goal of this document is to describe implementation of proposed solution.
+
+@section _workstation_devspec_overview_of_solution_ Overview of Solution
+
+Implementation is done with Tcl/Tk using Iwidgets library.  The graphical
+interface is implemented using Tk and Iwidgets-4.0 library.  All operations
+available from GUI are also supported by the command line.  Both GUI actions
+and Tcl commands handlers are implemented as Tcl procedures.  Analysis commands
+are implemented in base of BlueTcl commands.  Basic GUI components used in
+Bluespec Workstation are implemented as object-oriented library.  Each of these
+components is wrapper class which provides specific interface and hides
+implementation details.  All this elements are included in namespace "base".
+
+@section _workstation_devspec_components_ Basic components library implementation
+
+Following classes are implemented as components of library :
+        - Menubar - @ref _workstation_devspec_components_menubar_
+        - Toolbar - @ref _workstation_devspec_components_toolbar_
+        - Tabnotebook - @ref _workstation_devspec_components_tabnotebook_
+        - Dialog - @ref _workstation_devspec_components_dialog_
+        - Selection dialog - @ref
+        _workstation_devspec_components_selection_dialog_
+        - Hierarchy - @ref _workstation_devspec_components_hierarchy_
+        - Messagebox - @ref _workstation_devspec_components_messagebox_
+        - Paned window - @ref _workstation_devspec_components_paned_window_
+
+@subsection _workstation_devspec_components_menubar_ Class base::menubar
+
+This class represents configurable menubar.  It is inherited from
+iwidgets::Menubar.  Following public methods are provided by base::menubar :
+        - add_menubutton {n t u} - Adds menubutton to menubar
+                - n - name of menubutton
+                - t - title of menubutton
+                - u - number of the underlined letter
+        - add_command {n t u h f e} - Adds command to menubutton
+                - n - name of menubutton
+                - t - title of the menubutton
+                - u - number of the underlined letter
+                - h - help string
+                - f - function to be executed
+                - e - state to be set
+        - set_state {m i s}
+                - m - name of menu
+                - i - index of menu-item
+                - s - state to be set
+
+@subsection _workstation_devspec_components_toolbar_ Class base::toolbar
+
+This class represents a configurable toolbar.  It is inherited from
+iwidgets::Toolbar.  Following public method is provided by base::toolbar :
+        - add_button {n h i b c} - Adds a button to toolbar
+                - n - name of the button
+                - h - the help string
+                - i - associated image
+                - b - balloon string
+                - c - command to be executed
+                - s - state of the button active/disabled
+        - method change_state {ind st} - Changes the tool-bar button's state
+                - ind - index of the button 
+                - st - state 
+
+@subsection _workstation_devspec_components_tabnotebook_ Class base::tabnotebook
+
+This class represents a configurable tabnotebook.  It is inherited from
+iwidgets::Tabnotebook.  Following public method is provided by base:: :
+        - add_label {p c} - Adds a label to toolbar 
+                - p - name of the label
+                - c - command to be executed when selecting the tab
+
+@subsection _workstation_devspec_components_dialog_ Class base::dialog
+
+This class represents a configurable dialog.  It is inherited from
+iwidgets::Dialog.  Following public methods are provided by base::dialog :
+        - add_label {n t f} - Adds a label to the dialog 
+                - n - name of the label
+                - t - text of the label
+                - f - font of the label
+        - add_checkbutton {f b t} - Adds a checkbutton to the dialog
+                - f - name of the frame
+                - b - name of the checkbutton
+                - t - text of the button
+        - add_entryfield {f n l} - Adds an entryfield to the dialog
+                - f - name of the frame
+                - n - name of the entryfield
+                - l - label of the entryfield
+        - add_browse_entryfield {f n l c} - Adds an entryfield with browse button
+                - f - name of the frame
+                - n - name of the entryfield
+                - l - label of the entryfield
+                - c - command to be executed under button press                
+        - method insert_in_entryfield {entryname string} - Inserts the
+        specified string into entryfield 
+                - entryname name of the entryfield 
+                - string the text to be inserted into entryfield 
+
+
+@subsection _workstation_devspec_components_selection_dialog_ Class base::selection_dialog
+
+This class represents a configurable selection dialog. It is inherited from
+iwidgets::Selectiondialog. Following public methods are provided by
+base::selection_dialog :
+        - update {l} - Updates the selection list 
+                - l - the updated list
+        - get_selection {} - Returns the selection
+
+@subsection _workstation_devspec_components_hierarchy_ Class base::hierarchy
+
+This class represents a configurable hierarchy. It is inherited from
+iwidgets::Hierarchy. Following public methods are provided by base::hierarchy :
+        - add_itemmenu {n c} - Adds a menu item to the item pop up menu 
+                - n - name of the item
+                - c - command to be executed
+        - add_bgmenu {n c} - Adds a menu item to the background pop up menu of
+        the hierarchy
+                - n - name of the item
+                - c - command to be executed
+        - add_separator {} - Adds a separptor to the item pop up menu
+
+
+@subsection _workstation_devspec_components_messagebox_ Class base::messagebox
+
+This class represents a configurable messagebox. It is inherited from
+iwidgets::Messagebox. Following public methods are provided by base::messagebox
+:
+        - add_type {t b f} - Adds a message type 
+                - t -  name of the message type
+                - b - background color of the message
+                - f - foreground color of the message
+
+@subsection _workstation_devspec_components_paned_window_ Class base::paned_window
+
+This class represents a configurable paned window. It is inherited from iwidgets::Panedwindow. 
+
+
+@section _workstation_devspec_window_ General window system implementation
+
+Main window hierarchy consists of following windows :
+        - Main Window - @ref _workstation_devspec_window_main_ 
+        - Project Window - @ref _workstation_devspec_window_project_
+        - Package Window - @ref _workstation_devspec_window_package_ 
+        - Module Browser - @ref _workstation_devspec_window_module_ 
+        - Type Browser - @ref _workstation_devspec_window_type_ 
+        - Schedule Analysis - @ref _workstation_devspec_window_schedule_ 
+
+Each of this windows is implemented as separate class.
+
+
+@subsection _workstation_devspec_window_main_ Class main_window
+
+The class main_window consists of instantiations of following classes :
+        base::menubar
+        base::toolbar
+        base::status_command_window
+
+It also contains a status bar component, which is a Tk label widget.
+The class main_window provides following public procedure :
+        - proc change_toolbar_state {n s} - Changes the state of the specified
+        tool button
+                - n name of the tool button
+                - s state : disabled or active
+        - proc change_menu_status {m n s} - Sets the menu status disabled or
+        active
+                - m the menu button name
+                - n a list with indexes of menuitems
+                - s state : disabled or active
+        - proc clear {} - Clears the Main window
+                        
+
+@subsection _workstation_devspec_window_project_ Class project_window
+
+The class project_window consists of instantiations of following classes :
+        base::menubar
+        base::hierarchy
+
+The class project_window provides following public procedures :
+        - create {} - creates the Project Files window
+        - change_menu_status {m n s} - Changes the menu status for the Project
+        window
+               - m - the name of menu from Project window
+               - n - name of the menu item
+               - s - the status
+        - close {} - closes the Project window
+        - clear {} - removes all information from the Project window
+        - get_files {f} -  used as a -querycommand for the hierarchy viewer
+        - get_items {paths} -  Returns tagged list {id file_name} for *.bsv
+        files
+               - paths - the project search paths
+        - select_node {t s p} - select/deselect the node ,
+               - t - the most recently selected node ,
+               - s - if 1/0 then selected/deselected 
+               - p - the name of the hierarchy 
+        - dblclick_node {t} - Select/Deselect the node
+               - t - the most recently selected node
+        - select_current {} - Select/Deselect the current node
+        - project_options {} - Handles the Project->Options action
+        - exec_editor_for_selection {} - launches the editor for the selection
+        - exec_editor_for_current {} - launches the editor for the pop up menu
+        selection
+        - file_refresh_for_selection {} - refreshes the selected file 
+        - file_refresh_for_current {} - refreshes the file selected by pop up
+        menu 
+        - compile_file_with_dephs_for_selection {} - compiles the selected file
+        with dephs
+        - compile_file_with_dephs_for_current {} - compiles the selected file
+        with dephs
+
+@subsection _workstation_devspec_window_package_ Package Window
+Class package_window
+The class package_window consists of instances of following classes :
+        base::menubar
+        base::paned_window
+        base::hierarchy
+        base::messagebox
+The class project_window provides following public procedures :
+        - create {} - creates the Package window
+        - clear {} - removes all information from the Package window
+        - change_menu_status {m n s} - Changes the menu status for the Package
+        window
+               - m - the name of menu from Package window
+               - n - name of the menu item
+               - s - the status
+        - close {} - closes the Package window
+        - get_items {n} - gets items for the selected node in the package
+        hierarchy
+                - n - recently selected node in the package hierarchy
+        - check_node {t} - Check the type of the selected node
+                - t - the most recently selected node
+        - select_node {t s} - selects/deselects node
+                - t - the most recently selected node
+                - s - if 1/0 then select/deselect
+        - package_load {} - opens a listbox to load a package
+        - package_top_load {} - loads the top package
+        - package_reload {} - reloads all loaded packages 
+        - package_refresh {} - refreshes the package hierarchy
+        - import_hierarchy {} - shows the import hierarchy in a separate window
+        - package_search {} - searches for a string through the definitions of
+        all loaded packages
+        - view_expand {} - expands the selected item
+        - view_collapse {} - collapses the selected item
+        - view_collapse_all {} - collapses the hierarchy to only the package
+        view
+        - view_totype {} - opens the Type Browser window for the selected type
+        - view_source {} - launches the editor on the definition of the
+        selected item
+        - select_current {} - select/Deselect the current node
+        - expand_current {} - expands the selected item.
+        - collapse_current {} - colapses the selected item.
+        - get_package_depends {n} - returns the list of imported packages for
+        the specified package
+                - n the selected node
+        - get_depend {n} - creates the import hierarchy
+                - n the selected node
+
+@subsection _workstation_devspec_window_module_ Module Browser
+Class module_browser
+The class module_browser consists of instances of following classes :
+        base::menubar
+        base::paned_window
+        base::hierarchy
+        base::tabnotebook
+        base::messagebox
+
+The class module_browser provides following public procedures :
+        - create {} - creates the Module Browser window
+        - clear {} - removes all information from the Module Browser window
+        - change_menu_status {m n s} - Changes the menu status for the Module
+        Browser window
+               - m - the name of menu from Module Browser window
+               - n - name of the menu item
+               - s - the status
+        - close {} - closes the Module Browser window
+        - get_items {n} - gets items for the selected node in the type hierarchy
+                - n - recently selected node in
+        - select_node {t s p} - selects/deselects node
+                - t - the most recently selected node
+                - s - if 1/0 then select/deselect
+                - p - the name of the hierarchy
+        - module_load {} - opens a selection list to select a module to load
+        - module_reload {} - reloads all loaded modules
+        - module_find {} - searches for a string in the context of module
+        hierarchy
+        - view_show_schedule {} - opens the Schedule Analysis window for the
+        loaded module
+        - view_collapse_all {} - collapses the hierarchy to only the package
+        view
+
+@subsection _workstation_devspec_window_type_ Type Browser
+Class type_browser
+The class type_browser consists of instances of following classes :
+        base::menubar
+        base::paned_window
+        base::hierarchy
+        base::messagebox
+
+The class type_browser provides following public procedures :
+        - create {} - creates the Type Browser window
+        - clear {} - removes all information from the Type Browser window
+        - change_menu_status {m n s} - Changes the menu status for the Type
+        Browser window
+               - m - the name of menu from Type Browser window
+               - n - name of the menu item
+               - s - the status
+        - close {} - closes the Type Browser window
+        - get_items {n} - gets items for the selected node in the type hierarchy
+                - n - recently selected node
+        - update_menu_status {} - updates the menu status
+        - check_node {t} - checks the type of the selected node
+                - t - the most recently selected node
+        - select_node {t s p} - selects/deselects node
+                - t - the most recently selected node
+                - s - if 1/0 then select/deselect
+                - p - the name of the hierarchy
+        - show_type {} - Adds the specified type from the Add type entryfield
+        to the Type hierarchy
+        - types_add {} - adds a type to the type hierarchy
+        - types_remove {} - removes the selected type from the type hierarchy
+        - view_expand {} - expands the selected item
+        - view_collapse {} - collapses the selected item
+        - view_collapse_all {} - collapses the hierarchy to only the package
+        view
+        - view_source {} - launches the editor on the definition of the
+        selected item
+
+@subsection _workstation_devspec_window_schedule_ Schedule Analyzer
+The class schedule_analyzer consists of instances of following classes :
+        base::menubar
+        base::paned_window
+        base::hierarchy
+        base::tabnotebook
+        base::messagebox
+
+The class schedule_analyzer provides following public procedures :
+
+        - create {} - creates the Schedule Analysis window
+        - clear {} - removes all information from the Schedule Analysis window
+        - change_menu_status {m n s} - Changes the menu status for the Schedule
+        Analysis window
+               - m - the name of menu from Type Schedule Analysis window
+               - n - name of the menu item
+               - s - the status
+        - close {} - closes the Module Browser window
+        - get_items {n} - gets items for the selected node in the method
+        hierarchy
+                - n - recently selected node in
+        - select_node {t s p} - selects/deselects node
+                - t - the most recently selected node
+                - s - if 1/0 then select/deselect
+                - p - the name of the hierarchy
+        - module_load  {} - opens a selection list to select a module to load
+        - module_reload {} - reloads all loaded modules
+        - module_source {} - launches the editor on the definition of the
+        selected item
+        - select_rule {} - shows details for the selected rule in the right
+        pane of the Rule Order tab
+        - get_rules {} - shows the rules and methods in the left pane of the
+        Rule Order tab
+        - show_rule_rel {} - Shows the relations of two selected rules in the
+        Rule Relations tab
+
+
+@section _workstation_devspec_tcl_commands_ Tcl commands implementation
+
+The syntax and functionality of Tcl commands are described in @ref
+_workstation_devspec_workstation_docs_ functional specification document [2].
+The goal of this section is to describe implementation specifics for each
+command. All Tcl commands  are defined in namespace "commands". Analysis
+commands are implemented using BlueTcl commands. For these commands mapping
+into BlueTcl commands is described. 
+
+@subsection _workstation_devspec_tcl_commands_project_ Project manipulation commands
+
+Following commands are implemented :
+        - commands::new_project {n l p}  - Creates new project 
+                - n - name of the project
+                - l - location of the project
+                - p - search paths
+        - commands::open_project {l} - Opens the specified project
+                - l - the URL of the project which should be processed 
+        - commands::set_lib {l} - Sets search paths for the project
+                - l - list of search paths
+        - commands::save_project {} - Saves the current project
+        - commands::save_project_as {p l} - Saves the current project in
+        another location
+                - p - the name of the project
+                - l - path where the project should be located
+        - commands::close_project {} - Closes the project without saving
+        changes done after last open/save
+
+
+@subsection _workstation_devspec_tcl_commands_file_ File manipulation commands
+Following commands are implemented :
+        - commands::compile_file {f, d} - Compiles the file. 
+                - f - file which will be compiled
+                - d - if this option is set then dependencies will be considered.
+        - commands::new_file {f, p} - Creates new file
+                - f - file name 
+                - p - file's directory
+        - commands::open_file {f, l, c} - Opens the specified file
+                - f - file path 
+                - l - line number 
+                - c - column number
+        - commands::save_file {} - Saves the file
+        - commands::save_file_as {f} - Saves file in the specified location. 
+                - f  - file location
+        - commands::save_all {} - Saves all files
+        - commands::close_file {} - Closes the file
+        - commands::close_all_file {} - Close all files
+        - commands::compile_file {f, d} - Compiles the file. 
+                - f - the file which will be compiled. 
+                - d - if this option is set then dependencies will be considered.
+
+
+@subsection _workstation_devspec_tcl_commands_build_ Build commands
+
+Following commands are implemented :
+        - commands::compile {} - Compiles the current project
+        - commands::simulate {} - Simulate the current project
+        - commands::clean {} - Removes result files
+        - commands::full_clean {} - Removes all logs and result files
+
+
+@subsection _workstation_devspec_tcl_commands_window_ Window manipulation commands
+
+Following commands are implemented :
+        - commands::minimize_all {} - Minimizes all windows except the main
+        window
+        - commands::show {w} - Activates specified window
+                - w - one of
+                -project|-editor|-package|-type|-module|-schedule_analysis
+
+
+@subsection _workstation_devspec_tcl_commands_analysis_ Analysis commands
+
+Following commands are implemented :
+        - commands::load_package {p} - Loads package with given name.
+                - p - name of package. Uses the "bpackage load" BlueTcl
+                command.
+        - commands::reload_packages {} - Reloads all loaded packages. Uses
+        "bpackage list" and "bpackage load" BlueTcl commands
+        - commands::package_refresh {} - Refreshes the package hierarchy
+        - commands::import_hierarchy {} - Imports hierarchy in a separate
+        window
+        - commands::search_in_packages {s} - Search for a string in all loaded
+        packages. 
+                - s - string to be searched. Uses the "bpackage search" BlueTcl
+                command
+        - commands::get_package_comp_info {k} - Show information related to
+        selected component in the right pane of Package Browser window. 
+                - k - unique id of construct. Uses the "browsepackage detail"
+                BlueTcl command
+        - commands::add_type {n} - Adds the type to the Type Browser window. 
+                - n - name of the type. Uses the "browsetype add" BlueTcl
+                command.
+        - commands::remove_type {k} - Removes information for specified type
+        from the Type Browser window
+                - k - unique key for specified type
+        - commands::get_type_info {k} - Shows information for specified type in
+        the right pane of Type Browser window.
+                - k - unique key for specified type. Uses the "browsetype
+                detail" BlueTcl command
+        - commands::get_module_info {k} - Shows information for specified
+        module/instance in the right pane of Module Browser window. Uses the
+        "browsemodule detail" BlueTcl command
+                - k - unique key for specified type
+        - commands::load_module {} - Loads the specified module. Uses the
+        "module load" BlueTcl command
+                - n - name of module to be loaded.
+        - commands::reload_module {} - Reloads the loaded module in the Module
+        Brower window. Uses the module load BlueTcl commands
+        - commands::get_schedule {n} - Displays schedule information for
+        specified module in the Schedule # Analysis window. 
+                - n - name of the module 
+        - commands::get_schedule_warnings {} - Displays warnings occurred
+        during scheduling in the Schedule Analysis window. Uses the "schedule
+        warnings" BlueTcl command
+        - commands::get_execution_order {} - Displays the rule execution order
+        in the right pane of Rule order perspective of Schedule Analysis
+        window. Uses the "schedule execution" BlueTcl command
+        - commands::get_rule_info {n} - Displays the predicate, blocking rules
+        and method calls for the specified rule in the right pane of Rule order
+        perspective of Schedule Analysis window. Uses the "rule full" BlueTcl
+        command
+                - n - name of the rule
+        - commands::get_method_info {k} - Shows information for specified
+        module/instance in the right pane of Module Browser window. Uses the
+        "submodule full" BlueTcl command
+                - k - unique key for specified type
+        - commands::get_rule_relations {n, m} - Displays relations for given
+        pair of rules in the Rule relations perspective of the Schedule
+        Analysis window. Uses the "rule rel" BlueTcl command
+                - n - name of first rule 
+                - m - name of second rule
+        - commands::package_expand {k} - Expands the node of Package Browser
+        tree-view
+                - k -unique id of construct
+        - commands::type_expand {k} - Expands the node of Type Browser
+        tree-view
+                - k - unique id of construct
+        - commands::package_collapse {k} - Collapses the node of Package window
+        tree-view. 
+                - k - key of the node which should be collapsed
+        - commands::package_collapse_all {} - Collapses the hierarchical view
+        to show only package list
+        - commands::type_collapse {k} - Collapses the node of Type Browser
+        tree-view. 
+                - k - key of the node which should be collapsed
+        - commands::type_collapse_all {} - Collapses the hierarchical view to
+        show only type list
+        - commands::module_collapse_all {} - Collapses the hierarchical view to
+        show only module list
+
+@subsection _workstation_devspec_tcl_commands_
+
+
+
+@section _workstation_devspec_source_code_organization_ Source Code Organization
+
+Source code is located under workstation sub-directory of tcllib directory
+which is part of entire Bluespec distribution. The entire design consists of
+following files : workstation.tcl - Main script of Bluespec Workstation. It
+performs initialization of application and runs it.
+
+        - main_window.tcl - Definition of Main Window.
+        - status_command_window.tcl - Definition of Status-command Window.
+        - project_window.tcl -  Definition of Project Window.
+        - package_window.tcl - Definition of Package Window.
+        - module_browser_window.tcl - Definition of Module Browser Window.
+        - type_browser_window.tcl - Definition of Type Browser Window.
+        - schedule_analyzer.tcl - Definition of Schedule Analysis window.
+        - menu_actions.tcl - Definition of menu-actions of Main Window menubar.
+        - command_line_handlers.tcl - Definition of command line handlers.
+        - commands.tcl - Definition of Tcl commands.
+        - menubar.tcl - Definition of base::menubar class.
+        - toolbar.tcl - Definition of base::toollbar class.
+        - hierarchy.tcl - Definition of base::hierarchy class.
+        - messagebox.tcl - Definition of base::messagebox class.
+        - paned_window.tcl - Definition of base::paned_window class.
+        - dialog.tcl - Definition of base::dialog class.
+        - tabnotebook.tcl - Definition of base::tabnotebook class.
+        - selection_dialog.tcl - Definition of selection_dialog class.
+        - select_file_dialog.tcl - Definition of select_file dialog class.
+        - file_new_dialog.tcl - Definition of file_new_dialog class.
+        - file_save_as_dialog.tcl - Definition of file_save_as_dialog class.
+        - project_new_dialog.tcl - Definition of project_new_dialog class.
+        - project_open_dialog.tcl - Definition of project_open_dialog class.
+        - project_options_dialog.tcl - Definition of project_options_dialog
+        class.
+        - project_save_as_dialog.tcl - Definition of project_save_as_dialog
+        class.
+        - project_top_file_dialog.tcl - Definition of project_top_file_dialog
+        class.
+        - help_dialogs.tcl - Definitions of help dialogs. 
+        - exec_editor.tcl - Editor executor.
+        - bindings.tcl - Definitions of bindings. 
+        - help.tcl - Definitions of help variables.
+        - utils.tcl - Definitions of utilities used in Bluespec Workstation.
+
+@section _devspec_dependences_ Dependencies, Assumptions, Risks
+@todo
+
+*/
+
+// vim:syntax=doxygen:et:shiftwidth=8:tabstop=8:

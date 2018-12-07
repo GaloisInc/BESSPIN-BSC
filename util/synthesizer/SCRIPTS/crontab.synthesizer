@@ -1,0 +1,2 @@
+0 1 * * 7 /export/home/synthesizer/SCRIPTS/StartBatchAuto &> /export/home/synthesizer/public_html/errors.txt
+

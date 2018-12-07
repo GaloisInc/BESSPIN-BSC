@@ -1,0 +1,9 @@
+Document: bluespec-release-notes
+Title: Bluespec Release Notes
+Author: Bluespec, Inc.
+Abstract: These documents describe significant changes for each
+ Bluespec release.
+Section: Programming
+
+Format: PDF
+Files: /usr/share/doc/bluespec-__RELEASE_NUM__/ReleaseNotes_*.pdf.gz

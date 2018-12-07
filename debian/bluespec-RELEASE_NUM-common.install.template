@@ -1,0 +1,17 @@
+usr/lib/board_support usr/share/bluespec-__RELEASE_NUM__
+usr/lib/BSVSource usr/share/bluespec-__RELEASE_NUM__
+usr/lib/Verilog usr/share/bluespec-__RELEASE_NUM__
+
+usr/lib/tcllib/bluespec usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/gvim usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/include usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/itcl3.4 usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/itk3.4 usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/iwidgets4.0 usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/novas usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/scemi usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/tablelist usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/tcl8.5 usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/tk usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/tk8.5 usr/share/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/workstation usr/share/bluespec-__RELEASE_NUM__/tcllib

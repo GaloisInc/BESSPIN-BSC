@@ -1,0 +1,322 @@
+#!/bin/sh
+# \
+exec $BLUESPECDIR/bin/bluewish "$0" -- "$@"
+
+global pid
+
+lappend auto_path .
+lappend auto_path $::env(BLUESPECDIR)/tcllib/scemi
+lappend auto_path $::env(BLUESPECDIR)/tcllib/simtb
+lappend auto_path $::env(BLUESPECDIR)/tcllib/workstation
+lappend auto_path $::env(BLUESPECDIR)/tcllib/bluespec
+
+# standard Bluespec colours and fonts
+fonts::set_colours
+fonts::initialize
+
+package require BSDebug
+package require emu_control
+
+wm withdraw .
+
+proc usage {} {
+    puts ""
+    puts "usage: $::argv0 params_file <options>"
+    puts "Options:"
+    puts "   -gui    <path>   specify path to gui_dut.tcl (default man)"
+    puts "   -ll     <file>   the logic allocation file"
+    puts "   -log             create a log file"
+    puts "   -missing         collect list of missing input files and then exit"
+    puts "   -mode   <mode>   set simulation mode or emulation mode (default emulation)"
+    puts "   -no_dbg          do not bring up signal gui (default is to bring up)"
+    puts "   -port   <number> specify TCP port to communicate with simtb tcl"
+    puts "   -pre    <path>   path/prefix for unspecified xilinx files"
+    puts "   -rtl    <file>   the elaborated rtl netlist file"
+    puts "   -simtb  <exe>    specify executable name of the simulation tb"
+    puts "   -slog   <file>   the synthesis log file"
+    puts "   -syn    <file>   the post-synthesis netlist file"
+    puts "   -top    <name>   specify top module for hierarchy viewing"
+    puts "   -vcd             create a dump.vcd file for a simulation testbench"
+    puts "   -xrf    <file>   the xrf file"
+    puts "   -unit_time       use \"unit time\" in creating the readback vcd file"
+    puts ""
+    puts " e.g: -xrf foo.xrf foo.params"
+}
+
+set BoolOptions [list -- -missing -help -log -no_dbg -vcd -unit_time]
+set ValOptions [list -xrf -ll -rtl -syn -slog -pre -mode -gui -simtb -port -top]
+
+if { [catch [list ::utils::scanOptions $BoolOptions $ValOptions true OPT "$argv"] opts] } {
+    puts stderr $opts
+    usage
+    exit 1
+}
+
+if {[info exists OPT(-help)]} {
+    usage
+}
+
+if {[llength $opts] == 0} {
+    puts stderr "A params file argument is required"
+    usage
+    exit 1
+}
+
+if {[llength $opts] > 1} {
+    puts stderr "Only a single SceMi params file may be specified"
+    usage
+    exit 1
+}
+
+set list_missing [info exists OPT(-missing)]
+set missing_files [list]
+
+proc handle_missing {filename} {
+    global missing_files
+    lappend missing_files $filename
+}
+
+set no_dbg    [info exists OPT(-no_dbg)]
+set unit_time [info exists OPT(-unit_time)]
+
+set paramFile  [lindex $opts 0]
+set xrfFile  ""
+set llFile   ""
+set rtlFile  ""
+set synFile  ""
+set slogFile ""
+set top      ""
+
+set has_xrf    [info exists OPT(-xrf)]
+set has_ll     [info exists OPT(-ll)]
+set has_rtl    [info exists OPT(-rtl)]
+set has_syn    [info exists OPT(-syn)]
+set has_slog   [info exists OPT(-slog)]
+set has_pre    [info exists OPT(-pre)]
+set has_simtb  [info exists OPT(-simtb)]
+set has_top    [info exists OPT(-top)]
+set vcd        [info exists OPT(-vcd)]
+
+if {$vcd && !$has_simtb} {
+    return -code error "A vcd file can only be created with a simulation testbench."
+}
+
+if {![info exists OPT(-mode)]} {
+    set mode "emu"
+} else {
+    set mode $OPT(-mode)
+}
+if { $mode != "emu" && $mode != "sim" } {
+    return -code error "Illegal mode value `$mode' . Legal values are 'emu' or 'sim'."
+}
+
+if {$mode == "emu"} {
+    set man_gui_dut build/emu/scripts/gui_dut.tcl	
+} else {
+    set man_gui_dut build/sim/scripts/gui_dut.tcl	
+}
+
+if {![info exists OPT(-gui)]} {
+    set tbgui "man"
+} else {
+    set tbgui $OPT(-gui)
+}
+
+if {$has_xrf}   {set xrfFile    [file normalize $OPT(-xrf)]}
+if {$has_ll}    {set llFile     [file normalize $OPT(-ll)]}
+if {$has_rtl}   {set rtlFile    [file normalize $OPT(-rtl)]}
+if {$has_syn}   {set synFile    [file normalize $OPT(-syn)]}
+if {$has_slog}  {set slogFile   [file normalize $OPT(-slog)]}
+if {$has_pre}   {set prefix     [file normalize $OPT(-pre)]}
+if {$has_simtb} {set simtbFile  [file normalize $OPT(-simtb)]}
+if {$has_top}   {set top                        $OPT(-top)}
+
+if {!$no_dbg} {
+    if {!$has_xrf} {
+	if {!$has_ll} {
+	    if {$has_pre} {
+		set llFile [file normalize "$prefix\.ll"]
+	    } else {
+		return -code error "No logic allocation file has been specified."
+	    }
+	}
+	
+	if {!$has_rtl} {
+	    if {$has_pre} {
+		set rtlFile [file normalize "$prefix\.rtl"]
+	    } else {
+		return -code error "No elaborated rtl file has been specified."
+	    }
+	}
+	
+	if {!$has_syn} {
+	    if {$has_pre} {
+		set synFile [file normalize "$prefix\.edf"]
+	    } else {
+		return -code error "No post-synthesis netlist file has been specified."
+	    }
+	}
+	
+	if {!$has_slog} {
+	    if {$has_pre} {
+		set slogFile [file normalize "$prefix\.slog"]
+	    } else {
+		return -code error "No synthesis logfile has been specified."
+	    }
+	}
+    }
+}
+    
+if {![file readable $paramFile]} {
+    handle_missing $paramFile
+}
+
+if {!$list_missing} {
+    puts "Using SceMi parameters file: $paramFile"
+}
+
+if {$has_simtb && ![file readable $simtbFile]} {
+    handle_missing $simtbFile
+}
+
+if {!$no_dbg && !$has_xrf} {
+    foreach ff [list $rtlFile $llFile $synFile $slogFile] {
+	if {![file readable $ff]} {
+	    handle_missing $ff
+	}
+    }
+}
+
+if {!$no_dbg && $has_xrf} {
+    if {![file readable $xrfFile]} {
+	handle_missing $xrfFile
+    }
+}
+
+if {[llength $missing_files] != 0} {
+    return -code error "The following file(s) are unavailable: $missing_files"
+}
+
+if {$list_missing} {
+    exit 0
+}
+
+################################################################################
+###
+################################################################################
+
+package require Bluetcl
+package require Interp
+package require Redirect
+package require SimulationTestbench
+package require Iwidgets 4.0
+package require Waves
+
+
+######################### OPTIONS #################
+
+# Select wave viewer  Gtk or Novas
+Waves::set_options viewer GtkWave
+# Waves::set_options viewer {Novas}
+Waves::set_options {GtkWave,Command} gtkwave {GtkWave,Options} -W
+Waves::set_options {Novas,Command} {nWave}
+Waves::set_options {Novas,Options} {-nologo}
+
+if {$has_simtb} {
+    ## The testbench is a simulation
+
+    set name $OPT(-simtb)
+    set port 5678
+    if {[info exists OPT(-port)]} {
+	set port $OPT(-port)
+    }
+    set pid [::simtb::startSimulator $name $port $vcd]
+
+    rename ::exit ::__exit
+    proc ::exit {} {
+	global pid
+	
+	set r [catch [list ::redirect::send "bsdebug::scemi delete"] msg]
+	set r [catch [list ::redirect::send_cmd 0 1] msg]
+	#	set r [catch [list ::redirect::send "exit"] msg]
+	# after 200
+	# set r [catch [list exec pkill -P $pid] msg]
+	# set r [catch [list exec kill -TERM $pid] msg]
+	::__exit
+    }
+
+    ::redirect::send "lappend auto_path ."
+    ::redirect::send "lappend auto_path $::env(BLUESPECDIR)/tcllib/simtb"
+    ::redirect::send "lappend auto_path $::env(BLUESPECDIR)/tcllib/bluespec"
+    ::redirect::send "package require BSDebug"
+    ::redirect::send "package require Interp"
+    ::redirect::send "package require Redirect"
+    ::redirect::send "bsdebug::scemi init $paramFile"
+    ##  The interpreter bind phase can terminate and the simulator can proceed.
+    ::redirect::send_cmd 123456 1 true
+
+    if {!$no_dbg} {
+	if {$has_xrf} {
+	    ::redirect::netlist import $xrfFile false $unit_time 
+	} else {
+	    ::redirect::netlist load $rtlFile $llFile $synFile $slogFile false $unit_time
+	}
+    }
+	
+    ######################### Starting the GUI #################
+    # source the local files
+    if {$tbgui == "man"} {
+	source $man_gui_dut
+    } else {
+	source $tbgui/gui_dut.tcl
+    }
+    
+    redirect::rdbk set verbose off
+    
+    # log readback activities if the flag is set
+    if {[info exists OPT(-log)]} {
+	redirect::netlist cmdlog on
+	redirect::rdbk set cmdlog on
+	# This command may not exist
+	catch {bsdebug::dut cmdlog on} msg
+    }
+    emu_control .control $top $mode $tbgui $no_dbg
+
+    wm state . normal
+    
+    wm protocol . WM_DELETE_WINDOW { exit };
+
+} else {
+
+    bsdebug::scemi init $paramFile
+    
+    if {!$no_dbg} {
+	if {$has_xrf} {
+	    ::redirect::netlist import $xrfFile false $unit_time
+	} else {
+	    ::redirect::netlist load $rtlFile $llFile $synFile $slogFile false $unit_time
+	}
+   }
+   
+    ######################### Starting the GUI #################
+    # source the local files
+    if {$tbgui == "man"} {
+	source $man_gui_dut
+    } else {
+	source $tbgui/gui_dut.tcl
+    }
+    
+    redirect::rdbk set verbose off
+    
+    # log readback activities if the flag is set
+    if {[info exists OPT(-log)]} {
+	redirect::netlist cmdlog on
+	redirect::rdbk set cmdlog on
+	# This command may not exist
+	catch {bsdebug::dut cmdlog on} msg
+    }
+        
+    emu_control .control $top $mode $tbgui $no_dbg
+    wm state . normal
+
+}

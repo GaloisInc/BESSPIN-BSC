@@ -1,0 +1,8 @@
+Document: bluespec-training
+Title: Bluespec Training Slides
+Author: Bluespec, Inc.
+Abstract: This slides are used for Bluespec training presentation.
+Section: Programming
+
+Format: PDF
+Files: /usr/share/doc/bluespec-__RELEASE_NUM__-training/slides/*.pdf.gz

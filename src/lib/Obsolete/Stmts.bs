@@ -1,0 +1,584 @@
+-- Copyright 2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id: Stmts.bs,v 1.17 2003/05/05 17:57:14 augustss Exp $
+
+-- TODO:
+--   we need a way to convey the one-hot information to the scheduler
+--   cycle free thread join
+--   loops with no delay for conditions and increments
+
+--@ \subsection{Stmts}
+--@ \index{Stmts@\te{Stmts} (package)|textbf}
+--@
+--@ The \te{Stmts} package provides a C-like way of defining finite state
+--@ machines.
+--@ 
+--@ Defining a state machine proceeds in two steps: first, a description of
+--@ the FSM using C-like syntax (this internally builds an abstract syntax tree);
+--@ second, the description is translated into an FSM.
+
+package Stmts(
+	StmtT(..),		-- XXX compiler bug --- XXX (..)
+	Stmt(..), StmtM,
+	Else(..),
+        s', Stmts, -- XXX
+	s, if1, if2, while, forx, par, seq, skip, wait, break, continue,
+	Var(..), static, static_, auto, auto_, (+=), (-=), (*=),
+	Lock, mkLock, lock, unlock,
+	StmtFSM(..), stmtFSM
+	) where
+import List
+import Monad
+import Once	-- XXX forx the example
+
+data StmtT
+	= SAction Action
+	| SIf1 Bool StmtT
+	| SIf2 Bool StmtT StmtT
+	| SWhile Bool StmtT
+	| SFor StmtT Bool StmtT StmtT
+	| SSeq (List StmtT)
+	| SPar (List StmtT)
+	| SSkip
+	| SDelay
+	| SWait Bool
+	| SBreak
+	| SContinue
+	--
+	| SLock (Reg Bool)
+
+type Stmts = List StmtT
+
+--@ \subsubsection{Statements}
+--@ The type of statements.
+--@ \begin{verbatim}
+--@ typedef StmtM#(void) Stmt;
+--@ \end{verbatim}
+type Stmt = StmtM ()
+
+--@ The base type of statements is abstract.
+--@ \begin{verbatim}
+--@ typedef ...  StmtM #(type a);
+--@ \end{verbatim}
+data StmtM a
+	= S (Module (a, Stmts))
+
+unS :: StmtM a -> Module (a, Stmts)
+unS (S x) = x
+
+--@ To use the \te{do} syntax the base type has to be a monad.
+--@ \begin{verbatim}
+--@ instance Monad #(StmtM);
+--@ \end{verbatim}
+instance Monad StmtM
+  where
+    return x = S (return (x, Nil))
+    bind (S x) f = S
+	do  (xa, xs) <- x
+	    (fa, fs) <- unS (f xa)
+	    return (fa, xs `append` fs)
+
+stmt :: (Monad m) => StmtT -> m ((), Stmts)
+stmt s = return ((), s :> Nil)
+
+--@ Actions can be turned into statements.
+--@ Takes $1$ cycle to execute.
+--@ \begin{verbatim}
+--@ function Stmt s(Action a);
+--@ \end{verbatim}
+s' :: StmtT -> Stmt
+s' st = S (stmt st)
+
+
+s :: Action -> Stmt
+s a = s' (SAction a)
+
+--@ There are if statements, with one and two arms.
+--@ Takes $1+n$ cycles to execute if the chosen branch takes $n$ cycles.
+--@ \begin{verbatim}
+--@ function Stmt if1(Bool c, Stmt s);
+--@ \end{verbatim}
+if1 :: Bool -> Stmt -> Stmt
+if1 c (S t) = S
+    do
+	(_, ts) <- t
+	stmt (SIf1 c (SSeq ts))
+
+--@ \lineup
+--@ \begin{verbatim}
+--@ function Stmt if2(Bool c, Stmt s, Else el, Stmt e);
+--@ \end{verbatim}
+if2 :: Bool -> Stmt -> Else -> Stmt -> Stmt
+if2 c (S t) _ (S e) = S
+    do
+	(_, ts) <- t
+	(_, es) <- e
+	stmt (SIf2 c (SSeq ts) (SSeq es))
+--@ \lineup
+--@ A type to make the else arm more readable.
+--@ \begin{verbatim}
+--@ typedef enum { Else } Else;
+--@ \end{verbatim}
+data Else = Else
+
+--@ The while statement.
+--@ Testing the condition takes $1$ cycle.
+--@ \begin{verbatim}
+--@ function Stmt while(Bool c, Stmt s);
+--@ \end{verbatim}
+while :: Bool -> Stmt -> Stmt
+while c (S t) = S
+    do
+	(_, ts) <- t
+	stmt (SWhile c (SSeq ts))
+
+--@ The forx statement.
+--@ The initialization is executed before the loops start.
+--@ The increment is executed after all statements in the loop body.
+--@ Testing the condition takes $1$ cycle.
+--@ \begin{verbatim}
+--@ function Stmt forx(Tuple3 #(Stmt, Bool, Stmt) ff, Stmt b);
+--@ \end{verbatim}
+forx :: Stmt -> Bool -> Stmt -> Stmt -> Stmt
+forx (S i)(c)(S e) (S b) = S
+    do
+	(_, is) <- i
+	(_, es) <- e
+	(_, bs) <- b
+	stmt (SFor (SSeq is) c (SSeq es) (SSeq bs))
+
+--@ Break out of the enclosing loop.  Takes 0 cycles to execute.
+--@ If executed outside a loop it terminates the FSM execution.
+--@ \begin{verbatim}
+--@ Stmt break;
+--@ \end{verbatim}
+break :: Stmt
+break = S (stmt SBreak)
+
+--@ Start next iteration of the enclosing loop.  Takes 0 cycles to execute.
+--@ \begin{verbatim}
+--@ Stmt continue;
+--@ \end{verbatim}
+continue :: Stmt
+continue = S (stmt SContinue)
+
+--@ Turn (a sequence of) statments into a parallel construct.
+--@ Takes $n+1$ cycles to execute if the longest branch takes $n$ cycles.
+--@ \begin{verbatim}
+--@ function Stmt par(Stmt s);
+--@ \end{verbatim}
+par :: Stmt -> Stmt
+par (S s) = S
+    do
+	(_, ss) <- s
+	stmt (SPar ss)
+
+--@ Make sure (a sequence of) statements are executed seqeuntially.
+--@ \begin{verbatim}
+--@ function Stmt seq(Stmt s);
+--@ \end{verbatim}
+seq :: Stmt -> Stmt
+seq (S s) = S
+    do
+	(_, ss) <- s
+	stmt (SSeq ss)
+
+--@ The empty statement, does nothing.  Takes 0 cycles to execute.
+--@ \begin{verbatim}
+--@ Stmt skip;
+--@ \end{verbatim}
+skip :: Stmt
+skip = S (stmt SSkip)
+
+--@ The unit statement, does nothing.  Takes 1 cycle to execute.
+--@ \begin{verbatim}
+--@ Stmt delay;
+--@ \end{verbatim}
+delay :: Stmt
+delay = S (stmt SDelay)
+
+--@ Wait until a condition is fulfilled.
+--@ Takes at least 1 cycle to execute.
+--@ \begin{verbatim}
+--@ function Stmt wait(Bool c);
+--@ \end{verbatim}
+wait :: Bool -> Stmt
+wait c = S (stmt (SWait c))
+
+--------------------------------------------------------
+
+--@ \subsubsection{Variables}
+--@ The interface of variables.
+--@ \begin{verbatim}
+--@ interface Var #(type a);
+--@     method a _read();
+--@     method Stmt _write(a x1);
+--@ endinterface: Var
+--@ \end{verbatim}
+interface Var a =
+    _read :: a
+    _write :: a -> Stmt
+
+--@ Declare a variable initialized at reset.
+--@ \begin{verbatim}
+--@ function StmtM#(Var#(a)) static(a x)
+--@   provisos (Bits#(a, sa));
+--@ \end{verbatim}
+static :: (Bits a sa) => a -> StmtM (Var a)
+static x = S
+    do
+	r <- mkReg x
+	return (
+	    interface Var
+		_read = r._read
+		_write v = s (r._write v)
+	   ,Nil)
+
+--@ Declare a variable with an unspecified initial value.
+--@ \begin{verbatim}
+--@ StmtM#(Var#(a)) static_
+--@   provisos (Bits#(a, sa));
+--@ \end{verbatim}
+static_ :: (Bits a sa) => StmtM (Var a)
+static_ = S
+    do
+	r <- mkRegU
+	return (
+	    interface Var
+		_read = r._read
+		_write v = s (r._write v)
+	   ,Nil)
+
+--@ Declare a variable that is initialized each time the block is used.
+--@ \begin{verbatim}
+--@ function StmtM#(Var#(a)) auto(a x)
+--@   provisos (Bits#(a, sa));
+--@ \end{verbatim}
+auto :: (Bits a sa) => a -> StmtM (Var a)
+auto x = S
+    do
+	r <- mkRegU
+	return (
+	    interface Var
+		_read = r._read
+		_write v = s (r._write v)
+	   ,SAction (r._write x) :> Nil)
+
+auto_ :: (Bits a sa) => StmtM (Var a)
+auto_ = static_
+
+-- Shorthands for various common statements.
+(+=) :: (Arith a) => Var a -> a -> Stmt
+(+=) v x = v := v + x
+
+(-=) :: (Arith a) => Var a -> a -> Stmt
+(-=) v x = v := v - x
+
+(*=) :: (Arith a) => Var a -> a -> Stmt
+(*=) v x = v := v * x
+
+--------------------------------------------------------
+
+--@ \subsubsection{Locks}
+--@ The lock type is abstract.
+--@ \begin{verbatim}
+--@ typedef ... Lock;
+--@ \end{verbatim}
+data Lock
+	= L (Reg Bool)
+
+--@ Create a new lock.
+--@ \begin{verbatim}
+--@ StmtM#(Lock) mkLock;
+--@ \end{verbatim}
+mkLock :: StmtM Lock
+mkLock = S
+    do
+	r <- mkReg False
+	return (L (asReg r), Nil)
+
+--@ Acquire a lock; waits until the lock is gotten.
+--@ \begin{verbatim}
+--@ function Stmt lock(Lock l);
+--@ \end{verbatim}
+lock :: Lock -> Stmt
+lock (L l) = S (stmt (SLock l))
+
+--@ Release a lock.
+--@ \begin{verbatim}
+--@ function Stmt unlock(Lock l);
+--@ \end{verbatim}
+unlock :: Lock -> Stmt
+unlock (L l) = s (l := False)
+
+--------------------------------------------------------
+
+--@ \subsubsection{State machine interface}
+--@ The state machine interface.
+--@ \begin{verbatim}
+--@ interface StmtFSM;
+--@     method Action start();
+--@     method Bool done();
+--@ endinterface: StmtFSM
+--@ \end{verbatim}
+interface StmtFSM =
+    start :: Action
+    done  :: Bool
+
+--@ Turn a statement into a state machine.
+--@ \begin{verbatim}
+--@ module stmtFSM#(Stmt s)(StmtFSM);
+--@ \end{verbatim}
+stmtFSM :: Stmt -> Module StmtFSM
+stmtFSM (S s) =
+    do
+	(_, ss) <- s
+	_ca <- compile (SSeq ss)
+	e <- mkReg True
+	let (i, a) = _ca (Conts { end = (e := True); brk = (e := True); con = error "continue: no loop" })
+	addRules a
+	return $
+	    interface StmtFSM
+		start = action { i; e := False }
+		    when e
+		done = e
+
+struct Conts =
+	end :: Action
+	brk :: Action
+	con :: Action
+
+-- Given the actions for termination, break, and continue a
+-- CAction return the start action and the rules for the FSM.
+type CAction = Conts -> (Action, Rules)
+
+compile :: StmtT -> Module CAction
+compile (SAction a) = cact a
+compile (SIf1 c s) = compile (SIf2 c s SSkip)
+compile (SIf2 c s1 s2) =
+    do
+	b <- mkReg False
+	f1 <- compile s1
+	f2 <- compile s2
+	let f :: CAction
+	    f co = 
+		let (i1, a1) = f1 co
+		    (i2, a2) = f2 co
+		in  (if c then i1 else i2, a1 <+> a2)
+	return f
+compile (SWhile c s) =
+    do
+	b <- mkReg False
+	ca <- compile s
+	let f :: CAction
+	    f co =
+		let set_b = b := True
+		    co' = Conts { end = set_b; brk = co.end; con = set_b }
+		    (i, a) = ca co'
+		    r =
+			rules
+			    "while": when b ==> action { if c then i else co.end; b := False }
+		in  (set_b, r <+> a)
+	return f
+compile (SFor s1 c s2 s3) = compile (s1 `seq2` SWhile c (seq2 s3 s2))
+compile (SSeq ss) =
+    do
+	_cs <- mapM compile ss
+	return (foldr cjoin cnull _cs)
+compile (SPar ss) =
+    do
+	fs <- mapM compile ss
+	rs <- mapM (const (mkReg False)) ss
+	let f :: CAction
+	    f co =
+		let co' rr = Conts { end = rr.Prelude._write True;
+				     brk = error "break inside par";
+				     con = error "continue inside par" }
+		    ias = zipWith (\ f rr -> f (co' rr)) fs rs
+		    r = rules { "par": when foldr (&&) True (map (.Prelude._read) rs)
+				==> action { co.end; joinActions (map (\ r -> r.Prelude._write False) rs) } }
+		in  (joinActions (map (.fst) ias), joinRules (map (.snd) ias) <+> r)
+	return f
+compile (SSkip) = return cnull
+compile (SDelay) = cact noAction
+compile (SWait c) = compile (SWhile (not c) SSkip)
+compile (SLock l) =
+    do
+	b <- mkReg False
+	let f :: CAction
+	    f co = (b := True, rules { "lock": when b ==> if l then noAction else action { co.end; b := False } })
+	return f
+compile (SBreak) = return $ \ co -> (co.brk, nullRule)
+compile (SContinue) = return $ \ co -> (co.con, nullRule)
+
+seq2 :: StmtT -> StmtT -> StmtT
+seq2 s1 s2 = SSeq (s1 :> s2 :> Nil)
+
+
+cnull :: CAction
+cnull = \ co -> (co.end, nullRule)
+
+cjoin :: CAction -> CAction -> CAction
+cjoin x y = \ co -> 
+    let (b', ya) = y co
+	(b'', xa) = x (co { end = b' })
+    in  (b'', xa <+> ya)
+
+cact :: Action -> Module CAction
+cact a =
+    do
+	b <- mkReg False
+	let f :: CAction
+	    f co = (b := True, rules { "action": when b ==> action { a; co.end; b := False } })
+	return f
+
+joinRules :: List Rules -> Rules
+joinRules = foldr (<+>) nullRule
+
+nullRule :: Rules
+nullRule = rules { "null": when False ==> noAction }
+{-
+--------------------------------------------------------
+
+--@ \subsubsection{Examples}
+--@ A factorial example:
+--@ {\small
+--@ \begin{verbatim}
+--@ typedef Var#(Bit#(32)) Int32;
+--@ 
+--@ function Stmt fac(Bit#(32) x);
+--@   return (actionvalue
+--@ 	    Int32 i;
+--@ 	    i <- static_;
+--@ 	    Int32 r;
+--@ 	    r <- auto(1);
+--@ 	    Int32 upper;
+--@ 	    upper <- static_;
+--@ 	    if2(x > 15,
+--@ 		actionvalue
+--@ 		  r <= 0;
+--@ 		endactionvalue,
+--@ 		Else,
+--@ 		actionvalue
+--@ 		  upper <= x;
+--@ 		endactionvalue);
+--@ 	    forx(((i <= 1) , (i <= upper) , (i <= i+1)),
+--@ 		 actionvalue
+--@ 		  r <= r * i;
+--@ 		 endactionvalue);
+--@ 	    s($display("fac %0d = %0d", x, r));
+--@ 	  endactionvalue);
+--@ endfunction: fac
+--@ 
+--@ module factest(Empty);
+--@   Reg#(Bit#(32)) n;
+--@   mkReg#(10) the_n(n);
+--@   mfac <- stmtFSM(fac(n));
+--@   o <- mkOnce(mfac.start);
+--@   rule 
+--@    (True); o.start;
+--@   endrule
+--@ endmodule: factest
+--@ \end{verbatim}
+--@ }
+type Int32 = Var (Bit 32)
+
+fac :: (Bit 32) -> Stmt
+fac x = do {
+    i :: Int32 <- static_;
+    r :: Int32 <- auto(1);
+    upper :: Int32 <- static_;
+
+    if2 (x > 15) do {
+        r := 0;
+    } Else do {
+        upper := x;
+    };
+    forx (i := 1, i <= upper, i += 1) do {
+        r *= i;
+    };
+    s $ $display "fac %0d = %0d" x r;
+ }
+
+factest :: Module Empty
+factest =
+    module
+        n :: Reg (Bit 32) <- mkReg 10
+        mfac <- stmtFSM (fac n)
+        o <- mkOnce mfac.start
+        rules
+            when True
+             ==> o.start
+--@ 
+--@ Parallel execution and locks:
+--@ {\small
+--@ \begin{verbatim}
+--@ Stmt party;
+--@ party = actionvalue
+--@ 	  Int32 i;
+--@ 	  i <- static(0);
+--@ 	  l <- mkLock;
+--@ 	  while(i < 100,
+--@ 		actionvalue
+--@ 		  par(actionvalue
+--@ 			seq(actionvalue
+--@ 			      lock(l);
+--@ 			      i += 1;
+--@ 			      i += 1;
+--@ 			      unlock(l);
+--@ 			    endactionvalue);
+--@ 			seq(actionvalue
+--@ 			      lock(l);
+--@ 			      i += 1;
+--@ 			      i += 1;
+--@ 			      i += 1;
+--@ 			      i += 1;
+--@ 			      unlock(l);
+--@ 			    endactionvalue);
+--@ 			seq(actionvalue
+--@ 			      lock(l);
+--@ 			      s($display("i=%0d", i));
+--@ 			      unlock(l);
+--@ 			    endactionvalue);
+--@ 		      endactionvalue);
+--@ 		endactionvalue);
+--@ 	endactionvalue;
+--@ \end{verbatim}
+--@ }
+party :: Stmt
+party = do {
+    i :: Int32 <- static 0;
+    l <- mkLock;
+
+    while (i < 100) do {
+        -- run 3 parallel subtasks
+        par do {
+            seq do {
+                lock(l);
+                i += 1; i += 1;
+                unlock(l);
+            };
+            seq do {
+                lock(l);
+                i += 1; i += 1; i += 1; i += 1;
+                unlock(l);
+            };
+            seq do {
+                lock(l);
+                s $ $display "i=%0d" i;
+                unlock(l);
+            };
+        };
+    };
+ }
+
+partest :: Module Empty
+partest =
+    module
+        n :: Reg (Bit 32) <- mkReg 10
+        mpar <- stmtFSM party
+        o <- mkOnce mpar.start
+        rules
+            when True
+             ==> o.start
+-}

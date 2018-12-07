@@ -1,0 +1,191 @@
+# --------------------------------------------------
+#
+# Makefile for building a Bluespec release for a single architecture
+# using the native environment and tools
+#
+# Usage to build a release:
+#
+#   make VERSION=<version> BSCSRC=<bsc_repo> [<options>]
+#
+# Usage to clean up after a build:
+#
+#   make VERSION=<version> clean
+#
+# Optional arguments:
+#
+#   BSC_BUILD=(NORMAL|PROF|DEBUG)
+#
+#   BUILDS_FLAGS=<flags for 'make' in BSC repo>
+#   BUILD_TMP=<temp work directory>
+#
+#   DOCSRC=<bsc_doc_repo>  (required for building "full-release")
+#
+#   FLEXLMVER=<flexlm subdirectory>
+#
+#   BSC_LIC_POLICY=(DEFAULT|XGEN|DATE_REVERT)
+#
+#   BSPEC_EXP_DAYS=<days>
+#
+#   NOSVN=<set to 1 to avoid documentation that requires SVN>
+#
+# Requires:
+#   * VERSION set (to YYYY.MM.TAG)
+#
+# --------------------------------------------------
+
+ifndef VERSION
+$(error Variable VERSION is not set)
+else
+$(info >>> Release version "$(VERSION)")
+endif
+
+ifndef BSCSRC
+$(error Variable BSCSRC is not set)
+else
+$(info >>> bsc source directory "$(BSCSRC)")
+endif
+
+ifdef DOCSRC
+$(info >>> bsc-doc source directory "$(DOCSRC)")
+endif
+
+BUILD_DATE = $(shell date +%Y-%m-%d)
+
+PRODUCT = Bluespec-$(VERSION)
+
+# ---------------
+# Options
+
+# This can also be PROF or DEBUG
+BSC_BUILD ?= NORMAL
+
+# Change this to build a release for Cybernet
+# (Note that an appropriate license file needs to be available,
+# (see BUILD_LICENSE_FILE below)
+#
+FLEXLMVER ?= v10.1
+#FLEXLMVER ?= v11.14.0.2-cybernet
+
+# This can be set to XGEN or DATE_REVERT
+BSC_LIC_POLICY ?= DEFAULT
+
+# If the licence policy is DATE_REVERT or if it is DEFAULT and the
+# dummy Flex library chosen, this variable indicates the number of
+# days until expiration
+BSPEC_EXP_DAYS ?= 45
+
+# Set this to 1 if SVN is not available (for building docs)
+NOSVN ?= 0
+
+# ---------------
+# Environment
+
+OSTYPE = $(shell bsenv ostype)
+
+# ---------------
+# Tools
+
+#set STRIP=true to disable strip
+STRIP = strip
+
+ifeq ($(OSTYPE), Darwin)
+SED_IN_PLACE = sed -i ""
+else
+SED_IN_PLACE = sed -i
+endif
+
+# ---------------
+# make
+
+# Any additional flags to the BSC 'make'
+BUILD_FLAGS +=
+
+# ---------------
+# Working directories
+
+BUILD_TMP ?= /tmp
+BUILD_WORK_DIR = $(BUILD_TMP)/build-bsc-$(VERSION)
+
+BUILD_BUILD_DIR = $(BUILD_WORK_DIR)/build
+BUILD_LOG_DIR = $(BUILD_WORK_DIR)/logs
+
+# Install directory
+BUILD_PRODUCT_DIR = $(BUILD_BUILD_DIR)/$(PRODUCT)
+
+# ---------------
+# Update the version in the README file
+
+REWRITE_README = $(SED_IN_PLACE) -e "s/yyyy\\.mm/$(VERSION)/g"
+
+# --------------------------------------------------
+
+.PHONY: basic-release
+basic-release: build-dirs build-tools build-tarball
+
+.PHONY: full-release
+full-release: build-dirs build-tools build-extra build-tarball
+
+.PHONY: build-dirs
+build-dirs:
+	@echo "----- Make the build directories (create-build-work-dir)"
+	    mkdir $(BUILD_WORK_DIR)
+	    mkdir $(BUILD_LOG_DIR)
+	    mkdir $(BUILD_BUILD_DIR)
+	    mkdir $(BUILD_PRODUCT_DIR)
+
+.PHONY: build-tools
+build-tools:
+	@echo "----- Build native version of the tools"
+	    (cd $(BSCSRC) ; \
+		 (cd src/comp; \
+		      $(SED_IN_PLACE) 's/^versionnum = \"[^\"]*\"$$/versionnum = \"$(VERSION)\"/' Version.hs; \
+		      $(SED_IN_PLACE) 's/^versiondate = \"[^\"]*\"$$/versiondate = \"$(BUILD_DATE)\"/' Version.hs \
+	         ) ; \
+		 $(MAKE) -j1 MAKEFLAGS= \
+		     BSC_BUILD=$(BSC_BUILD) \
+		     FLEXLMVER=$(FLEXLMVER) \
+		     BSC_LIC_POLICY=$(BSC_LIC_POLICY) \
+		     BSPEC_EXP_DAYS=$(BSPEC_EXP_DAYS) \
+		     $(BUILD_FLAGS) \
+		     NOSYSTEMC=1 \
+		     PREFIX=$(BUILD_PRODUCT_DIR) \
+		     BLUESPEC_VERSION=$(VERSION) \
+		     install-bin 2>&1 | tee $(BUILD_LOG_DIR)/bsc-install-bin.log ; \
+		 find $(BUILD_PRODUCT_DIR)/lib/bin/*/ -type f \
+		     | xargs -t $(STRIP) \
+	    )
+
+.PHONY: build-extra
+build-extra:
+	@echo "----- Build the non-platform-specific parts (doc, training, scripts)"
+	    (cd $(BSCSRC) ; \
+		 $(MAKE) -j1 MAKEFLAGS= \
+		     PREFIX=$(BUILD_PRODUCT_DIR) \
+		     BLUESPEC_VERSION=$(VERSION) \
+		     install-full 2>&1 | tee $(BUILD_LOG_DIR)/bsc-install-full.log \
+	    )
+	    if [ -d "$(DOCSRC)" ]; then \
+		cd $(DOCSRC) ; \
+		$(MAKE) -j1 MAKEFLAGS= \
+		    PREFIX=$(BUILD_PRODUCT_DIR) \
+		    BLUESPEC_VERSION=$(VERSION) \
+		    NOSVN=$(NOSVN) \
+		    release 2>&1 | tee $(BUILD_LOG_DIR)/bsc-doc-release.log ; \
+		$(REWRITE_README) $(BUILD_PRODUCT_DIR)/README.txt ; \
+	    fi
+
+.PHONY: build-tarball
+build-tarball:
+	@echo "----- Create the tarball"
+	    tar czf $(BUILD_WORK_DIR)/$(PRODUCT).tar.gz \
+		-C $(BUILD_BUILD_DIR) $(PRODUCT)
+	@echo ">>> Release built: $(BUILD_WORK_DIR)/$(PRODUCT).tar.gz"
+
+# --------------------------------------------------
+
+.PHONY: clean
+clean:
+	@echo "----- Delete the working directory"
+	rm -fr $(BUILD_WORK_DIR)
+
+# --------------------------------------------------

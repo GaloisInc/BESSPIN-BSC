@@ -1,0 +1,17 @@
+# see the utils directory for scripts to process this file.
+prerequisite.sh
+newest-kernel.sh
+bluespec-rpms.sh
+dkms-check.sh
+plugdev.sh
+digilent.sh
+cse-permissions.sh
+usb-driver.sh
+blacklist-ftdi_sio.sh
+blacklist-usbserial.sh
+reboot.sh
+plugdev-check.sh
+libusb-driverrc.sh
+bootstrap-bluenoc.sh
+reboot-after-bootstrap.sh
+post-install-checks.sh

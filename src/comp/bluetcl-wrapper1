@@ -1,0 +1,25 @@
+#!/bin/sh
+###
+### (c) Copyright 2005 - 2008, Bluespec Incorporated
+###
+
+PLAT=`${BLUESPECDIR}/bin/bsenv platform`
+FAMILY=`${BLUESPECDIR}/bin/bsenv c++_family`
+
+if [ -n "$BLUESPEC_LD_LIBRARY_PATH" ] ; then
+    LD_LIBRARY_PATH=${BLUESPEC_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
+    DYLD_LIBRARY_PATH=${BLUESPEC_LD_LIBRARY_PATH}:${DYLD_LIBRARY_PATH}
+fi
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${BLUESPECDIR}/SAT/${FAMILY}:
+DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${BLUESPECDIR}/SAT/${FAMILY}:
+export LD_LIBRARY_PATH
+export DYLD_LIBRARY_PATH
+
+BLUESPECEXEC=${BLUESPECDIR}/bin/${PLAT}/bluetcl
+
+if [ -z "$BLUESPECEXEC" ] || [ ! -x $BLUESPECEXEC ] ; then
+    echo "Error Bluespec executable not found BLUESPECEXEC  $BLUESPECEXEC"
+    exit 1;
+fi
+
+exec $BLUESPECEXEC "$@"

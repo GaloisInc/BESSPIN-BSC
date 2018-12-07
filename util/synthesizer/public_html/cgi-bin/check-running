@@ -1,0 +1,40 @@
+#!/bin/bash
+
+echo "Content-type: text/html"
+echo
+echo "<html><head><title>Synthesizer is running?</title></head></body>"
+echo "<h1>Synthesizer running?</h1>"
+echo "<p>Here are all processes that the synthesizer user is running on bluetinder. If <code>top</code> is the only one, then no batch is running. If there are more processes, then a batch is most likely running.</p>"
+
+echo "<table border=0 bgcolor=#e8e8e8 width=100%><tr><td><code>"
+if ssh -l synthesizer bluetinder 'top -b -n 1' | grep synthe | /export/home/synthesizer/public_html/cgi-bin/addBR ; then
+  echo "</code>"
+else
+  echo "<br>ssh</code> returned error."
+fi;
+
+echo "</td></tr></table>"
+
+echo "<p>If you don't see anything above (not even <code>top</code>), then it was probably not possible for synthesizer to ssh to bluetinder."
+
+echo '<p>If a batch is running, and you want to see its progress, then look at the <a href="https://svn.bluespec.com:8080/~synthesizer/cgi-bin/results">results page</a>. You may have to ask it to refresh the database. Click on the batch number, and scroll down to see the progress file.</p>'
+
+echo "<h1>Killing the synthesizer</h1>"
+
+echo '<form action="killProcess" method="GET">'
+echo "<p>To stop the batch, kill the process called <code>run-batch</code>. This will not kill everything immediately, so if you're in a hurry, also kill <code>mantle</code>, <code>svn</code>, and other processes. Stopping it quickly while it's building bsc is harder, but killing all make processes you can see usually helps.</p>"
+echo "<p>You can kill processes that synthesizer runs on bluetinder, by entering the process number, found in the leftmost column of the table above, here:"
+echo '<INPUT type="text" name="KILLPID" size ="8" value ="">'
+echo '<INPUT TYPE="SUBMIT" NAME="Kill" VALUE ="Kill" hidden>'
+echo "</p>"
+
+echo "<h1>Cleaning up the ~synthesizer/TEMP directory</h1>"
+echo '<a href="cleanup-temp">Click here</a> to do a <code>rm -rf /export/home/synthesizer/TEMP/*</code> You should definately do this after having killed a batch, but not until all processes have terminated, and not while another batch is running.'
+
+echo "</form>"
+
+echo '<p><a href="https://svn.bluespec.com:8080/~synthesizer">Back to synthesizer main page</a></p>'
+
+echo "</body></html>"
+
+

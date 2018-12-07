@@ -1,0 +1,66 @@
+#!/bin/sh
+
+RESCAN=/sys/bus/pci/rescan
+REMOVE=/dev/bluenoc_control/remove
+
+# If the previous device exists, remove it
+if [ -f $REMOVE ]; then
+    echo "1" >> $REMOVE
+fi
+
+# rescan the PCIe interface
+if [ -f $RESCAN ]; then
+    if [ -w $RESCAN ]; then
+	echo "1" >> $RESCAN
+    else
+	#echo "CRITICAL WARNING: Failed to rescan PCIe bus.  May need to perform a warm reboot!"
+	exit 1
+    fi
+else
+    #echo "CRITICAL WARNING: Failed to rescan PCIe bus.  May need to perform a warm reboot!"
+    exit 1
+fi
+
+# Issue a reset
+STATUS=`bluenoc reset`
+
+# check bluenoc status value
+OUTPUT=`bluenoc status 2>&1`
+STATUS=$?
+
+if [ "$STATUS" -ne 0 ] ; then
+    echo "CRITICAL WARNING: Failed to execute 'bluenoc status'"
+    exit 1
+fi
+
+if [ "$OUTPUT" = "No BlueNoC targets found." ] ; then
+    echo "CRITICAL WARNING: No BlueNoC targets found."
+    exit 1
+fi
+   
+case $OUTPUT in
+    ''|*[!0-9]*)
+	echo "CRITICAL WARNING: Unexpected output from 'bluenoc status':"
+	echo "$OUTPUT"
+        exit 1
+	;;
+    *)
+        ;;
+esac
+
+case $OUTPUT in
+    7)
+	;;
+    15)
+	;;
+    23)
+	;;
+    31)
+	;;
+    *)    
+	#echo "CRITICAL WARNING: Failed to rescan PCIe bus.  May need to perform a warm reboot!"
+	exit 1
+	;;
+esac
+
+exit 0

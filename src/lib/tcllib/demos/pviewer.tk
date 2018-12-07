@@ -1,0 +1,181 @@
+# ----------------------------------------------------------------------
+#  DEMO: hierarchy in [incr Widgets]
+# ----------------------------------------------------------------------
+package require Iwidgets 4.0
+
+# ------------------------------
+# widget to add a package
+
+proc openPackage { } {
+    set typeList {
+	{{BSV Files} {.bsv}}
+    }
+    set absfile [tk_getOpenFile -filetypes $typeList]
+
+    # separate the path from the base filename
+    set path [file dirname $absfile]
+    set fname [file tail $absfile]
+
+    # get the package name
+    if [regexp {^(.+)\.bsv$} $fname tmp pkgname] {
+	puts "Loading package $pkgname"
+	flags set "-p +:$path"
+	bpackage load $pkgname
+	# refresh the viewer state
+	browsepackage refresh
+	# refresh the widget
+	collapse_all
+    } else {
+	# if it isn't a .bsv file, then do nothing
+	puts "Load failed"
+    }
+}
+
+# ---------------
+# menubar
+
+iwidgets::menubar .mb -helpvariable helpVar -menubuttons {
+    menubutton file -text "File" -menu {
+        options -tearoff false
+
+        command open -label "Open" \
+                -command openPackage
+
+        separator sep1
+
+        command exit -label "Exit" -command {exit}
+    }
+}
+pack .mb -fill x -side top
+
+# ------------------------------
+# paned window
+
+# place the hierarchy and message text in a paned frame
+
+iwidgets::panedwindow .pw -width 8i -height 4i -orient vertical
+pack .pw -padx 4 -pady 4
+
+# ------------------------------
+# procedures for the hierarchy widget
+
+proc getElems {file} {
+
+    if {$file == ""} {
+	set dir 0
+    } else {
+	set dir $file
+    }
+    set res [browsepackage list $dir]
+    return $res
+}
+
+# ---------------
+
+proc select_node {uid status} {
+    global h
+    global msg
+
+    if {$status} {
+	$h selection remove $uid
+
+	# clear the display
+	set msg {}
+    } else {
+	# remove all previously selected
+	set others [$h selection get]
+	foreach other $others {
+	   $h selection remove $other
+	}
+	
+	# select this one
+	$h selection add $uid
+
+	# update the display
+	set msg [browsepackage detail $uid]
+    }
+}
+
+proc expand_node {uid} {
+    global h
+
+    $h expand $uid
+}
+
+proc collapse_node {uid} {
+    global h
+
+    $h collapse $uid
+}
+
+proc expand_recursive {node} {
+    global h
+
+    set children [getElems $node]
+    foreach c $children {
+        set uid [lindex $c 0]
+        $h expand $uid
+        expand_recursive $uid
+    }
+}
+
+# ---------------
+# procedures for right-click operations
+
+# Expand all the file nodes in the hierarchy
+proc expand_all {} {
+    expand_recursive 0
+}
+
+# Collapse all the nodes in the hierarchy
+proc collapse_all {} {
+    global h
+
+    $h configure -querycommand "getElems %n"
+}
+
+# ------------------------------
+# Hierarchy widget
+
+# 
+# Create the hierarchy mega-widget, adding commands to both the item
+# and background popup menus.
+#
+
+# put it in a new pane
+.pw add "left"
+set pane [.pw childsite "left"]
+
+set h \
+  [iwidgets::hierarchy $pane.h \
+    -querycommand "getElems %n" -visibleitems 30x15 \
+    -labeltext "Package Viewer" -selectcommand "select_node %n %s"]
+pack $h -side left -expand yes -fill both
+
+$h component itemMenu add command -label "Select" \
+    -command {select_node [$h current] 0}
+$h component itemMenu add command -label "Deselect" \
+    -command {select_node [$h current] 1}
+$h component itemMenu add separator
+$h component itemMenu add command -label "Expand" \
+    -command {expand_node [$h current]}
+$h component itemMenu add command -label "Collapse" \
+    -command {collapse_node [$h current]}
+
+$h component bgMenu add command -label "Expand All" -command expand_all
+$h component bgMenu add command -label "Collapse All" -command collapse_all
+$h component bgMenu add command -label "Clear Selections" \
+    -command {$h selection clear}
+
+# ------------------------------
+# Pane to display information about the selected item
+
+# put it in a new pane
+.pw add "right"
+set pane [.pw childsite "right"]
+
+set m [message $pane.m -textvariable msg -anchor nw -width 3i]
+pack $m -side left -expand yes -fill both
+
+# ------------------------------
+

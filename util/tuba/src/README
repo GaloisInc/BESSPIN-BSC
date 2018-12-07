@@ -1,0 +1,112 @@
+README for Tuba support libraries
+------------------------------------------------------------
+
+This directory contains sources for two libraries which can be used by Tuba.
+
+Tclparser.so - a parser (tokenizer) for Tcl/Tk code.
+TclparserX.so - an experimental replacement parser.
+
+Both libraries have Tcl counterparts in case some people have trouble building
+the libraries on their platform.
+
+To build the libraries for either Linux or SunOS, use one of the existing
+Makefiles. If you need to build them for a different system, use the 
+Makefile.gen file as a guide and create a new Makefile. There is
+nothing tricky about it, except how to build and create shared libraries.
+
+Unfortunately, I do not have a development environment on Windows 95, so I
+cannot provide a prebuilt library for that platform. I would be grateful if
+someone could furnish me with some prebuilt .ddls as well as a makefile.
+
+After successfully building the libraries, remember to copy the libs to the
+directory where Tuba is installed. "make install" will accomplish this.
+
+There is no documentation for this version. The test program "tclextest" gives
+a good example of how to use it, and the tuba sources also provide a good
+example of using the parser. Documentation will be added in later versions.
+
+Here is a VERY QUICK example of using the parser:
+
+    # create a parser object for some code
+    set tp [new_Tclparser $code]
+
+    # get a token
+    puts "first token is [$tp gettok]"
+
+    # get the line number for this token
+    puts "line number of first token is [$tp getlineno]
+
+    # get the rest of the tokens until EOS (end of statement)
+    while { [set tok [$tp gettok]] != [geteos] } {
+      puts "[$tp getlineno]: $tok"
+    }
+
+    # get the rest of the tokens until EOF (End of File [code])
+    while { [set tok [$tp gettok]] != [geteof] } {
+      if { $tok == [geteos] } continue
+      puts "[$tp getlineno]: $tok"
+    }
+
+    # delete the parser object
+    delete_Tclparser $tp
+
+When parsing statements that contain embedded code (if, while, proc, ... 
+statements) you can recursively create a new parser using that token and
+providing the linenumber of the token. Example:
+
+    if { $tok == "proc" } {
+      # get the name
+      set procname [$tp gettok]
+      
+      # get the argument list
+      set arglist [$tp gettok]
+      
+      # get the code body
+      set code [$tp gettok]
+      
+      # create a new parser for this code
+      set tpbody [new_Tclparser $code [$tp getlineno]]
+      
+      # parse this code using the new parser
+      ...
+      
+      # and remove it
+      delete_Tclparser $tpbody
+    }
+
+
+Again, better documentation will come later.
+
+
+
+For those who want to poke around the source in here, here is a brief 
+description of some of the files:
+
+Tstring.h/Tstring.cc : This is a C++ class wrapper around Tcl_DString. It's
+                       not complete by any means, but it is a start and provides
+                       all the functionality that Tclparser needs at the moment.
+                     
+tni : This is an experimental Tcl/C(++) code wrapper generator. An interface
+      is supplied via a *.i file, and it generates the wrapper code so that
+      Tcl can invoke your C/C++ code. It supports both classes with methods
+      and C functions. For those of you who are familiar with SWIG, this is
+      very similar, but much simpler. You need to use a C++ compiler,
+      though.
+      
+tni.cc/tni.h : This is the tni library that provides conversion functions
+               to convert Tcl arguments to native C types and back. Custom
+               conversion code can be put into the interface file (see below).
+      
+Tclparser_tni.i : This is the interface file for the Tclparser class that is
+                  processed by the tni script. Here you put the class and
+                  methods you want your Tcl code to interface with. C functions
+                  also go in here as well as custom conversion code for 
+                  conversions to and from non-native types.
+
+
+Please send questions, bugs, and feature requests to iliad@doitnow.com
+
+
+
+John Stump
+$ProjectDate: Wed, 06 Jan 1999 08:04:09 -0700 $

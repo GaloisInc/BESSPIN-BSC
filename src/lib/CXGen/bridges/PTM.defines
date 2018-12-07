@@ -1,0 +1,17 @@
+// Copyright Bluespec Inc. 2011-2012
+
+`ifdef SCEMI_PCIE_VIRTEX7
+  `ifdef BOARD_RPP2
+      `include "PTM_DINI_RPP2.defines"
+  `endif
+`endif
+
+`ifdef SCEMI_PCIE_VIRTEXU
+  `ifdef BOARD_DNVUF4A
+       `include "PTM_DINI_DNVUF4A.defines"
+  `endif
+`endif
+
+`ifdef SCEMI_TCP
+  `include "PTM_TCP.defines"
+`endif

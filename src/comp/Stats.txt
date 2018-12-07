@@ -1,0 +1,369 @@
+This file is an historical record of various measurements of the
+Bluespec system-- size of compiler, speed of compiler, size of
+appliction, speed of application, etc.  It's not totally systematic,
+but it will provide amusement in our old age when we look back at the
+history of Bluespec.
+
+================================================================
+June 5, 2001
+
+Bluespec compiler
+- Lines of code
+
+    dune:~/Bluespec/bsc2> wc *.hs */*.hs */*/*.hs
+      21225  138293  728658 total
+
+    dune:~/Bluespec/bsc2> wc *.c */*.c */*/*.c
+       7956   26147  210028 total
+
+- Time to build:
+
+    dune:~/Bluespec/bsc2> time make BSC=bsc_ghc_opt
+    ...
+    1076.390u 28.420s 18:37.92 98.8%        0+0k 0+0io 305243pf+0w
+
+Hibeam model
+- Lines of code
+    dune:~/Bluespec/Hibeam_model> wc *.bs */*.bs
+       8789   32488  296797 total
+
+- Static number of rules
+
+- Static number of modules
+
+- Time to build (4x4 model)
+    dune:~/Bluespec/Hibeam_model> time make project
+    553.690u 39.510s 10:01.17 98.6% 0+0k 0+0io 21427pf+0w
+
+- Time to execute (4x4 model)
+
+    dune:~/Bluespec/Hibeam_model> time ./Testjig_noFE
+    15.590u 0.120s 0:17.80 88.2%    0+0k 0+0io 298pf+0w
+    Timeslots (600 ns): 32
+    Packets: 960 (size: 50B each)
+
+
+    dune:~/Bluespec/verify/src/test/Hibeam> time ./hibeam doyle1
+    55.020u 0.180s 0:55.54 99.3%    0+0k 0+0io 380pf+0w
+    Timeslots (600 ns): 158
+    Packets: 2130 (size: 50B each)
+
+    dune:~/Bluespec/verify/src/test/Hibeam> time ./hibeam doyle2 flat
+    41.530u 0.130s 0:41.90 99.4%    0+0k 0+0io 380pf+0w
+    Timeslots (600 ns): 158
+    Packets: 127 (size: flat distribution from 40B to 1500B)
+
+    dune:~/Bluespec/verify/src/test/Hibeam> time ./hibeam doyle3
+    42.810u 0.150s 0:43.24 99.3%    0+0k 0+0io 380pf+0w
+    Timeslots (600 ns): 158
+    Packets: 1145 (size: 100B each)
+
+    dune:~/Bluespec/verify/src/test/Hibeam> time ./hibeam doyle4 flat
+    41.500u 0.140s 0:41.86 99.4%    0+0k 0+0io 380pf+0w
+    Timeslots (600 ns): 158
+    Packets: 121 (size: flat distribution from 40B to 1500B)
+
+
+    dune:~/Bluespec/verify/src/test/Hibeam> time ./hibeam doyle5
+    43.410u 0.190s 0:43.82 99.4%    0+0k 0+0io 380pf+0w
+    Timeslots (600 ns): 158
+    Packets: 858 (size: 100B each)
+
+    Summary: 20-50 packets/sec,
+             450,000 real nsecs/1 simulated nsec
+             28,000,000 nsecs real/1 nsec simulated
+                 (= 140 msecs/200 MHz clock cycle)
+
+================================================================
+June 18, 2001
+
+Bluespec compiler
+- Lines of code
+
+    dune:~/Bluespec/bsc2> wc *.hs */*.hs */*/*.hs
+      21322  138818  732101 total
+
+    dune:~/Bluespec/bsc2> wc *.c */*.c */*/*.c
+       7959   26160  210165 total
+
+- Time to build:
+
+    dune:~/Bluespec/bsc2> time make BSC=bsc_ghc_opt
+    1395.780u 43.760s 24:15.45 98.9%        0+0k 0+0io 582896pf+0w
+
+Hibeam model
+- Lines of code
+    dune:~/Bluespec/Hibeam_model> wc *.bs */*.bs
+      10327   38756  364487 total
+
+- Static number of rules
+
+- Static number of modules
+
+- Time to build (4x4 model)
+    dune:~/Bluespec/Hibeam_model> time make project
+    617.240u 5.560s 11:31.63 90.0%  0+0k 0+0io 54427pf+0w
+
+================================================================
+June 19, 2001
+
+New 1.7GHz Pentium 4 machine with 1 GB memory
+
+Bluespec compiler
+- Lines of code
+
+    dune:~/Bluespec/bsc2> wc *.hs */*.hs */*/*.hs
+      21332  138919  732814 total
+
+    dune:~/Bluespec/bsc2> wc *.c */*.c */*/*.c
+       7959   26160  210165 total
+
+- Time to build:
+
+    dune:~/Bluespec/bsc2> time make BSC=bsc_ghc_opt
+    891.860u 32.520s 15:48.51 97.4% 0+0k 0+0io 582845pf+0w
+
+Hibeam model
+- Lines of code
+    dune:~/Bluespec/Hibeam_model> wc *.bs */*.bs
+      10173   38311  359592 total
+
+- Static number of rules
+
+- Static number of modules
+
+- Time to build (4x4 model)
+    dune:~/Bluespec/Hibeam_model> time make project
+    511.440u 4.330s 8:48.79 97.5%   0+0k 0+0io 53195pf+0w
+
+================================================================
+Aug 17, 2001
+
+Bluespec compiler
+- Lines of code
+
+    dune:~/Bluespec/bsc2> wc *.hs */*.hs */*/*.hs
+      22049  144119  762334 total
+
+    dune:~/Bluespec/bsc2> wc *.c */*.c */*/*.c
+       8662   29640  231416 total
+
+Hibeam model:
+- Time to build:
+
+    dune:~/Bluespec/bsc2> time make BSC=bsc_ghc_opt all
+    1147.270u 35.360s 20:02.32 98.3%        0+0k 0+0io 622103pf+0w
+
+================================================================
+Sept 4, 2001
+
+Bluespec compiler
+- Lines of code
+
+    dune:~/Bluespec/bsc2> wc *.hs */*.hs */*/*.hs
+      22545  146493  777863 total
+
+    dune:~/Bluespec/bsc2> wc *.c */*.c */*/*.c
+       8670   29696  231716 total
+
+Hibeam model
+- Lines of code
+    dune:~/Bluespec/Hibeam_model> wc *.bs */*.bs
+      11349   44155  397168 total
+
+- Static number of rules
+
+- Static number of modules
+
+- Time to build (4x4 model, 4 ports, 8 CoS)
+    dune:~/Bluespec/Hibeam_model> time make hibeam
+    283.180u 3.640s 5:00.97 95.2%   0+0k 0+0io 58483pf+0w
+
+================================================================
+Sept 13, 2001
+
+Bluespec compiler
+- Lines of code
+
+    dune:~/Bluespec/bsc2> wc *.hs */*.hs */*/*.hs
+      22670  147571  785478 total
+
+    dune:~/Bluespec/bsc2> wc *.c */*.c */*/*.c
+       8706   29776  232387 total
+
+- Time to build:
+
+    dune:~/Bluespec/bsc2> time make BSC=bsc_ghc_opt all
+    1886.760u 40.960s 34:30.89 93.0%        0+0k 0+0io 651210pf+0w
+
+    (error on lang.tex, but that's a minor thing at the end)
+
+Hibeam model
+- Lines of code
+    dune:~/Bluespec/Hibeam_model> wc *.bs */*.bs
+      11412   44449  399817 total
+
+- Static number of rules
+
+- Static number of modules
+
+- Time to build (4 nodes, 4 ports, 8 CoS)
+    dune:~/Bluespec/Hibeam_model> time make project
+    438.680u 8.750s 7:47.02 95.8%   0+0k 0+0io 64332pf+0w
+
+
+================================================================
+Aug 2, 2002
+
+Hibeam model
+- Lines of code
+    dune:~/Bluespec/Hibeam_model> wc *.bs */*.bs
+      12959   49978  419143 total
+
+- Time to build (16 nodes, 10 ports, 4 CoS)
+  with -O2
+  with tsStatsPrint = True    (per timeslot stats logging)
+    9 hours, 42 min
+
+================================================================
+Aug 6, 2002
+
+Hibeam model
+- Time to build and run
+      16 nodes, 10 ports, 4 CoS
+      with tsStatsPrint = False    (per timeslot stats logging)
+
+      with -O2
+        Compile time (to make mkHibeam.o):         5 hours, 45 min
+        Run time ("full mesh", 1msec sim time):    47 min
+
+      without -O2
+        Compile time (to make mkHibeam.o):         3 hours, 20 min
+        Run time ("full mesh", 1msec sim time):    54 min
+
+Bluespec compiler
+- Lines of code
+
+    dune:~/Bluespec/bsc2> wc *.hs */*.hs */*/*.hs
+      25441  165482  882685 total
+
+    dune:~/Bluespec/bsc2> wc *.c */*.c */*/*.c
+       5510   16402  126451 total
+
+- Time to build:
+
+    dune:~/Bluespec/bsc2> make BSC=bsc_ghc_opt
+    15 minutes
+
+================================================================
+Aug 6, 2002
+
+Hibeam model
+- Time to build and run
+      16 nodes, 1 ports, 8 CoS
+      with tsStatsPrint = False    (per timeslot stats logging)
+      with -O2
+        Compile time (to make mkHibeam.o):             1 hour, 32 min
+        Run time ("full NxP mesh",   1msec sim time):  65 min
+        Run time ("full NxPxC mesh", 1msec sim time):  87 min
+
+Hibeam model
+- Time to build and run
+      12 nodes, 10 ports, 4 CoS
+      with tsStatsPrint = False    (per timeslot stats logging)
+      with -O2
+        Compile time (to make mkHibeam.o):         2 hour, 19 min
+        Run time ("full mesh", 1msec sim time):    30 min
+
+================================================================
+Aug 8, 2002
+
+Hibeam model
+- Time to build
+      Hybrid model: 4 nodes 1 port 4 Cos, 12 nodes 10 ports 4 CoS
+      with tsStatsPrint = False    (per timeslot stats logging)
+      with -O2
+        Compile time (to make mkHibeam.o):         5 hour, 27 min
+
+================================================================
+Sep 8-9, 2002
+
+Hibeam model
+- Time to build
+    4 nodes  1 ports 4 Cos:  0h:8m
+    4 nodes 10 ports 4 Cos:  0h:14m
+   16 nodes  1 ports 8 Cos:  1h:20m
+   16 nodes 10 ports 4 Cos:  5h:30m
+
+   Hybrid:
+    4 nodes  1 ports 4 Cos,
+   12 nodes 10 ports 4 Cos:  5h:30m
+
+================================================================
+Oct 28, 2002
+
+Bluespec compiler
+- Lines of code
+
+    dune:~/Bluespec/bsc2> wc src/comp/*.hs
+      25095  163782  880213 total
+
+    dune:~/Bluespec/bsc2> wc src/lib/C/*.c
+       5399   16139  124261 total
+
+- Time to build:
+
+    dune:~/Bluespec/bsc2> make
+        (started at 11:54:50am)
+        (ended   at 12:12:35am)
+    17 minutes
+
+================================================================
+Nov 22, 2002
+
+Bluespec compiler
+- Lines of code
+
+    dune:~/Bluespec/bsc> wc src/comp/*.hs
+      25816  168440  903627 total
+
+    dune:~/Bluespec/bsc> wc src/lib/C/*.c
+       5427   16238  124956 total
+
+- Time to build:
+
+    dune:~/Bluespec/bsc> make all
+    15 minutes
+
+================================================================
+Nov 25, 2002
+
+Hibeam model
+- Time to build
+    4 nodes  1 ports 4 Cos:  0h:8m
+
+================================================================
+Aug 18, 2003
+
+Bluespec compiler
+- Lines of code
+
+    dune:~/Bluespec/bsc> wc src/comp/*.hs
+      26059  170274  915752 total
+
+    dune:~/Bluespec/bsc> wc src/lib/C/*.c
+       5463   16377  126012 total
+
+- Time to build:
+
+    dune:~/Bluespec/bsc> make
+    1224.380u 18.690s 22:02.32 94.0%        0+0k 0+0io 402725pf+0w
+    (about 20 mins)
+
+Hibeam model
+- Time to build
+    4 nodes  10 ports 4 Cos:
+    555.360u 3.670s 12:56.15 72.0%  0+0k 0+0io 74074pf+0w
+    (about 13 mins)
+
+================================================================

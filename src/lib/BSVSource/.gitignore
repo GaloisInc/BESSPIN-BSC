@@ -1,0 +1,8 @@
+# Ignore generated .ba and .v files
+*.ba
+*.v
+
+# Ignore generated wrappers
+vpi_wrapper_*.h
+vpi_wrapper_*.c
+

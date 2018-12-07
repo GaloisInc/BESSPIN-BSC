@@ -1,0 +1,5 @@
+# Package is not part of Debian
+bluespec-__RELEASE_NUM__-common binary: new-package-should-close-itp-bug
+
+# Third party supplied script
+bluespec-__RELEASE_NUM__-common binary: csh-considered-harmful usr/share/bluespec-__RELEASE_NUM__/board_support/*/xilinx/ML605/verilog/ddr3_v3_5/user_design/sim/isim_run.sh

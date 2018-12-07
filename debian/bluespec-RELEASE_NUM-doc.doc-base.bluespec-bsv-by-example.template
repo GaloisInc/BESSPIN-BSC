@@ -1,0 +1,27 @@
+Document: bluespec-bsv-by-example
+Title: BSV by Example
+Author: Rishiyur S. Nikhil and Kathy R. Czeck
+Abstract: BSV (Bluespec SystemVerilog) is a language used in the
+ design of electronic systems (ASICs, FPGAs and systems). BSV is used
+ across the spectrum of applications—processors, memory subsystems,
+ interconnects, DMAs and data movers, multimedia and communication I/O
+ devices, multimedia and communication codecs and processors, signal
+ processing accelerators, high-performance computing accelerators,
+ etc. BSV is also used across markets—from low-power, portable
+ consumer items to enterprise-class server-room systems.
+ .
+ Being both a very high-level language as well as fully synthesizable
+ to hardware, it is used in many design activities, as described
+ below. This combination of high level and full synthesizability
+ enables many of these activities that were previously only done in
+ software simulation now to be moved easily to FPGA-based execution
+ (whether the design is eventually bound for ASICs or FPGAs).  This
+ can speed up execution by three to six orders of magnitude (1000x to
+ 1,000,000x). Such a dramatic speedup not only accelerates existing
+ activities, but enables new activities that were simply not feasible
+ before (such as cycle-accurate multi-core processor architecture
+ models running real operating systems and real applications).
+Section: Programming
+
+Format: PDF
+Files: /usr/share/doc/bluespec-__RELEASE_NUM__-doc/bsv_by_example.pdf.gz

@@ -1,0 +1,319 @@
+#! /bin/env tclsh8.0
+
+# this is a parser for the Tea Native Interface .i files. It creates the
+# C/C++ code necessary to interface with existing C/C++ code from Tcl
+
+# helper "macros"
+set LB \x7b
+set RB \x7d
+
+proc include {file} {
+  global includes
+  
+  if { [string index $file 0] != "<" } {
+    set file "\"$file\""
+  }
+  append includes "#include $file\n"
+}
+
+# sets the package name
+proc package {name version} {
+  global packageinit prototypes LB RB
+
+  set cap_package "[string toupper [string index $name 0]][string range $name 1 end]"
+  set proto "int ${cap_package}_Init\(Tcl_Interp* interp)"
+  append prototypes "extern \"C\" $proto;\n"
+  set packageinit "$proto\n$LB\n\tTcl_PkgProvide(interp, \"$cap_package\", \"$version\");\n"
+}
+
+# processes a class and generates code for the given interfaces
+proc class {classname interfaces} {
+  global current_classname prototypes accessors LB RB 
+
+  set current_classname $classname
+  
+  # create the method accessor prototype
+  append prototypes "extern \"C\" int ${current_classname}_accessor(TCLARGS);\n"
+  
+  # get the accessor code started
+  append accessors "int ${current_classname}_accessor(TCLARGS)\n$LB\n"
+  append accessors "\t$current_classname * ptr;\n"
+  append accessors "\ttry $LB\n"
+  append accessors "\t\tsscanf(tclobj_to_charp(interp,objv\[0\]), \"%p\", &ptr);\n"
+  append accessors "\t\tchar* method = tclobj_to_charp(interp, objv\[1\]);\n"
+  
+  uplevel $interfaces
+  
+  # finish the accessor code
+  append accessors "\t\telse throw \"unknown method\";\n"
+  append accessors "\t$RB catch (char* msg) $LB\n"
+  append accessors "\t\treturn TclError(interp, Tstring(msg));\n\t$RB\n$RB\n\n"
+}
+
+proc constructor {arguments} {
+  global functions current_classname LB RB packageinit
+  
+  set funcname new_$current_classname
+  
+  # create the new command
+  set function "int $funcname\(TCLARGS)\n$LB\n"
+  
+  # do the arg count checking
+  append function [argcount_check $funcname $arguments]
+
+  # set up the try block
+  append function "\ttry $LB\n"
+  
+  # create the object
+  append function "\t\t$current_classname* newobj = new $current_classname\("
+  
+  # stick on the ctor arguments
+  append function "[process_args $arguments]);\n"
+  
+  # get the string version of the pointer
+  append function "\t\tchar strresult\[20\];\n\t\tsprintf(strresult, \"%p\", (void*)newobj);\n"
+
+  # create the method accessor
+  append function "\t\tTcl_CreateObjCommand(interp, strresult, ${current_classname}_accessor, (ClientData) NULL, (Tcl_CmdDeleteProc *) NULL);\n"
+
+  # return the object string version
+  append function "\t\treturn TclOk(interp, Tstring(strresult));\n"
+  
+  # end the try block
+  append function "\t$RB catch (char* msg) $LB\n"
+  append function "\t\treturn TclError(interp, Tstring(msg));\n\t$RB\n"
+  
+  # end the function
+  append function "$RB\n\n"
+
+  append functions $function
+  
+  # put the accessor in the package init code
+  append packageinit "\tTcl_CreateObjCommand(interp, \"$funcname\", $funcname, (ClientData) NULL, (Tcl_CmdDeleteProc *) NULL);\n"
+}
+
+# generates code for the delete_class function
+proc destructor {} {
+  global functions current_classname LB RB prototypes packageinit
+  
+  set funcname delete_$current_classname
+  set proto "int $funcname\(TCLARGS)"
+  
+  append prototypes "extern \"C\" $proto;\n"
+  
+  # create the new command
+  set function "$proto\n$LB\n"
+  
+  # do the arg count checking
+  append function [argcount_check $funcname [list [list $current_classname* object]]]
+
+  append function "\t$current_classname * ptr;\n"
+  append function "\ttry $LB\n"
+  append function "\t\tsscanf(tclobj_to_charp(interp,objv\[1\]), \"%p\", &ptr);\n"
+  append function "\t\tdelete ptr;\n"
+
+  # need to remove the accessor function
+  append function "\t\tTcl_DeleteCommand(interp,tclobj_to_charp(interp,objv\[1\]));\n"
+  
+  # return the object string version
+  append function "\t\treturn TclOk(interp, Tstring());\n"
+  
+  # end the try block
+  append function "\t$RB catch (char* msg) $LB\n"
+  append function "\t\treturn TclError(interp, Tstring(msg));\n\t$RB\n"
+  
+  # end the function
+  append function "$RB\n\n"
+
+  append functions $function
+  
+  # put the accessor in the package init code
+  append packageinit "\tTcl_CreateObjCommand(interp, \"$funcname\", $funcname, (ClientData) NULL, (Tcl_CmdDeleteProc *) NULL);\n"
+}
+
+
+# generates method accessor for the specified method
+proc method {rettype methodname arguments} {
+  global accessors current_classname functions LB RB prototypes
+  
+  set wrapper ${current_classname}_method_$methodname
+  
+  # setup the prototype
+  set proto "int $wrapper\($current_classname * ptr,TCLARGS)"
+  append prototypes "$proto;\n"
+  
+  # update the method accessor function
+  append accessors "\t\tif(strcmp(method,\"$methodname\") == 0)\n"
+  append accessors "\t\t\treturn $wrapper\(ptr, clientData, interp, objc, objv);\n"
+  
+  # create the method wrapper
+  append functions "$proto\n$LB\n"
+  
+  # setup the return arg
+  append functions "\t$rettype result;\n"
+  
+  # start the call to the method
+  if { $rettype != "void" } {
+    append functions "\tresult = ptr->$methodname\("
+  } else {
+    append functions "\tptr->$methodname\("
+  }
+  
+  # set up the args
+  set i 1
+  foreach arg $arguments {
+    set argtype [conv_ptr_name [lindex $arg 0]]
+    if { $i > 1 } {
+      append functions ","
+    }
+    append functions "tclobj_to_$argtype\(interp,objv\[$i\])"
+  }
+  
+  append functions ");\n\treturn TclOk(interp, [conv_ptr_name $rettype]_to_Tstring\(result));\n"
+  
+  append functions "$RB\n\n"
+}
+
+# process a C function
+proc function {rettype funcname arguments} {
+  global functions LB RB prototypes packageinit
+  
+  set wrapper function_$funcname
+  
+  # setup the prototype
+  set proto "extern \"C\" int $wrapper\(TCLARGS)"
+  append prototypes "$proto;\n"
+  
+  # create the method wrapper
+  append functions "$proto\n$LB\n"
+  
+  # setup the return arg
+  append functions "\t$rettype result;\n"
+  
+  # start the call to the method
+  if { $rettype != "void" } {
+    append functions "\tresult = $funcname\("
+  } else {
+    append functions "\t$funcname\("
+  }
+  
+  # set up the args
+  set i 1
+  foreach arg $arguments {
+    set argtype [conv_ptr_name [lindex $arg 0]]
+    if { $i > 1 } {
+      append functions ","
+    }
+    append functions "tclobj_to_$argtype\(interp,objv\[$i\])"
+    incr i
+  }
+  
+  append functions ");\n\treturn TclOk(interp, [conv_ptr_name $rettype]_to_Tstring\(result));\n"
+  
+  append functions "$RB\n\n"
+
+  # put the function in the package init code
+  append packageinit "\tTcl_CreateObjCommand(interp, \"$funcname\", $wrapper, (ClientData) NULL, (Tcl_CmdDeleteProc *) NULL);\n"
+}
+
+
+# coverts from one type to another (user supplied code)
+proc conversion {fromtype tostring totype code} {
+  global functions prototypes LB RB conversions
+  
+  # convert pointer type names
+  set fromtype [conv_ptr_name $fromtype]
+  set totypename [conv_ptr_name $totype]
+  
+  if { $fromtype == "tclobj" } {
+    set proto "$totype ${fromtype}_to_$totypename\(Tcl_Interp* interp, Tcl_Obj * input)"
+  } else {
+    set proto "$totype ${fromtype}_to_$totypename\($fromtype * input)"
+  }
+  
+  append prototypes "$proto;\n"
+  
+  append conversions "$proto\n$LB\n"
+  append conversions $code
+  append conversions "$RB\n\n"
+}
+
+# converts type names with * in them to use "p"
+proc conv_ptr_name {name} {
+  regsub -all \\* $name p new
+  return $new
+}
+
+
+# puts in code to check the arguments
+proc argcount_check {method arguments} {
+  global RB LB
+  
+  set argcount [llength $arguments]
+  
+  set code "\tif(objc != [expr {$argcount + 1}]) $LB\n"
+  append code "\t\treturn TclError(interp, Tstring(\"Syntax is: $method"
+  foreach arg $arguments {
+    append code " [lindex $arg 1]"
+  }
+  append code "\"));\n\t$RB\n"
+  return $code
+}
+
+# puts in code for converting Tcl arguments to C
+proc process_args {arguments} {
+  set code ""
+  set i 1
+  foreach arg $arguments {
+    set argtype [conv_ptr_name [lindex $arg 0]]
+    if { $i > 1 } { append code "," }
+    append code "tclobj_to_$argtype\(interp,objv\[$i\])"
+    incr i
+  }
+  
+  return $code
+}
+
+
+
+
+
+proc preface {fd} {
+  puts $fd "/*"
+  puts $fd " * code generated by tni version 0.1"
+  puts $fd " */\n\n"
+}
+
+# the following are sections of code we build up during processing, then
+# dump them out in their correct order
+set includes "#include <tcl.h>\n#include <tni.h>\n"
+set prototypes ""
+set functions ""
+set conversions ""
+set packageinit ""
+set accessors ""
+
+set current_classname ""
+
+set input [lindex $argv 0]
+set output [file rootname $input].cc
+
+# create the .c file
+set out [open $output w]
+
+# put in the preface stuff
+preface $out
+
+# now parse the .i file
+source $input
+
+# dump out the sections
+puts $out $includes
+puts $out $prototypes
+puts $out $accessors
+puts $out $functions
+puts $out $conversions
+puts $out "$packageinit\n\treturn TCL_OK;\n$RB"
+
+# close the output file
+close $out

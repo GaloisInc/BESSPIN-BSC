@@ -1,0 +1,4 @@
+#!/bin/bash
+
+/usr/bin/crontab /export/home/synthesizer/SCRIPTS/crontab.synthesizer
+

@@ -1,0 +1,215 @@
+-- Copyright 2000--2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id$
+
+package Monad(mapM, mapM_, zipWithM, zipWith3M, replicateM, sequence, foldM, folduM, foldlM, foldrM) where
+
+import List
+
+--X \subsubsection{Monad}
+--X
+--X \index{Monad@\te{Monad} (type class)}
+--X (Advanced topic; can be skipped on first reading.)
+--X
+--X {\te{Monad}} defines monad operations.
+--X Think of a monadic type {\mbox{\qbs{m a}}} as representing an
+--X ``action'' and returning a result of type {\qbs{a}}.
+--X
+--X Take a function and a list; the function applied to
+--X a list element would return an action and result.
+--X Return an action representing all those actions
+--X and the list of corresponding results.
+--X \index{mapM@\te{mapM} (\te{Monad} function)}
+--X \begin{libverbatim}
+--X function m#(List#(b)) mapM(function m#(b) f(a x1), List#(a) x)
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+mapM :: (Monad m) => (a -> m b) -> List a -> m (List b)
+mapM f Nil = return Nil
+mapM f (Cons x xs) = do
+    _element :: b
+    _element <- f x
+    _elements :: List b
+    {-# hide #-}
+    _elements <- mapM f xs
+    return (Cons _element _elements)
+
+--X Take an action and a list;
+--X return an action representing the original action repeated
+--X as many times as there are list elements.
+--X \index{mapM_@{\verb'mapM_'} (\te{Monad} function)}
+--X \begin{libverbatim}
+--X function m#(List#(b)) mapM_(m#(b) c)
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+mapM_ :: (Monad m) => m b -> List a -> m (List b)
+mapM_ c = mapM (\_ -> c)
+
+--X Think of a monadic type {\mbox{\qbs{m a}}} as representing an
+--X ``action'' and returning a result of type {\qbs{a}}.
+--X
+--X Combine two lists with a function.
+--X \index{zipWithM@\te{zipWithM} (\te{List} function)}
+--X Take a function which takes two arguments and two lists;
+--X The function applied to the corresponding element from
+--X each list would return an action and result.
+--X Return an action representing all those actions
+--X and the list of corresponding results.
+--X
+--X \begin{libverbatim}
+--X function m#(List#(c))
+--X          zipWithM(function m#(c) f(a x1, b x2), List#(a) xs, List#(b) ys)
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+zipWithM :: (Monad m) => (a -> b -> m c) -> List a -> List b -> m (List c)
+zipWithM f (Cons x xs) (Cons y ys) =
+  do
+    z <- f x y
+    zs <- zipWithM f xs ys
+    return (Cons z zs)
+zipWithM f _ _ = return Nil
+
+--X Think of a monadic type {\mbox{\qbs{m a}}} as representing an
+--X ``action'' and returning a result of type {\qbs{a}}.
+--X
+--X Combine three lists with a function.
+--X \index{zipWithM@\te{zipWithM} (\te{List} function)}
+--X Take a function which takes three arguments and three lists;
+--X The function applied to the corresponding element from
+--X each list would return an action and result.
+--X Return an action representing all those actions
+--X and the list of corresponding results.
+--X
+--X \begin{libverbatim}
+--X function m#(List#(d)) zipWith3M(function m#(d) f(a x1, b x2, c x3),
+--X 				List#(a) xs,
+--X 				List#(b) ys,
+--X 				List#(c) zs)
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+zipWith3M :: (Monad m) => (a -> b -> c -> m d) -> List a -> List b -> List c -> m (List d)
+zipWith3M f (Cons x xs) (Cons y ys) (Cons z zs) =
+  do
+    w <- f x y z
+    ws <- zipWith3M f xs ys zs
+    return (Cons w ws)
+zipWith3M f _ _ _ = return Nil
+
+
+--X Take a list of actions; return an action representing
+--X performing all those actions and returning the list
+--X of all the results.
+--X \index{sequence@\te{sequence} (\te{Monad} function)}
+--X \begin{libverbatim}
+--X function m#(List#(a)) sequence()
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+sequence :: (Monad m) => List (m a) -> m (List a)
+sequence =
+    letseq mcons p q = do
+		_x :: a
+		_x <- p
+		_xs :: List a
+		_xs <- q
+		return (Cons _x _xs)
+    in  foldr mcons (return Nil)
+
+--X \te{foldlM} $f$ $z$ $xs$ \\
+--X $f$ $z$   $xs_1$ represents an action and result $z_1$ \\
+--X $f$ $z_1$ $xs_2$ represents an action and result $z_2$ \\
+--X $\cdots$ \\
+--X Return an action representing all these actions and the final $z_n$
+--X \index{foldlM@\te{foldlM} (\te{Monad} function)}
+--X \begin{libverbatim}
+--X function m#(a) foldlM(function m#(a) f(a x1, b x2), a a, List#(b) xs)
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+foldlM :: (Monad m) => (a -> b -> m a) -> a -> List b -> m a
+foldlM f a Nil         = return a
+foldlM f a (Cons x xs) = do
+	_y :: a
+	_y <- f a x
+	foldlM f _y xs
+
+--X Tree reduction over a non-empty list.
+--X First argument combines pairs of leaves.
+--X No transformation at singleton leaves.
+--X \index{foldM@\te{foldM} (\te{Monad} function)}
+--X \begin{libverbatim}
+--X function m#(a) foldM(function m#(a) f(a x1, a x2), List#(a) xs)
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+foldM :: (Monad m) => (a -> a -> m a) -> List a -> m a
+foldM _ Nil = error "Monad.foldM: empty list"
+foldM f (Cons x Nil) = return x
+foldM f xs = do
+	_ps <- joinPairs f xs
+	foldM f _ps
+
+joinPairs :: (Monad m) => (a -> a -> m a) -> List a -> m (List a)
+joinPairs f (Cons x (Cons y xs)) = do
+	_r <- f x y
+	_rs <- joinPairs f xs
+	return (Cons _r _rs)
+joinPairs _ xs = return xs
+
+--X Tree reduction over a non-empty list.
+--X First argument combines pairs of leaves.
+--X Second argument is applied to singleton leaves.
+--X \index{folduM@\te{folduM} (\te{Monad} function)}
+--X \begin{libverbatim}
+--X function m#(a) folduM( function m#(a) f(a x1, a x2),
+--X                        function m#(a) g(a x1), List#(a) xs )
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+folduM :: (Monad m) => (a -> a -> m a) -> (a -> m a) -> List a -> m a
+folduM _ _ Nil = error "Monad.foldM: empty list"
+folduM _ _ (Cons x Nil) = return x
+folduM f g xs = do
+	_ps <- joinPairsU f g xs
+	folduM f g _ps
+
+joinPairsU :: (Monad m) => (a -> a -> m a) -> (a -> m a) -> List a -> m (List a)
+joinPairsU f g (Cons x (Cons y xs)) = do
+	_r <- f x y
+	_rs <- joinPairsU f g xs
+	return (Cons _r _rs)
+joinPairsU f g (Cons x Nil) = do
+	_r <- g x
+	return (Cons _r Nil)
+joinPairsU _ _ Nil = return Nil
+
+--X \te{foldrM} $f$ $z$ $xs$ \\
+--X $f$ $xs_n$ $z$   represents an action and result $z_n$ \\
+--X $f$ $xs_{n-1}$ $z_n$ represents an action and result $z_{n-1}$ \\
+--X $\cdots$ \\
+--X Return an action representing all these actions and the final $z_1$
+--X \index{foldrM@\te{foldrM} (\te{Monad} function)}
+--X \begin{libverbatim}
+--X function m#(b) foldrM(function m#(b) f(a x1, b x2), b z, List#(a) xs)
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+foldrM :: (Monad m) => (a -> b -> m b) -> b -> List a -> m b
+foldrM f z Nil         = return z
+foldrM f z (Cons x xs) = do
+	_y :: b
+	_y <- foldrM f z xs
+	f x _y
+
+--X The \te{fmap} function is a generalization of the the \te{List.map}
+--X function to an arbitrary monad.  It is now in the Prelude.
+--X \index{fmap@\te{fmap} (\te{Monad} function)}
+--X \begin{libverbatim}
+--X function m#(b) fmap(function b f(a x1), m#(a) xs)
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+
+--X Generate a {\te{List}} of elements generated by using
+--X the given monadic value repeatedly.
+--X \index{replicateM@\te{replicateM} (\te{List} function)}
+--X \begin{libverbatim}
+--X function m#(List#(a)) replicateM(Integer n, m#(a) c)
+--X   provisos (Monad#(m));
+--X \end{libverbatim}
+replicateM :: (Monad m) => Integer -> m a -> m (List a)
+replicateM n c = mapM (const c) (upto 1 n)

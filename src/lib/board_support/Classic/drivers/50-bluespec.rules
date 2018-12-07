@@ -1,0 +1,5 @@
+SUBSYSTEM=="pci", ATTR{vendor}=="0xb100", ATTR{device}=="0xb5ce", RUN+="/usr/local/sbin/bluespec-rules.sh"
+SUBSYSTEM=="pci", ATTR{vendor}=="0xb100", ATTR{device}=="0xb5c3", RUN+="/usr/local/sbin/bluespec-rules.sh"
+SUBSYSTEM=="pci", ATTR{vendor}=="0x17df", ATTR{device}=="0x1900", RUN+="/usr/local/sbin/bluespec-rules.sh"
+SUBSYSTEM=="pci", ATTR{vendor}=="0x1be7", ATTR{device}=="0xb5ce", RUN+="/usr/local/sbin/bluespec-rules.sh"
+SUBSYSTEM=="pci", ATTR{vendor}=="0x1be7", ATTR{device}=="0xb5c3", RUN+="/usr/local/sbin/bluespec-rules.sh"

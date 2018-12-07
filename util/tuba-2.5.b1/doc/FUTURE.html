@@ -1,0 +1,173 @@
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <META NAME="Author" CONTENT="John Stump">
+   <META NAME="GENERATOR" CONTENT="Mozilla/4.04 [en] (X11; I; Linux 1.2.13 i586) [Netscape]">
+   <META NAME="Description" CONTENT="A list of features soon to be in Tuba">
+   <TITLE>Future Features Of Tuba</TITLE>
+<!-- Author: john -->
+</HEAD>
+<BODY TEXT="#000000" BGCOLOR="#FDF5E6" LINK="#0000EF" VLINK="#55188A" ALINK="#FF0000">
+
+<H1>
+<!--#geoguide--></H1>
+
+<H1>
+Future Features Of Tuba</H1>
+
+<HR WIDTH="100%">
+
+<P><I>Note:&nbsp; I haven't been keeping this list up to date. For instance,
+the version numbers were are all wrong so I removed them altogether.</I>
+
+<P>Below is a list of potentially upcoming features of Tuba. Many of these
+features are basically randomly scattered around to ensure timely releases.
+If you have any other ideas for improving Tuba, please send them to me
+(<A HREF="mailto:johnstump@iname.com">johnstump@iname.com</A>). Also, if you
+see a feature that's low on the list but you just gotta have it, drop me
+a line and I'll try to move it up.
+<BR>&nbsp;
+<UL>
+<LI>
+Improve the library building process, perhaps using the information found
+in tclConfig.sh (installed by the Tcl distribution).</LI>
+
+<LI>
+Allow entering a proc breakpoint manually (for procs that aren't defined
+yet)</LI>
+</UL>
+
+<UL>
+<LI>
+Speed up the Tcl and C++ parsers by rethinking the parsing algorithm. Currently,
+code in nested blocks are parsed multiple times, as many times as the nesting
+level. This makes for an easier parser, but more inefficient.</LI>
+
+<LI>
+Incorporate the Java parser (for use with TclBlend) that was sent to me
+by Moses DeJong &lt;dejong@cs.umn.edu> into Tuba and make it an optional
+parser to use</LI>
+
+<LI>
+Put parser type (C, Java, or Tcl) in the options menu.</LI>
+
+<LI>
+Implement online help.</LI>
+
+<LI>
+Don't instrument "variable" commands if there is not value assigned</LI>
+
+<LI>
+Support for proc templates. I define a proc template as anything that looks
+like this:</LI>
+
+
+<P><TT>proc $name {} $code</TT>
+
+<P>At load time Tuba can't put instrumentation in the proc body, so it
+defers instrumentation when the proc is defined at runtime. The code in
+<TT>$code</TT> is properly instrumented, but the line numbers don't match
+up with the source code in the file that is displayed in the source window.
+Support for this will probably involve an embedded window in the source
+code window that shows the runtime-expanded proc definition so the user
+can step through it.
+<LI>
+Document dynamic procs in the Users Guide</LI>
+</UL>
+
+<UL>
+<LI>
+User configurations. Almost all aspects of the GUI will be customizable
+by the user. This includes window geometries, colors, fonts, etc. Provide
+a couple of canned configurations (styles). For instance, I like the style
+of Tix.</LI>
+
+<LI>
+Fully support keyboard accelerators (configurable, of course).</LI>
+
+<LI>
+Add a "View All" menu option under the "View" menu bar button. This will
+bring up all the windows: variable window, stack window, procs window,
+and breakpoints windows.</LI>
+
+<LI>
+Support temporary breakpoints. When the temporary breakpoint is reached,
+it is removed.</LI>
+
+<LI>
+New command line options:</LI>
+
+<UL>
+<LI>
+an option to not read in the preferences file.</LI>
+
+<LI>
+an option to read in a different preferences file than the default (~/.tubarc).</LI>
+</UL>
+
+<LI>
+Make the "View" command (the magnifying glass icon) a little smarter: if
+there is nothing selected, ask the user for a variable.</LI>
+
+<LI>
+Try to be smart about figuring out what interpreter an application needs
+by parsing the information at the begining of the app. I know of three
+ways people automate the startup of their script applications (anyone know
+of others?):</LI>
+
+<UL>
+<LI>
+<TT>#!/<I>some_path_goes_here</I>/wish8.0</TT></LI>
+
+<LI>
+<TT>#!/bin/env wish8.0 </TT>(my personal favorite)</LI>
+
+<LI>
+<TT># The next line restarts with wish \</TT></LI>
+
+<BR><TT>exec wish8.0 "$0" "$@"</TT></UL>
+
+<LI>
+Parser support for some Tk commands: after, bind, ...</LI>
+</UL>
+
+<UL>
+<LI>
+Be able to expand an array into its elements in the var list and just monitor
+a specific element. Tix widget?</LI>
+
+<LI>
+Display the proc list in a hierarchical fashion, where procs in a namespace
+can be seen at lower levels. Another Tix widget?</LI>
+
+<LI>
+A command window. In this window you can type in a command to be executed
+by the application being debugged. You can select the level you want to
+execute it in: global, current proc, or any level up. This will be handy
+for more in-depth poking around your application.</LI>
+</UL>
+
+<UL>
+<LI>
+More editor-like features in the source code window:</LI>
+
+<UL>
+<LI>
+search</LI>
+
+<LI>
+goto line</LI>
+
+<LI>
+allow editing of code?</LI>
+
+<LI>
+line numbers</LI>
+</UL>
+
+<LI>
+Be able to set proc break points and goto code from the stack window</LI>
+</UL>
+
+</BODY>
+</HTML>

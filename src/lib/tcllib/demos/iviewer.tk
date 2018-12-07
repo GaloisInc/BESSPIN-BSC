@@ -1,0 +1,407 @@
+#!/bin/sh
+# the next line restarts using wish \
+exec $BLUESPECDIR/bin/bluewish "$0" -name "$1" -- "$@"
+
+# ----------------------------------------------------------------------
+#  DEMO: module hierarchy
+# ----------------------------------------------------------------------
+
+package require Iwidgets 4.0
+package require Waves 1.0
+namespace import ::Bluetcl::*
+
+# Source and setup some files from the workstation
+set wsdir $env(BLUESPECDIR)/tcllib/workstation
+frame .embed -container 1
+
+set BSPEC(WSDIR) $wsdir
+set PROJECT(EDITOR_NAME) emacs
+source $wsdir/file_commands.tcl
+
+set BSPEC(FILES) [glob *.bsv */*.bsv ../*/*.bsv */*.bsv */*/*.bsv]
+
+
+# ------------------------------
+# widget to select a module file
+
+proc openModule { } {
+    set typeList {
+	{{Module Files} {.ba}}
+    }
+    set absfile [tk_getOpenFile -filetypes $typeList]
+
+    # separate the path from the base filename
+    set path [file dirname $absfile]
+    set fname [file tail $absfile]
+
+    # get the module name
+    if [regexp {^(.+)\.ba$} $fname tmp modname] {
+	puts "Loading module $modname"
+	flags set "-p +:$path -tcl-show-hidden"
+	module load $modname
+	# refresh the viewer state
+	browseinst refresh
+	# refresh the widget
+	collapse_all
+    } else {
+	# if it isn't a .ba file, then do nothing
+	puts "Load failed"
+    }
+}
+
+proc openPackage { } {
+    set typeList {
+	{{Package Files} {.bo}}
+    }
+    set absfile [tk_getOpenFile -filetypes $typeList]
+
+    # separate the path from the base filename
+    set path [file dirname $absfile]
+    set fname [file tail $absfile]
+
+    # get the module name
+    if [regexp {^(.+)\.bo$} $fname tmp modname] {
+	puts "Loading pacakge $modname"
+	flags set "-p +:$path"
+	bpackage load $modname
+	# refresh the viewer state
+	#browseinst refresh
+	# refresh the widget
+	#collapse_all
+    } else {
+	# if it isn't a .ba file, then do nothing
+	puts "Load failed"
+    }
+}
+
+proc openDumpFile { } {
+    set typeList [list]
+    foreach ft [Waves::get_dump_file_extensions] {
+        lappend typeList [list $ft "*.$ft"]
+    }
+    lappend typeList [list All "*"]
+
+    set absfile [tk_getOpenFile -filetypes $typeList]
+
+    # separate the path from the base filename
+    set path [file dirname $absfile]
+    set fname [file tail $absfile]
+
+    Waves::load_dump_file $absfile
+}
+
+
+proc getVList {} {
+    .mb delete .file.attach.2 .file.attach.end
+    .mb add separator .file.attach.sep
+
+    set int [Waves::list_potential_viewers]
+    foreach i $int {
+        .mb add command .file.attach.[join $i "__"] \
+            -label "$i" \
+            -command "Waves::attach_viewer \{$i\}"
+    }
+
+}
+
+# ---------------
+# menubar
+
+iwidgets::menubar .mb -helpvariable helpVar -menubuttons {
+    menubutton file -text "File" -menu {
+        options -tearoff false
+
+        command new -label "Open Module" \
+                -command openModule
+
+        command package -label "Load Package" \
+                -command openPackage
+
+        separator sep1
+
+        command waves -label "Start Waves" \
+            -command { update ; Waves::start_viewer }
+
+        command stopwaves -label "Close Waves" \
+            -command Waves::close_viewer
+
+        cascade attach -label "Attach ..." \
+            -menu {
+                command Refresh -label "Refresh List" -command {getVList}
+                command None    -label None          -command {Waves::attach_viewer "" }
+                separator sep1
+            }
+
+        command loaddump -label "Load Dump file" \
+            -command openDumpFile
+
+
+        command exit -label "Exit" -command {exit}
+    }
+
+    menubutton options -text "Backend" -menu {
+        options -tearoff false -selectcolor blue
+
+        radiobutton bVerilog -variable backend \
+                -value verilog -label "Verilog" \
+                -command {flags set -verilog}
+
+        radiobutton bBluesim -variable backend \
+                -value sim -label "Bluesim" \
+                -command {flags set -verilog}
+    }
+}
+getVList
+pack .mb -fill x -side top
+
+#frame .fr -width 200 -height 200 -background white
+#pack .fr -fill both
+
+
+# Start the backend variable as Verilog
+set backend verilog
+flags set -verilog
+
+# ------------------------------
+# paned window
+
+# place the hierarchy and message text in a paned frame
+
+iwidgets::panedwindow .pw -width 8i -height 6i -orient vertical
+pack .pw -padx 4 -pady 4  -expand yes -fill both
+
+
+# ------------------------------
+# module browser
+
+proc getElems {file} {
+
+    if {$file == ""} {
+	set dir 0
+    } else {
+	set dir $file
+    }
+    set res [browseinst list $dir]
+    #puts "getElems $file = $res"
+    return $res
+}
+
+# ---------------
+
+proc select_node {uid status} {
+    global h
+
+    if {$status} {
+	$h selection remove $uid
+
+	# clear the display
+	clear_detail
+    } else {
+	# remove all previously selected
+	set others [$h selection get]
+	foreach other $others {
+	   $h selection remove $other
+	}
+
+	# select this one
+	$h selection add $uid
+
+	# update the display
+	set_detail [browseinst detail $uid]
+    }
+}
+
+proc expand_node {uid} {
+    global h
+
+    $h expand $uid
+}
+
+proc collapse_node {uid} {
+    global h
+
+    $h collapse $uid
+}
+
+proc expand_recursive {node} {
+    global h
+
+    set children [getElems $node]
+    foreach c $children {
+        set uid [lindex $c 0]
+        $h expand $uid
+        expand_recursive $uid
+    }
+}
+
+proc expand_all {} {
+    expand_recursive 0
+}
+
+proc collapse_all {} {
+    global h
+
+    $h configure -querycommand "getElems %n"
+}
+
+# ---------------
+
+#
+# Create the hierarchy mega-widget, adding commands to both the item
+# and background popup menus.
+#
+
+# put it in a new pane
+.pw add "left"
+set pane [.pw childsite "left"]
+
+set h \
+  [iwidgets::hierarchy $pane.h \
+    -querycommand "getElems %n" -visibleitems 30x15 \
+    -labeltext "Module Viewer" -selectcommand "select_node %n %s"]
+pack $h -side left -expand yes -fill both
+
+$h component itemMenu add command -label "Select" \
+    -command {select_node [$h current] 0}
+$h component itemMenu add command -label "Deselect" \
+    -command {select_node [$h current] 1}
+$h component itemMenu add separator
+$h component itemMenu add command -label "Expand" \
+    -command {expand_node [$h current]}
+$h component itemMenu add command -label "Collapse" \
+    -command {collapse_node [$h current]}
+
+$h component bgMenu add command -label "Expand All" -command expand_all
+$h component bgMenu add command -label "Collapse All" -command collapse_all
+$h component bgMenu add command -label "Clear Selections" \
+    -command {$h selection clear}
+
+
+# ------------------------------
+# Pane to display information about the selected module
+
+# put it in a new pane
+.pw add "right"
+set pane [.pw childsite "right"]
+
+#set det [message $pane.det -anchor nw -width 3i -textvariable detailsX]
+set det [text $pane.det -width 60]
+$det tag configure HED -font {times 12 bold}
+pack $det  -expand yes -fill both
+.pw fraction 40 60
+
+# ----------
+
+# function to set the tab infos
+
+proc set_detail { detail } {
+    global det
+
+    clear_detail
+
+    set len [llength $detail]
+    for {set i 0 } {$i < $len} {incr i 2} {
+        set h [lindex $detail $i]
+        set t [lindex $detail [expr $i + 1]]
+
+        $det insert end "$h\n" HED
+        foreach e $t {
+            $det insert end "$e\n"
+        }
+        $det insert end "\n"
+    }
+
+}
+
+proc clear_detail { } {
+    global det
+
+    $det delete 0.0 end
+}
+
+# ------------------------------
+# utilities
+
+proc getField {fname flist} {
+    foreach elem $flist {
+        if {[lindex $elem 0] == $fname } {
+            return [lindex $elem 1]
+        }
+    }
+    return ""
+}
+
+# ------------------------------
+proc openFilePosition { pos } {
+    if {$pos == "" } {
+        puts "no position available"
+        return
+    }
+    commands::open_file [lindex $pos 0] [lindex $pos 1]
+}
+
+
+proc instSource {} {
+    global h
+    set uid [$h selection get]
+    if {$uid == ""} { return }
+    array set Det [browseinst detail $uid]
+    if { [info exists Det(position)] } {
+        openFilePosition $Det(position)
+    }
+}
+
+proc defSource {} {
+    global h
+    set uid [$h selection get]
+    if {$uid == ""} { return }
+    array set Det [browseinst detail $uid]
+    if { [info exists Det(ModulePosition)] } {
+        openFilePosition $Det(ModulePosition)
+    }
+}
+
+proc ifcSource {} {
+    global h
+    set uid [$h selection get]
+    if {$uid == ""} { return }
+    array set Det [browseinst detail $uid]
+    if { [info exists Det(Interface)] } {
+        set p [bpackage position $Det(Interface)]
+        openFilePosition $p
+
+    }
+}
+
+
+proc startWaves {} {
+    Waves::start_viewer
+}
+
+proc sendWaves {} {
+    global h
+    set uid [$h selection get]
+    if {$uid == ""} {return}
+    Waves::send_instance $uid
+}
+
+
+iwidgets::buttonbox .bb
+
+.bb add InstSrc -text "Instance\nSource" -command "instSource"
+.bb add DefSrc -text "Definition\nSource" -command "defSource"
+.bb add IfcSrc -text "Interface\nSource" -command "ifcSource"
+.bb add SendWaves -text "Send\nWaves" -command "sendWaves"
+
+pack .bb
+clear_detail
+
+foreach a $argv {
+    switch [file extension $a] {
+        ".ba" {
+            module load [file rootname [file tail $a]]
+        }
+        ".bo" { bpackage load [file rootname [file tail $a]] }
+        default    { puts stderr "unknown argument: $a" }
+    }
+}

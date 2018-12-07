@@ -1,0 +1,9 @@
+#!/bin/tcsh
+tclchecker -suppress undefinedVar \
+           -suppress pkgUnchecked \
+           -suppress warnUndefProc \
+           -suppress warnExpr \
+           -suppress warnReadonlyVar \
+           -suppress warnBehaviourCmd \
+           -suppress warnNotSpecial \
+           $*

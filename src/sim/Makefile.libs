@@ -1,0 +1,131 @@
+# Makefile for Bluesim runtime
+# Copyright 2005 Bluespec, Inc. All Rights Reserved
+
+# This file is a symbolic link target of, e.g., g++4_64/Makefile
+
+PWD:=$(shell pwd)
+TOP:=$(PWD)/../../..
+
+include $(TOP)/platform.mk
+
+INSTALL ?= $(TOP)/util/install
+
+CFLAGS += -Wall \
+	-Wmissing-prototypes \
+	-Wstrict-prototypes \
+	-Wpointer-arith \
+	-Wshadow \
+	-Wcast-qual \
+	-Werror \
+	-Wno-unused-parameter \
+	-g \
+	-std=c99 \
+        -D_FILE_OFFSET_BITS=64 \
+	-fPIC
+CXXFLAGS += -Wall \
+	-Wpointer-arith \
+	-Wshadow \
+	-Wcast-qual \
+	-Werror \
+	-Wno-unused-parameter \
+	-g \
+	-D_ISOC99_SOURCE \
+	-std=gnu++98 \
+        -D_FILE_OFFSET_BITS=64 \
+        -fno-rtti \
+	-fPIC
+
+# Compares two dotted numeric strings (e.g 2.3.16.1) for $1 >= $2
+define version_ge
+$(findstring TRUE,$(shell bash -c 'sort -cu -t. -k1,1nr -k2,2nr -k3,3nr -k4,4nr <(echo -e "$2\n$1") 2>&1 || echo TRUE'))
+endef
+
+glibcversion := $(shell ldd --version | head -1 | awk '{print $$NF}')
+ifeq ($(call version_ge,$(glibcversion),2.20),TRUE)
+CFLAGS += -D_DEFAULT_SOURCE
+CXXFLAGS += -D_DEFAULT_SOURCE
+else
+CFLAGS += -D_SVID_SOURCE
+CXXFLAGS += -D_SVID_SOURCE
+endif
+
+# CFLAGS +=  -I $(LM_BSC_DIR)
+CXXFLAGS +=  -I $(LM_BSC_DIR)
+
+COPT ?= -O3
+CDEBUG ?= -UUSE_ENTER
+CFLAGS += $(PROF) $(COPT) $(CDEBUG)
+CXXFLAGS += $(PROF) $(COPT) $(CDEBUG) 
+
+# Common makefile code for linking in FlexLM licensing
+# target is FLEXOBJ and is named here
+FLEXOBJ = bsim_ccore.o
+LM_BSC_DIR ?= $(TOP)/vendor/flexlm/cinterface
+include $(LM_BSC_DIR)/Makefile.inc
+
+
+PREFIX?=$(TOP)/inst
+LIBDIR=$(PREFIX)/lib
+SIMLIB=$(LIBDIR)/Bluesim
+
+# Descrition of library of Bluesim primitives
+LIB_PRIM = libbsprim.a
+PRIM_OBJS = prim_ops.o wide_data.o mem_alloc.o target.o \
+            prim_mod_reg.o prim_mod_wire.o prim_mod_probe.o \
+            prim_mod_fifo.o prim_mod_regfile.o prim_mod_bram.o \
+            prim_mod_counter.o \
+            prim_mod_clockgen.o \
+            prim_mod_synchronizers.o \
+            prim_mod_gatedclock.o \
+            prim_mod_resets.o \
+            dollar_display.o dollar_dumpvars.o dollar_plusargs.o \
+            dollar_stop_finish.o dollar_time.o \
+            mem_file.o module.o portability.o \
+            don_hack.o
+
+# Description of Bluesim kernel library
+LIB_KERNEL = libbskernel.a
+KERNEL_OBJS = kernel.o event_queue.o priority.o symbol.o \
+              reset.o plusargs.o vcd.o $(FLEXOBJ) portability.o
+
+LIBS = $(LIB_PRIM) $(LIB_KERNEL)
+
+vpath %.cxx ../
+
+%.o:%.cxx
+	$(CXX) -E -MM  -I $(LM_BSC_DIR) $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+.PHONY:	all
+all: $(LIBS)
+
+# Normal libraries
+
+$(LIB_PRIM): $(PRIM_OBJS)
+	$(RM) $(LIB_PRIM)
+	$(AR) cr $(LIB_PRIM) $(PRIM_OBJS)
+
+$(LIB_KERNEL): $(KERNEL_OBJS)
+	$(RM) $(LIB_KERNEL)
+	$(AR) cr $(LIB_KERNEL) $(KERNEL_OBJS)
+
+install: all
+	$(INSTALL) -m 755 -d $(SIMLIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 $(LIBS) $(SIMLIB)/$(BUILDDIR)
+
+clean:
+	$(RM) *.o *.d $(LIBS)
+
+realclean: clean
+
+TAGS:	*.h *.c *.cxx
+	etags *.h *.c *.cxx 
+
+# include dependency information
+DEPEND_OBJS = $(PRIM_OBJS) $(KERNEL_OBJS)
+
+-include $(DEPEND_OBJS:.o=.d)

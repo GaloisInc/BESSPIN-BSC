@@ -1,0 +1,8 @@
+#!/usr/bin/runhugs
+
+main = getContents >>= putStr . unlines . map (++"<br>") . map nbsp . lines
+
+
+nbsp = concatMap (\c -> case c of
+	                  ' ' -> "&nbsp;"
+			  _ -> [c]) 

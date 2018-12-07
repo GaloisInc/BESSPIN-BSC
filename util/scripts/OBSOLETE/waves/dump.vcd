@@ -1,0 +1,340 @@
+$date
+	Tue Aug  9 17:10:12 2005
+$end
+$version
+	Icarus Verilog
+$end
+$timescale
+	1s
+$end
+$scope module main $end
+$var reg 1 ! CLK $end
+$var reg 1 " RST_N $end
+$var reg 32 # cycle[31:0] $end
+$var reg 1 $ do_cycles $end
+$var reg 1 % do_dump $end
+$scope module top $end
+$var wire 1 ! CLK $end
+$var wire 1 " RST_N $end
+$var wire 1 & _d2 $end
+$var wire 32 ' cntr$D_IN[31:0] $end
+$var wire 1 ( cntr$EN $end
+$var wire 1 & the_scram$EN_cpu_op $end
+$var wire 32 ) the_scram$cpu_dout[31:0] $end
+$var wire 8 * the_scram$cpu_op_addr[7:0] $end
+$var wire 1 + the_scram$cpu_op_dcd $end
+$var wire 32 , the_scram$cpu_op_din[31:0] $end
+$var wire 1 - the_scram$cpu_op_wr $end
+$var reg 32 . cntr[31:0] $end
+$scope module the_scram $end
+$var wire 1 ! CLK $end
+$var wire 1 & EN_cpu_op $end
+$var wire 1 / RDY_cpu_dout $end
+$var wire 1 0 RDY_cpu_op $end
+$var wire 1 " RST_N $end
+$var wire 32 1 cpu_dout[31:0] $end
+$var wire 8 2 cpu_op_addr[7:0] $end
+$var wire 1 3 cpu_op_dcd $end
+$var wire 32 4 cpu_op_din[31:0] $end
+$var wire 1 5 cpu_op_wr $end
+$var wire 32 6 dataReg$D_IN[31:0] $end
+$var wire 1 7 dataReg$EN $end
+$var wire 8 8 regfile$ADDR_1[7:0] $end
+$var wire 8 9 regfile$ADDR_IN[7:0] $end
+$var wire 32 : regfile$D_IN[31:0] $end
+$var wire 32 ; regfile$D_OUT_1[31:0] $end
+$var wire 1 < regfile$WE $end
+$var reg 32 = dataReg[31:0] $end
+$scope module regfile $end
+$var wire 8 > ADDR_1[7:0] $end
+$var wire 8 ? ADDR_2[7:0] $end
+$var wire 8 @ ADDR_3[7:0] $end
+$var wire 8 A ADDR_4[7:0] $end
+$var wire 8 B ADDR_5[7:0] $end
+$var wire 8 C ADDR_IN[7:0] $end
+$var wire 1 ! CLK $end
+$var wire 32 D D_IN[31:0] $end
+$var wire 32 E D_OUT_1[31:0] $end
+$var wire 32 F D_OUT_2[31:0] $end
+$var wire 32 G D_OUT_3[31:0] $end
+$var wire 32 H D_OUT_4[31:0] $end
+$var wire 32 I D_OUT_5[31:0] $end
+$var wire 1 < WE $end
+$scope begin init_block $end
+$var reg 32 J i[31:0] $end
+$upscope $end
+$scope begin runtime_check $end
+$var reg 1 K enable_check $end
+$upscope $end
+$upscope $end
+$upscope $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+#0
+$dumpvars
+xK
+b100000000 J
+bx I
+bx H
+bx G
+bx F
+b10101010101010101010101010101010 E
+b10101010101010101010101010101010 D
+b10101010 C
+bz B
+bz A
+bz @
+bz ?
+b10101010 >
+b10101010101010101010101010101010 =
+0<
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 :
+b10101010 9
+b10101010 8
+07
+b10101010101010101010101010101010 6
+15
+b10101010101010101010101010101010 4
+03
+b10101010 2
+b10101010101010101010101010101010 1
+10
+1/
+b10101010101010101010101010101010 .
+1-
+b10101010101010101010101010101010 ,
+0+
+b10101010 *
+b10101010101010101010101010101010 )
+1(
+b10101010101010101010101010101011 '
+0&
+1%
+0$
+b1 #
+0"
+0!
+$end
+#1
+1<
+1&
+b1 '
+b0 ,
+b0 4
+b0 :
+b0 D
+b0 *
+b0 2
+b0 8
+b0 9
+b0 >
+b0 C
+b0 .
+0K
+1!
+#2
+1"
+#5
+0!
+#10
+b10 '
+b1 ,
+b1 4
+b1 :
+b1 D
+b1 *
+b1 2
+b1 8
+b1 9
+b1 >
+b1 C
+b1 .
+b10101010101010101010101010101010 6
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 E
+b10 #
+1!
+#15
+0!
+#20
+b11 '
+b10 ,
+b10 4
+b10 :
+b10 D
+b10 *
+b10 2
+b10 8
+b10 9
+b10 >
+b10 C
+b10 .
+b10101010101010101010101010101010 6
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 E
+b11 #
+1!
+#25
+0!
+#30
+b100 '
+b11 ,
+b11 4
+b11 :
+b11 D
+b11 *
+b11 2
+b11 8
+b11 9
+b11 >
+b11 C
+b11 .
+b10101010101010101010101010101010 6
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 E
+b100 #
+1!
+#35
+0!
+#40
+b101 '
+b100 ,
+b100 4
+b100 :
+b100 D
+b100 *
+b100 2
+b100 8
+b100 9
+b100 >
+b100 C
+b100 .
+b10101010101010101010101010101010 6
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 E
+b101 #
+1!
+#45
+0!
+#50
+b110 '
+b101 ,
+b101 4
+b101 :
+b101 D
+b101 *
+b101 2
+b101 8
+b101 9
+b101 >
+b101 C
+b101 .
+b10101010101010101010101010101010 6
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 E
+b110 #
+1!
+#55
+0!
+#60
+b111 '
+b110 ,
+b110 4
+b110 :
+b110 D
+b110 *
+b110 2
+b110 8
+b110 9
+b110 >
+b110 C
+b110 .
+b10101010101010101010101010101010 6
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 E
+b111 #
+1!
+#65
+0!
+#70
+b1000 '
+b111 ,
+b111 4
+b111 :
+b111 D
+b111 *
+b111 2
+b111 8
+b111 9
+b111 >
+b111 C
+b111 .
+b10101010101010101010101010101010 6
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 E
+b1000 #
+1!
+#75
+0!
+#80
+b1001 '
+b1000 ,
+b1000 4
+b1000 :
+b1000 D
+b1000 *
+b1000 2
+b1000 8
+b1000 9
+b1000 >
+b1000 C
+b1000 .
+b10101010101010101010101010101010 6
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 E
+b1001 #
+1!
+#85
+0!
+#90
+b1010 '
+b1001 ,
+b1001 4
+b1001 :
+b1001 D
+b1001 *
+b1001 2
+b1001 8
+b1001 9
+b1001 >
+b1001 C
+b1001 .
+b10101010101010101010101010101010 6
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 E
+b1010 #
+1!
+#95
+0!
+#100
+0<
+0&
+b1011 '
+b1010 ,
+b1010 4
+b1010 :
+b1010 D
+b1010 *
+b1010 2
+b1010 8
+b1010 9
+b1010 >
+b1010 C
+b1010 .
+b10101010101010101010101010101010 6
+b10101010101010101010101010101010 ;
+b10101010101010101010101010101010 E
+b1011 #
+1!

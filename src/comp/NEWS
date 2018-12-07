@@ -1,0 +1,128 @@
+$Id: NEWS,v 1.35 2001/09/25 15:56:59 augustss Exp $
+
+User visible changes to bsc.
+
+2001-09-25
+	Allow -e flags with .bs file to force linking after compilation.
+
+2001-09-09
+	Add directory Libraries/ for useful stuff.  Wallace and PopCount
+	are found there.
+
+2001-08-23
+	The new function `nosplit' can be used to turn off rule
+	splitting in a complete subexpression.
+
+2001-07-27
+	Some string manipulation is now allowed at run time.
+
+2001-07-25
+	New pragma, noinline, to generate code for ordinary functions.
+
+2001-07-19
+	Add a dump pragma in modules to dump expressions.
+
+2001-07-14
+	Add Prelude/Loop.bs to make loops easy.
+
+2001-07-09
+	Use async, active low reset.
+
+2001-07-06
+	Extern Verilog module syntax to allow computed module names
+	and multiple clock/reset ports.
+
+2001-06-04
+	New function, replaceBits, to insert bits in a bit vector.
+
+2001-04-17
+	Allow monadic binding to be written `x :: t <- e'.
+
+2001-04-16
+	Implicit condition definition in interface expressions
+	can now be general guards instead of just a boolean.
+
+2001-04-06
+	FileIO package added.
+
+2001-04-05
+	The Trans-Mongolian Express release, tagged TRANS_MONGOLIAN_EXPRESS,
+	branched off.  Web page at
+	http://w3/bluespec/releases/trans-mongolian-express/
+
+2001-04-04
+	Generate pri[pars] schedulers for large rule sets.
+
+2001-03-29
+	More rule assertions (`no implicit conditions').
+
+2001-03-28
+	Add user defined operator precedences.
+
+2001-03-27
+	ActionSeq now based on ListN.
+
+2001-03-24
+	Rule assertions (`fire when enabled').
+
+2001-03-22
+	Added qualified import.
+
+2001-03-21
+	Generate direct schedulers by default; control via
+	the -schedule-max-direct flag.
+
+2001-03-21
+	Boolify package to transform functions into pure combinations of
+	boolean primitives.
+
+2001-03-04
+	ModuleCollect package
+
+2001-03-03
+	interface expressions.
+
+2001-03-01
+	The IsModule class to extend the Module monad
+
+2001-03-01
+	Push and Pull packages.
+
+2001-02-23
+	The Van Golu Express release, tagged VAN_GOLU_EXPRESS,
+	branched off.  Web page at 
+	http://w3/bluespec/releases/van-golu-express/
+
+2001-02-15
+	UIntRange ready for testing.
+
+2001-02-14
+	ActionValue can be used in Verilog interfaces.
+
+2001-02-12
+	Proper precedence levels for &, |
+
+2001-02-07
+	curry & uncurry aded to Prelude.
+
+2001-02-07
+	Package Tabulate added.
+
+2001-02-06
+	Package Enum added.
+
+2001-02-06
+	Better C code generation.
+
+2001-02-04
+	The C runtime can take regular expressions to specify variables
+	to print.
+
+2001-02-04
+	Prelude functions max and min added.
+
+2001-02-03
+	The package Reserved added.
+
+2001-01-31
+	The unit type, (), added.

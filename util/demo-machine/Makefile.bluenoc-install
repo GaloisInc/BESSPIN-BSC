@@ -1,0 +1,36 @@
+
+TAR=tar
+WGET=wget
+
+USB_DRIVER_VERSION ?= HEAD-2d19c7c
+
+USB_DRIVER_TAR=usb-driver-$(USB_DRIVER_VERSION).tar.gz
+USB_DRIVER_URL='http://git.zerfleddert.de/cgi-bin/gitweb.cgi/usb-driver?a=snapshot;h=HEAD;sf=tgz'
+USB_DRIVER_DIR=usb-driver-$(USB_DRIVER_VERSION)
+
+default: build
+
+$(USB_DRIVER_TAR):
+	$(WGET) -O $(USB_DRIVER_TAR) $(USB_DRIVER_URL)
+
+$(USB_DRIVER_DIR): $(USB_DRIVER_TAR)
+	$(TAR) xf $^
+
+usb-driver-latest: $(USB_DRIVER_DIR)
+	ln -Tfs $< $@
+
+usb-driver-latest/libusb-driver.so: usb-driver-latest
+	$(MAKE) -C usb-driver-latest
+
+build: usb-driver-latest/libusb-driver.so
+
+install: usb-driver-latest/libusb-driver.so
+	@[ `id -u` -eq 0 ] || echo "WARNING: You're not root.  Install will probably fail."
+	install -o root -g root usb-driver-latest/libusb-driver.so /usr/local/lib/
+	./usb-driver-latest/setup_pcusb
+
+clean:
+	$(RM) -r $(USB_DRIVER_DIR)
+	$(RM) usb-driver-latest
+
+.PHONY: default all clean

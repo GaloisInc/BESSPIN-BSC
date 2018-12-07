@@ -1,0 +1,71 @@
+# Makefile for VPI access library
+# Copyright 2008 Bluespec, Inc. All Rights Reserved
+PWD:=$(shell pwd)
+TOP:=$(PWD)/../../../..
+
+include $(TOP)/platform.mk
+
+INSTALL ?= $(TOP)/util/install
+
+CFLAGS += -Wall \
+	-Wmissing-prototypes \
+	-Wpointer-arith \
+	-Wshadow \
+	-Wcast-qual \
+	-Werror \
+	-Wno-shadow \
+	-g \
+	-std=c99 \
+	-fPIC \
+# vpi_user.h fails this check
+#	-Wstrict-prototypes
+
+COPT ?= -O3
+CDEBUG ?=
+CFLAGS += $(PROF) $(COPT) $(CDEBUG)
+
+OSTYPE ?= $(shell uname -s)
+ifeq ($(OSTYPE),$(findstring $(OSTYPE), Darwin darwin))
+# for Mac OS X, declare that the binary is dynamic and undefined references
+# will be looked up later when the library is linked
+LDFLAGS = -dynamiclib -Wl,-install_name,libbdpi.so,-undefined,dynamic_lookup
+else
+LDFLAGS = -shared -Wl,-soname,libbdpi.so
+endif
+
+PREFIX?=$(TOP)/inst
+LIBDIR=$(PREFIX)/lib
+VPILIB=$(LIBDIR)/VPI
+
+vpath %.c ../
+
+%.o:%.c
+	$(CC) -E -MM $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+.PHONY:	all
+all: libbdpi.so
+
+libbdpi.so: libbdpi.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -o libbdpi.so libbdpi.o
+
+install: all
+	$(INSTALL) -m 755 -d $(VPILIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 libbdpi.so $(VPILIB)/$(BUILDDIR)
+
+clean:
+	$(RM) *.o *.d libbdpi.so
+
+realclean: clean
+
+TAGS:	*.h *.c
+	etags *.h *.c
+
+# include dependency information
+DEPEND_OBJS = libbdpi.o
+
+-include $(DEPEND_OBJS:.o=.d)

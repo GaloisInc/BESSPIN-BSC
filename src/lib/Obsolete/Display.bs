@@ -1,0 +1,43 @@
+-- $Id: Display.bs,v 1.7 2002/10/23 14:14:19 augustss Exp $
+package Display(Display(..), mkDisplay) where
+import Environment
+import Printer
+
+--@ XXX THIS PACKAGE NOT DOCUMENTED YET
+
+interface Display a =
+    displayHex :: a -> Action
+    displayDec :: a -> Action
+    displayCyc :: Action
+    finish     :: Action
+
+interface VDisplay n =
+    displayHex :: Bit n -> PrimAction
+    displayDec :: Bit n -> PrimAction
+    displayCyc :: PrimAction
+    finish     :: PrimAction
+
+mkDisplay :: (IsModule m, Bits a sa) => m (Display a)
+mkDisplay = liftModule $
+  if genVerilog then
+    module
+	v :: VDisplay sa
+	v <- module verilog "vdisplay" (valueOf sa) "CLK" "RST_N" {
+		displayHex = "valx" "DISPX";
+		displayDec = "vald" "DISPD";
+		displayCyc = "DISPC";
+		finish  = "FINI";
+	     } [ [displayHex, displayDec, displayCyc] <> [displayHex, displayDec, displayCyc] ]
+        interface
+	    displayHex x = fromPrimAction $ v.displayHex (pack x)
+	    displayDec x = fromPrimAction $ v.displayDec (pack x)
+	    displayCyc   = fromPrimAction $ v.displayCyc
+	    finish       = fromPrimAction $ v.finish
+  else
+    module
+	p :: Printer <- mkPrinter
+        interface
+	    displayHex x = action { p.printBit (pack x); p.print "\n" }
+	    displayDec x = action { p.printBitDec (pack x); p.print "\n" }
+	    displayCyc   = action { p.printCycle; p.print "\n" }
+	    finish       = p.exitWith 0

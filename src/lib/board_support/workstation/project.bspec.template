@@ -1,0 +1,29 @@
+set PROJECT(COMP_TYPE) "bsc"
+set PROJECT(TB_COMP_TYPE) "ccd"
+set PROJECT(EDITOR_NAME) "emacs"
+set PROJECT(INCLUDED_FILES) "*.bsv"
+set PROJECT(LINK_MAKEFILE) "Makefile"
+set PROJECT(LINK_TYPE) "bsc"
+set PROJECT(MAKE_CLEAN) "clean"
+set PROJECT(MAKE_FILE) "Makefile"
+set PROJECT(MAKE_FULLCLEAN) "clean"
+set PROJECT(SCEMI_ENABLE) "0"
+set PROJECT(SCEMI_LINK_OPTIONS) "--sim"
+set PROJECT(SCEMI_BSVTB) "0"
+set PROJECT(SCEMI_COMPBSC) "0"
+set PROJECT(SCEMI_TB_CC_CC) "g++ -c TESTBENCH.cpp -I%B/SceMi  -I\${SYSTEMC}/include"
+set PROJECT(SCEMI_TB_CC_LINK) "g++ -o scemirun TESTBENCH.o -L\$SYSTEMC/lib-linux  -L%B/SceMi/%F -lsystemc -lscemi -ldl"
+set PROJECT(SCEMI_TB_CC_RUN) "./scemirun"
+set PROJECT(VIEWER_CLOSE) "close"
+set PROJECT(EDITOR_GVIM_EXEC) "gvim %f %l %c"
+set PROJECT(EDITOR_EMACS_EXEC) "emacs %f %l %c"
+::Waves::set_options {GtkWave,Command} {gtkwave}
+::Waves::set_options {Mentor,Command} {Not supported}
+::Waves::set_options {StartTimeout} {20}
+::Waves::set_options {GtkWave,Options} {-W}
+::Waves::set_options {Mentor,Options} {Not supported}
+::Waves::set_options {ExtendNameMode} {noextend}
+::Waves::set_options {DumpExtensions} {vcd fsdb wlf}
+::Waves::set_options {Novas,Command} {nWave}
+::Waves::set_options {viewer} {GtkWave}
+::Waves::set_options {Novas,Options} {-nologo}

@@ -1,0 +1,342 @@
+/**
+
+  @page _graph_visualization_fspec_ Functional Specification 
+
+@section _graph_visualization_fspec_introduction_  Introduction
+
+@subsection _graph_visualization_fspec_introduction_document_id_ Document Identifier
+
+This is a functional specification document for the @b Graph @b Visualization
+subtask of @b Bluespec @b Workstation.
+
+@subsection _graph_visualization_fspec_introduction_definition_of_terms_ Definition of Terms and Acronyms
+        - @b BSV - Bluespec System Verilog\n
+        - @b BSC - Bluespec System Verilog compiler\n
+        - @b Blue @b (tcl/wish) - Bluespec extension for tcl/wish interpreter
+
+@subsection _graph_visualization_fspec_introduction_overview_of_the_funcionality Overview of the functionality
+
+This tool provides means to display and manipulate scheduling graphs generated
+by BSC. Graphs are generated using the @b -shed-dot flag. The generated graphs
+will be in the *.dot format and will be located in the info-dir directory.
+Generated graphs will be handled/displayed by the workstation using the Tcldot
+package of graphviz (see @ref _graph_visualization_fspec_graphviz_packages_
+"[3]", @ref _graph_visualization_fspec_graphviz_packages_ "[4]").\n
+Tcldot is a TCL library which parses and stores dot files as an in-memory
+representation. Workstation will read the in-memory graph and visualize it in a
+separate graphical window. The user will also be able to view, remove or
+highlight the nodes/edges of the graph.  Each query will be evaluated in a
+separate window. There will be a possibility to serialize the modified graph in
+dot format file.\n
+
+There will be 5 kinds of graphs (each embraced in a separate dot file):
+        - @ref _graph_visualization_fspec_graph_windows_conflict_graph_ -
+        represents the conflicts between rules/methods
+        - @ref _graph_visualization_fspec_graph_windows_execution_graph_ -
+        represents only the execution order edges between rules/methods
+        - @ref _graph_visualization_fspec_graph_windows_urgency_graph_ -
+        represents urgency dependencies between rules/methods
+        - @ref _graph_visualization_fspec_graph_windows_combined_graph_ - in
+        this graph there are two nodes for each rule/method. First node
+        represents the scheduling of the rule/method and the next one
+        represents the execution of the rule/method's body.
+        - @ref _graph_visualization_fspec_graph_windows_full_combined_graph_ -
+        the same as the Combined graph, except that it includes the arbitrary
+        edges which the BSC compiler has inserted.
+
+All graph windows will be launched by the @b Scheduling @b Graphs pull down
+menu from the @b Schedule @b Analysis window (see @ref
+_graph_visualization_fspec_schedule_analysis_window_ "Schedule Analysis
+Window").
+
+@anchor _graph_visualization_fspec_schedule_analysis_window_ 
+@image html schedule_analysis.png "Schedule Analysis Window" width=10cm
+@image latex schedule_analysis.png "Schedule Analysis Window" width=10cm
+
+@subsection _graph_visualization_fspec_introduction_scope_ Scope 
+
+@ref _graph_visualization_fspec_graph_windows_ section describes graph windows.
+@ref _graph_visualization_fspec_supported_platforms_ section provides platform
+requirements.  @ref _graph_visualization_fspec_use_cases_  section
+provides the ways how to reproduce the use cases described in @ref
+_graph_visualization_use_cases_. @ref _graph_visualization_fspec_limitations_
+section describes project limitations.  @ref
+_graph_visualization_fspec_command_line_options_ section describes the command
+line options of the project.  @ref _graph_visualization_fspec_dependencies_
+section describes the dependencies which can stand as obstacles for this
+project.  @ref _graph_visualization_fspec_effort_estimations_ section describes
+effort estimations for this project.
+
+@subsection _graph_visualization_fspec_introduction_references_ References
+
+@anchor _graph_visualization_fspec_workstation_docs_
+[1].  @ref _workstation_prd_ - Product requirement document for Bluespec
+Workstation\n
+[2].  @ref _workstation_fspec_ - Functional specification document for
+Bluespec Workstation\n
+@anchor _graph_visualization_fspec_graphviz_packages_
+[3].  http://www.graphviz.org - graphviz packages\n
+[4].  http://www.graphviz.org/cgi-bin/man?tcldot -  Tcldot package man page\n
+@anchor _graph_visualization_fspec_bsv_docs_
+[5].  reference_guide_rev_30_march_2007.pdf - Bluespec System Verilog reference
+guide\n
+[6].  bsv_user_guide_rev_30_march_2007.pdf - Bluespec System Verilog user
+guide\n
+@anchor _graph_visualization_fspec_workstation_schedule_
+[7].  workstation/docs/workstation_schedule.planner - Schedule for Bluespec
+Workstation project\n
+@anchor _graph_visualization_fspec_graph_task_docs_
+[8].  @ref _graph_visualization_prd_ - Product Requirement
+document for the graph visualization subtask of Bluespec Workstation\n
+[9].  @ref _graph_visualization_use_cases_ - Use Cases document
+for the graph visualization subtask of Bluespec Workstation\n
+
+@section _graph_visualization_fspec_graph_windows_ Graph Windows
+
+Below are described the graph windows which will be shown by Bluepsec
+Workstation.
+
+@subsection _graph_visualization_fspec_graph_windows_conflict_graph_ Conflict Graph Window
+
+The Conflict Graph window demonstrates the conflict graph for the currently
+loaded module.\n
+
+The graph is constructed from the generated \<mod\>_conflict.dot file.  It
+represents rules/methods which conflict either completely (cannot execute in
+the same cycle) or conflict in one direction (if they execute in the same
+cycle, it has to be in the opposite order). Complete conflicts are represented
+by bold non-directional edges. Ordering conflicts are represented by dashed
+directional edges, pointing from the node which must execute first to the node
+which must execute second.\n
+This window consists of a menu-bar, a canvas to illustrate the graph and a
+status bar.\n
+The main menu consists of the @b View sub-menu which provides all @ref
+ _graph_visualization_fspec_graph_windows_base_menu_actions_.
+ 
+@image html conflict_graph.png "Conflict Graph Window" width=10cm
+@image latex conflict_graph.png "Conflict Graph Window" width=10cm
+
+@subsection _graph_visualization_fspec_graph_windows_execution_graph_ Execution Graph window
+
+The Execution Graph window demonstrates the execution graph for the currently
+loaded module.\n
+The graph is constructed from the generated \<mod\>_exec.dot file. It
+demonstrates the execution order edges. All edges in this graph appear as
+normal directional edges.\n
+This window consists of a menu-bar, a canvas to illustrate the graph and a
+status bar.\n
+The main menu consists of the @b View sub-menu which provides all @ref
+ _graph_visualization_fspec_graph_windows_base_menu_actions_.
+
+@subsection _graph_visualization_fspec_graph_windows_urgency_graph_ Urgency Graph
+
+The Urgency Graph window demonstrates the urgency graph for the currently
+loaded module.\n
+The graph is constructed from the generated \<mod\>_urgency.dot file. The edges
+in this graph represent urgency dependencies.  They are directional edges which
+point from a more urgent node to a less urgent node (meaning that if the
+rules/methods conflict, then the more urgent one will execute and block the 
+less urgent one).  Two rules/methods have an edge either because the user 
+specified a "descending_urgency" attribute or because there is a data path 
+(though method calls) from the execution of the first rule/method to the
+predicate of the second rule/method.\n
+This window consists of a menu-bar, a canvas to illustrate the graph and a
+status bar.\n
+The main menu consists of the @b View sub-menu which provides all @ref
+ _graph_visualization_fspec_graph_windows_base_menu_actions_.
+
+@subsection _graph_visualization_fspec_graph_windows_combined_graph_ Combined Graph
+
+The Combined Graph window demonstrates the combined graph for the currently
+loaded module.\n
+
+The graph is constructed from the generated \<mod\>_combined.dot file. In this
+and the @ref _graph_visualization_fspec_graph_windows_full_combined_graph_
+there are two nodes for each rule/method.  One node represents the scheduling
+of the rule/method (computing its predicate -- the CAN_FIRE signal -- and
+computing the WILL_FIRE signal) and one node represents the execution of the 
+rule/method's body.  The nodes are labelled "Sched" and "Exec" along with the 
+rule/method name.  To help visually distinguish the nodes, the "Sched" nodes 
+are shaded.\n
+
+This window consists of a menu-bar, a canvas to illustrate the graph and a
+status bar.\n
+The main menu consists of the @b View sub-menu which provides all @ref
+_graph_visualization_fspec_graph_windows_base_menu_actions_.
+
+@subsection _graph_visualization_fspec_graph_windows_full_combined_graph_ Full Combined Graph
+
+The Full Combined Graph window demonstrates the full combined graph for the
+currently loaded module.\n
+
+The graph is constructed from the generated \<mod\>_combined_full.dot file.
+This graph is the same as the @ref
+_graph_visualization_fspec_graph_windows_conflict_graph_, except that it
+includes the arbitrary edges which the compiler inserts when the execution or
+urgency order between two rules/methods is underspecified. The new edges are
+bold and colored blue, to help highlight them visually.  This is the final
+graph which determines the static schedule of the currently loaded module.\n
+
+This window consists of a menu-bar, a canvas to illustrate the graph and a
+status bar.\n
+The main menu consists of the @b View sub-menu which provides all @ref
+_graph_visualization_fspec_graph_windows_base_menu_actions_.
+
+@subsection _graph_visualization_fspec_graph_windows_base_menu_actions_ Base Menu Actions
+
+The user will be able view the specified properties in the same window or.
+
+@subsection _graph_visualization_fspec_graph_windows_properties_ Properties
+
+@anchor _tabbed_notebook_ @b Tabbed @b Notebook
+
+The tabbed notebook will consist of the following panes:
+        - @b Nodes - represents nodes
+        - @b Edges - represents edges
+
+Each tab will contain a scrolled window which will list all the nodes/edges of
+the graph and a corresponding checkbox for each node/edge.  When performing @b
+New or @b Redraw actions (see @ref _button_box_ "Button Box") only the checked
+nodes/edges will be included in the graph. (As tcl dot removes dangling edges
+there is no need to manage this otherwise.)\n
+
+On the bottom of each pane will consist of the following fields:
+        - @b Filter @b entryfield - to specify a RE
+
+        - @b Select @b All - checks all nodes/edges 
+        - @b Clear @b All - unchecks all nodes/edges
+
+When the window opens all nodes and edges will be selected.\n
+In a later phase, filters will be added to select from the node/edge lists in a
+program way.
+
+@anchor _button_box_ @b Button @b Box
+
+The button box will consist of the following buttons:
+        - @b Select @b All - will select all the nodes/edges in the list.
+        - @b Clear @b All - will deselect all the nodes/edges in the list.
+        - @b Add @b Adjacent - will select all the nodes/edges which have
+          connections with the currently selected nodes.
+        - @b New - will create a new graph window and render the graph using
+        the settings from the @ref _tabbed_notebook_ "Paned Window"
+        - @b Redraw - will redraw the graph in the same source window using the
+        settings from the @ref _tabbed_notebook_ "Paned Window"
+        - @b Rename - will open a dialog to change the title of the graph. 
+        - @b Hide - will close the left pane
+
+@section _graph_visualization_fspec_supported_platforms_ Platform requirements
+
+@b TBD
+
+@section _graph_visualization_fspec_use_cases_ Use Cases Coverage
+
+Below is shown the coverage of use cases from the @ref
+_graph_visualization_use_cases_. \n
+Note that each use case is preceded with the following steps:
+        - Launch the Bluespec Workstation
+        - Open/Create project
+        - Compile the project
+        - Load a module
+
+@subsection _graph_visualization_fspec_use_cases_1_ Use case 1 : View scheduling graphs for the currently loaded module
+
+        - Select the @b Window @b -> @b Scheduling @b Graphs pull down menu
+        from the "Main Window"
+        - Select the @b Conflict menu item from the pull down menu and view the
+        @ref _graph_visualization_fspec_graph_windows_conflict_graph_ in a
+        separate window
+        - Select the @b Urgency menu item from the pull down menu and view the
+        @ref _graph_visualization_fspec_graph_windows_urgency_graph_ in a
+        separate window
+
+@subsection _graph_visualization_fspec_use_cases_2_ Use case 2 : View the specified group of nodes in the same graph
+
+        - Select the @b Scheduling @b Graphs @b -> @b Conflict menu action from
+        the @ref _graph_visualization_fspec_schedule_analysis_window_ "Schedule
+        Analysis Window" 
+        - View the @ref
+        _graph_visualization_fspec_graph_windows_conflict_graph_ 
+        - Select the @b View @b -> @b Filter @b Graph menu action
+        - Press the @b Clear @b All button from the @ref _button_box_ "Button
+        Box"  
+        - Check the desired nodes in the left pane of the opened @ref
+         _graph_visualization_fspec_graph_windows_properties_ dialog
+        - Click on the @b New button
+        - View the specified group of nodes in the same window
+
+@subsection _graph_visualization_fspec_use_cases_3_ Use case 3 : View the specified group of nodes in a separate graph
+
+        - Select the @b Scheduling @b Graphs @b -> @b Combined menu action from
+        the @ref _graph_visualization_fspec_schedule_analysis_window_ "Schedule
+        Analysis Window" 
+        - View the @ref
+        _graph_visualization_fspec_graph_windows_combined_graph_ 
+        - Select the @b View @b -> @b Filter @b Graph menu action
+        - Press the @b Clear @b All button from the @ref _button_box_ "Button
+        Box"
+        - Check the desired nodes in the left pane of the opened @ref
+         _graph_visualization_fspec_graph_windows_properties_ dialog
+        - Click on the @b New button
+        - View the specified group of nodes in a separate window
+
+@subsection _graph_visualization_fspec_use_cases_4_ Use case 4 : Remove specified nodes and view the result graph in the same window
+
+        - Select the @b Scheduling @b Graphs @b -> @b Urgency menu action from
+        the @ref _graph_visualization_fspec_schedule_analysis_window_ "Schedule
+        Analysis Window" 
+        - View the @ref _graph_visualization_fspec_graph_windows_urgency_graph_ 
+        - Select the @b View @b -> @b Filter @b Graph menu action
+        - Uncheck the desired nodes in the left pane of the opened @ref
+         _graph_visualization_fspec_graph_windows_properties_ dialog
+        - Click on the @b New button
+        - View the result graph (without unchecked nodes) in a separate
+        window
+
+@subsection _graph_visualization_fspec_use_cases_5_ Use case 5 : Remove the specified edge/edges and view the result graph in the same graph
+
+        - Select the @b Scheduling @b Graphs @b -> @b Urgency menu action from
+        the @ref _graph_visualization_fspec_schedule_analysis_window_ "Schedule
+        Analysis Window" 
+        - View the @ref _graph_visualization_fspec_graph_windows_urgency_graph_
+        - Select the @b View @b -> @b Filter @b Graph menu action
+        - Uncheck the desired edge/edges in the right pane of the opened @ref
+        _graph_visualization_fspec_graph_windows_properties_ dialog
+        - Click on the @b Redraw button
+        - View the result graph (without uchecked nodes) in the same graph
+
+@subsection _graph_visualization_fspec_use_cases_6_ Use case 6 : Show complete conflicts for the Conflict Graph
+ 
+        - Select the @b Scheduling @b Graphs @b -> @b Conflict menu action from
+        the @ref _graph_visualization_fspec_schedule_analysis_window_ "Schedule
+        Analysis Window" 
+        - View the @ref
+        _graph_visualization_fspec_graph_windows_conflict_graph_ 
+        - Select the @b View @b -> @b Complete @b Conflicts menu action
+        - View the graph representing only complete conflicts in a separate
+        window
+
+@section _graph_visualization_fspec_limitations_ Limitations
+
+@b TBD
+
+@section _graph_visualization_fspec_command_line_options_ Command line options
+
+@b TBD
+
+@section _graph_visualization_fspec_dependencies_ Dependencies, Assumptions, Risks
+
+As the graph visualization is a sub-task for Bluespec Workstation, it inherits
+dependencies from Workstation (see @ref
+_graph_visualization_fspec_workstation_docs_ "[1]", @ref
+_graph_visualization_fspec_workstation_docs_ "[2]").\n
+The only dependency specific for this task is the compatibility of TclDot package with BlueWish interpreter.\n
+The functional and development specifications should be reviewed/accepted by Bluspec to avoid major rework.\n
+
+@section _graph_visualization_fspec_effort_estimations_ Effort estimations
+
+The detailed effort estimation is given in the corresponding section of PRD (see @ref _graph_visualization_fspec_graph_task_docs_ "[8]").
+
+
+*/
+
+// vim:syntax=doxygen:et:shiftwidth=8:tabstop=8:

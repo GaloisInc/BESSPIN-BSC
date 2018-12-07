@@ -1,0 +1,11 @@
+usr/lib/bin usr/lib/bluespec-__RELEASE_NUM__
+usr/lib/BlueNoC usr/lib/bluespec-__RELEASE_NUM__
+usr/lib/Bluesim usr/lib/bluespec-__RELEASE_NUM__
+usr/lib/Libraries usr/lib/bluespec-__RELEASE_NUM__
+usr/lib/Prelude usr/lib/bluespec-__RELEASE_NUM__
+usr/lib/SAT usr/lib/bluespec-__RELEASE_NUM__
+usr/lib/SceMi usr/lib/bluespec-__RELEASE_NUM__
+usr/lib/VPI usr/lib/bluespec-__RELEASE_NUM__
+
+usr/lib/tcllib/emacs usr/lib/bluespec-__RELEASE_NUM__/tcllib
+usr/lib/tcllib/lib.linux* usr/lib/bluespec-__RELEASE_NUM__/tcllib

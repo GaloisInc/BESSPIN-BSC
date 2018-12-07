@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+<project name="" company="" manager="" phase="" project-start="20081120T000000Z" mrproject-version="2" calendar="1">
+  <properties/>
+  <phases/>
+  <calendars>
+    <day-types>
+      <day-type id="0" name="Working" description="A default working day"/>
+      <day-type id="1" name="Nonworking" description="A default non working day"/>
+      <day-type id="2" name="Use base" description="Use day from base calendar"/>
+    </day-types>
+    <calendar id="1" name="Default">
+      <default-week mon="0" tue="0" wed="0" thu="0" fri="0" sat="1" sun="1"/>
+      <overridden-day-types>
+        <overridden-day-type id="0">
+          <interval start="0800" end="1200"/>
+          <interval start="1300" end="1700"/>
+        </overridden-day-type>
+      </overridden-day-types>
+      <days>
+        <day date="20090110" type="day-type" id="0"/>
+        <day date="20090106" type="day-type" id="1"/>
+        <day date="20090128" type="day-type" id="1"/>
+        <day date="20090102" type="day-type" id="1"/>
+        <day date="20081231" type="day-type" id="1"/>
+        <day date="20090107" type="day-type" id="0"/>
+        <day date="20090105" type="day-type" id="1"/>
+        <day date="20090101" type="day-type" id="1"/>
+      </days>
+    </calendar>
+  </calendars>
+  <tasks>
+    <task id="1" name="Method Port Binding step" note="" work="144000" start="20081120T000000Z" end="20081126T170000Z" work-start="20081120T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <task id="2" name="Devspec" note="" work="28800" start="20081120T000000Z" end="20081120T170000Z" work-start="20081120T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work"/>
+      <task id="3" name="Prototype" note="" work="115200" start="20081120T170000Z" end="20081126T170000Z" work-start="20081121T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="2" type="FS"/>
+        </predecessors>
+      </task>
+    </task>
+    <task id="4" name="test-suite enhancement" note="This task includes support of diff with and without &#10;WARNING lines" work="57600" start="20081126T170000Z" end="20081128T170000Z" work-start="20081127T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="3" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="5" name="Combinational Path" note="" work="57600" start="20081128T170000Z" end="20081202T170000Z" work-start="20081201T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="4" type="FS"/>
+      </predecessors>
+      <task id="6" name="Fspec" note="" work="14400" start="20081128T170000Z" end="20081201T120000Z" work-start="20081201T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work"/>
+      <task id="7" name="Devspec" note="" work="14400" start="20081201T120000Z" end="20081201T170000Z" work-start="20081201T120000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="6" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="8" name="Prototype" note="" work="28800" start="20081201T170000Z" end="20081202T170000Z" work-start="20081202T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="7" type="FS"/>
+        </predecessors>
+      </task>
+    </task>
+    <task id="9" name="Scheduling Annotation" note="" work="57600" start="20081202T170000Z" end="20081204T170000Z" work-start="20081203T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="8" type="FS"/>
+      </predecessors>
+      <task id="10" name="Fspec" note="" work="14400" start="20081202T170000Z" end="20081203T120000Z" work-start="20081203T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work"/>
+      <task id="11" name="Devspec" note="" work="14400" start="20081203T120000Z" end="20081203T170000Z" work-start="20081203T120000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="10" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="12" name="Prototype" note="" work="28800" start="20081203T170000Z" end="20081204T170000Z" work-start="20081204T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="11" type="FS"/>
+        </predecessors>
+      </task>
+    </task>
+    <task id="13" name="Finish" note="" work="86400" start="20081204T170000Z" end="20081209T170000Z" work-start="20081205T080000Z" percent-complete="0" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="12" type="FS"/>
+      </predecessors>
+      <task id="14" name="Fspec" note="" work="14400" start="20081204T170000Z" end="20081205T120000Z" work-start="20081205T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work"/>
+      <task id="15" name="Devspec" note="" work="14400" start="20081205T120000Z" end="20081205T170000Z" work-start="20081205T120000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="14" type="FS"/>
+        </predecessors>
+      </task>
+      <task id="16" name="Prototype" note="" work="57600" start="20081205T170000Z" end="20081209T170000Z" work-start="20081208T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+        <predecessors>
+          <predecessor id="1" predecessor-id="15" type="FS"/>
+        </predecessors>
+      </task>
+    </task>
+    <task id="17" name="Implementation" note="" work="144000" start="20081209T170000Z" end="20081216T170000Z" work-start="20081210T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="16" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="18" name="Test-plan" note="" work="86400" start="20081216T170000Z" end="20081219T170000Z" work-start="20081217T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="17" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="19" name="Test implementation" note="" work="86400" start="20081219T170000Z" end="20081224T170000Z" work-start="20081222T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="18" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="20" name="Enhancements" note="" work="547200" start="20081224T170000Z" end="20090126T170000Z" work-start="20081225T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="19" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="21" name="Testing/Manual QA" note="&#10;" work="57600" start="20090127T000000Z" end="20090129T170000Z" work-start="20090127T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <constraint type="must-start-on" time="20090127T000000Z"/>
+      <predecessors>
+        <predecessor id="1" predecessor-id="20" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="22" name="Stabilization" note="" work="28800" start="20090129T170000Z" end="20090130T170000Z" work-start="20090130T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="21" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="23" name="Enhancements" note="" work="28800" start="20090202T000000Z" end="20090202T170000Z" work-start="20090202T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <constraint type="must-start-on" time="20090202T000000Z"/>
+      <predecessors>
+        <predecessor id="1" predecessor-id="22" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="24" name="Testing/Manual QA" note="" work="28800" start="20090202T170000Z" end="20090203T170000Z" work-start="20090203T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="23" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="25" name="Stabilization" note="Fri 06 Feb 2009, 17:45&#10;Fri 06 Feb 2009, 17:45&#10;" work="86400" start="20090203T170000Z" end="20090206T170000Z" work-start="20090204T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="24" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="26" name="Enhancement" note="Implementing the mechanism of displaying line numbers in the Show BVI dialog." work="43200" start="20090206T170000Z" end="20090210T120000Z" work-start="20090209T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="25" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="27" name="Writing comments for class variables" note="" work="14400" start="20090210T120000Z" end="20090210T170000Z" work-start="20090210T120000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="26" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="28" name="Clock, reset, inout changes" note="" work="86400" start="20090210T170000Z" end="20090213T170000Z" work-start="20090211T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="27" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="29" name="Enhancements" note="" work="43200" start="20090213T170000Z" end="20090217T120000Z" work-start="20090216T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="28" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="30" name="Enhance wizard window expanding mechanism" note="" work="43200" start="20090217T120000Z" end="20090218T170000Z" work-start="20090217T120000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="29" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="31" name="Change the usage of the TCL list to array" note="" work="57600" start="20090218T170000Z" end="20090220T170000Z" work-start="20090219T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="30" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="32" name="Enhancements on Method Port Binding screen" note="1. The definitions of subinterfaces will not be written in the generated &#10;file if the &quot;Use Existing&quot; radio-button is selected in Subinterface section.&#10;2. Add a &quot;Hide&quot; button to hide the Port/Method/Subinterface section.&#10;3. Add functionality to show the number of  methods/subinterfaces." work="43200" start="20090220T170000Z" end="20090224T120000Z" work-start="20090223T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="31" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="33" name="Fixes/Enhancements" note="1. Multiple clocks/resets do not receive the verilog assignments.&#10;2. Implement a functionality to show a hourglass during long processes." work="43200" start="20090224T120000Z" end="20090225T170000Z" work-start="20090224T120000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="32" type="FS"/>
+      </predecessors>
+    </task>
+    <task id="34" name="Functionality of SA screen" note="" work="57600" start="20090225T170000Z" end="20090227T170000Z" work-start="20090226T080000Z" percent-complete="100" priority="0" type="normal" scheduling="fixed-work">
+      <predecessors>
+        <predecessor id="1" predecessor-id="33" type="FS"/>
+      </predecessors>
+    </task>
+  </tasks>
+  <resource-groups/>
+  <resources>
+    <resource id="1" name="Hmayak and Andranik" short-name="" type="1" units="0" email="" note="" std-rate="0"/>
+  </resources>
+  <allocations/>
+</project>

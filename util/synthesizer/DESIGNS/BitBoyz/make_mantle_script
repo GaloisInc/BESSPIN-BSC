@@ -1,0 +1,378 @@
+#!/usr/bin/perl
+#############################################################################
+use Getopt::Long;
+use File::Basename;
+
+$debug  = $verbose = 1;
+$root   = `pwd`;
+chomp($root);
+$clk    = "CLK";
+$period = 4;
+$util   = 50;
+$lib_name = "hp13";
+
+sub usage {
+    print "Usage: \n";
+    print "   make_mantle_script [-clk=clk] [-period=val] [-util=0-100] [-root=destdir]\n";
+    print "                      [-lib=lib_name] modname\n";
+    print "       where lib_name is tsmc18 or hp13 (default hp13)\n";
+    exit(-1);
+}
+
+GetOptions("debug"=>\$debug,
+           "verbose"=>\$verbose,
+           "clk:s"=>\$clk,
+           "root:s"=>\$root,
+           "period:s"=>\$period,
+           "utilization:s"=>\$util,
+           "lib:s"=>\$lib_name);
+
+if ($#ARGV != 0) {
+    usage();
+}
+
+$ENV{BLUESPECDIR} or die "ERROR: environment var BLUESPECDIR not defined\n";
+
+$module = $ARGV[0];
+
+print "   \$root => $root\n";
+print "   clock  => $clk\n";
+print "   period => $period\n";
+print "   util   => $util\n";
+
+# collect files needed,
+$ns = "$period" . "ns";
+$dir = ""; # "$module\_$ns\_u$util";
+
+if ("$lib_name" == "tsmc18") {
+    $volcano_name = "tsmc18_6lm";
+    $volcano_path = "/tools/magma/lib/tsmc18gl.volcano";
+} elsif ("$lib_name" == "hp13") {
+    $volcano_name = "csm13rvt_8lm";
+    $volcano_path = "/tools/magma/lib/csm13rvt_8lm.volcano";
+} else {
+    $volcano_name = $lib_name;
+    $volcano_path = $lib_path;
+}
+
+print "Using library: $volcano_name\n";
+
+die "ERROR: failed to find volcano directory $volcano_path\n"
+    if (! -d "$volcano_path");
+
+print "Copying files to \$root\$dir => $root/$dir\n";
+
+if (-e "$root/$dir") {
+    system("cd '$root/$dir'; rm -fR \*") == 0
+        or die "ERROR: failed to remove old $root/$dir\n";
+}
+
+system("mkdir -p '$root/$dir'") == 0
+    or die "ERROR: failed to create $root/$dir\n";
+
+# if files in use list are not here, they must be in library
+@Idirs = (".", "$ENV{BLUESPECDIR}/Verilog");
+
+$top = $ARGV[0];
+@fs = &findModules( "$top.use" );
+
+push( @fs, "./$top.v" );
+$files = join(" ", @fs);
+
+print "$files\n";
+
+foreach $f (@fs) {
+    next if ($f =~ /^\w*$/);
+    print("Copying: $f\n") if (verbose);
+    system("cp '$f' '$root/$dir'") == 0
+        or die "ERROR: cannot copy $f --> $root/$dir\n";
+}
+
+if (verbose) {
+    print "Copied $files to $root/$dir\n";
+}
+
+$b = $module;
+
+# regenerate files with local names
+foreach $f (@fs) {
+    $f =~ s@^.*/@@g;
+}
+
+################################################################################
+# gotta sort them from the leaf cells up to the top since mantle doesn't like
+#  it if a verilog module is defined with empty cells
+$files = join(" ", @fs);
+
+################################################################################
+# create run.tcl script
+if (open (FILE,">$root/$dir/run.tcl")) {
+    print FILE "set rootdir \"$root/$dir\"\n";
+    print FILE "set rtldir  \"$root/$dir\"\n";
+    print FILE "set b       \"$b\"\n";
+    print FILE "set m       \"/work/$b/$b\"\n";
+    print FILE "set clk     \"\$m/$clk\"\n";
+    print FILE "set vfiles  \[list $files\]\n";
+    print FILE "set period  $period" . "\n";
+    print FILE "set utilization 0.$util\n";
+    print FILE "set volcano \"$volcano_path\"\n";
+    print FILE "set l       \"/$volcano_name\"\n";
+
+
+}
+else {
+    print "Could not open run.tcl file in $root/$dir/\n";
+}
+
+printTheRest();
+close FILE;
+
+# check for library elements that I know about for now
+# system "echo source run.tcl > $root/$dir/cmds";
+# system "echo exit >> $root/$dir/cmds";
+
+if (open(FILE, ">$root/$dir/mntl")) {
+    print FILE "\#!/bin/tcsh -f\n";
+    print FILE "setenv LM_LICENSE_FILE 27000\@indigo\n";
+    print FILE "setenv PATH \".:/tools/magma/current/common/bin:\${PATH}\"\n";
+    print FILE "mantle \$*\n";
+    close FILE;
+    system("chmod +x '$root/$dir/mntl'") == 0
+        or die "ERROR: failed to make $root/$dir/mntl executable\n";
+}
+
+exit();
+
+################################################################################
+sub findModules {
+    my ($use) = @_;
+    local *FILE;
+    my $mod;
+    my @fs = ();
+
+    return unless (open(FILE,"$use"));
+    foreach $mod (<FILE>) {
+        $mod =~ s/\s*$//;
+        next if (exists $alreadyDone{$mod}); # GLOBAL!
+        push(@fs, findModules("$mod.use")) if (-e "$mod.use");
+        push(@fs, &findFile( "$mod.v" ));
+        $alreadyDone{$mod} = 1;
+    }
+    close(FILE);
+    return @fs;
+}
+
+sub findFile {
+    my ($f) = @_;
+    foreach $dir (@Idirs) {
+        return "$dir/$f" if (-e "$dir/$f");
+    }
+    # can't find the file, make a nice error message
+    my $searched_paths;
+    foreach $dir (@Idirs) {
+        $searched_paths .= "\n        $dir";
+    }
+    die "ERROR: cannot find source file $f in:$searched_paths\n";
+}
+
+# # not used since we have .use files?
+# sub sortVerilogFiles {
+#     my(@fs) = @_;
+
+#     foreach $f (@fs) {
+#         if (open(FILE,$f)) {
+#             $mod = $f;
+#             $mod =~ s/\.v$//;
+#             $verilog{$mod} = join(" ", <FILE>);
+#             close FILE;
+#         }
+#     }
+    
+# # now "bubble" sort modules such that first modules don't call anything afterwards!
+#     @modlist = sort keys(%verilog);
+#     for ($i=0; $i<$#modlist; $i++) {
+#         for ($j=$i+1; $j<$#modlist; $j++) {
+#             # check for mod1 in mod2 and vice versa
+#             $mod1 = $modlist[$i];
+#             $mod2 = $modlist[$j];
+#             if ($verilog{$mod1} =~ /\b$mod2\b/) {
+#                 # swap
+#                 $modlist[$i] = $mod2;
+#                 $modlist[$j] = $mod1;
+#             }
+#         }
+#     }
+    
+#     foreach $f (@modlist) {
+#         $f .= ".v";
+#     }
+    
+#     $files = join(" ", @modlist);
+# }
+
+
+#############################################################################
+sub printTheRest {
+
+# print the rest of it out
+print FILE <<'LINES'
+
+############################################################
+############################################################
+#
+## Config report timing path *********
+config report timing path {PIN_NAME MODEL_NAME DELAY AT GAIN SLEW PIN_CAP PIN_LOAD WIRE_LOAD TOTAL_LOAD FANOUT LENGTH EDGE GAIN}
+
+config hierarchy separator /
+config rtl datapath physical off
+
+# downgrade CK-23 and CK-347 ERRORs
+config message level CK-23 warning
+config message level CK-347 warning
+config message level RTL-2027 info
+
+# set include_dir $rtldir/include
+# set constraints_dir $rootdir/constraints
+
+if {[data exists /work]} {data delete object /work}
+
+import volcano "$volcano"
+
+config report timing path {PIN_NAME MODEL_NAME DELAY AT GAIN SLEW PIN_CAP PIN_LOAD WIRE_LOAD TOTAL_LOAD FANOUT LENGTH EDGE GAIN}
+
+config hierarchy separator /
+config rtl datapath physical off
+
+# find clock cells in the library, and hide them
+set _clk_libcells [data find $l CLK*]
+foreach i $_clk_libcells {force hide $i}
+
+report arc $l -file arc.rpt
+
+####### IMPORTING RTL ##########
+config rtl verilog 2000 on
+
+foreach v $vfiles {import rtl $v}
+
+run rtl elaborate $b -verilog
+
+run bind logical $m $l
+
+#check model $m -print unbound_cells -file unbound.rpt
+check model $m -print unbound_cells 
+
+config rtl clockgate off
+
+fix rtl $m
+
+### SETTING SCAN-STYLE ###
+# define prior to fix-netlist to avoid Create
+# inserting scan-flops
+force dft scan style $m muxed_flip_flop
+
+#######################################################
+# Make sure we "force keep" hand-instantiated cells
+#######################################################
+
+# data loop entity lib_entity $l {
+#   data loop models entity_model $entity {
+#     data loop upcells model_upcell $models {
+#       set model_types [data get $models model_type]
+#       if {$model_types == "standard"} {
+#         regsub -all % $upcells "" upcell
+#         puts "force keep $upcells -model"
+#         force keep $upcells -model
+#       }
+#     }
+#   }
+# }
+
+# area opt
+fix netlist $m $l
+
+###############
+# run DFT
+###############
+
+# force dft scan clock $m "clk" -group_id 0
+# force dft scan chain $m 0 scan_in_0 scan_out_0
+# force dft scan control $m scan_en scan_enable
+# run dft check $m $l -pre_scan
+# run dft scan insert $m $l
+# run dft check $m $l
+
+###############
+# load SDC
+###############
+# import sdc $m $constraints_dir/SDC_FILE.tcl -translation sdc_translation.tcl
+force timing clock $clk $period
+
+###############
+# run fix time
+###############
+
+config hierarchy separator /
+config undriven 0
+run gate sweep $m -hier
+
+data flatten $m
+
+#check model $m -print weird_nets
+check model $m -print weird_nets -file weirdnets.rpt
+#check model $m -print netlist_violations -file netviolations.rpt
+check model $m -print netlist_violations
+
+# timing optimization
+fix time $m $l -rtl
+
+#############################
+# floorplanning and fix-cell
+#############################
+force plan net VDD $m -port VDD -usage power
+force plan net VSS $m -port VSS -usage ground
+
+data create floorplan $m fp1
+set f ${m}/floorplan:fp1
+force floorplan parameters $f -utilization $utilization -aspect_ratio 1
+run floorplan apply $m
+run plan create pin $m
+
+# import def all -mode netlist -section floorplan -section pin -model_type macro def_name.def $l $l
+# run dft scan trace $m
+
+# *HELP* *HACK* we really need run this step, don't we?
+fix cell $m $l
+
+#############################################################################
+# Report slack, area, and CPU time, for the synthesizer system
+set worst_slack [query measure slack -worst $m]
+set best_area [query measure cellarea $m]
+set cpu_time [query cputime]
+
+message info "RSLT-123" "OK: $worst_slack $best_area $cpu_time"
+
+## quick summary
+#puts ""
+#puts "######################## Synthesis Summary ########################"
+#puts ""
+#set worst_slack [unfix [query measure slack -worst $m]]
+#set worst_slack_in_ns [expr $worst_slack * 1e9]
+#if { $worst_slack >= 0 } {
+#  message info "SUMM-1" "TIMING: PASSED  Worst slack:     $worst_slack_in_ns ns"
+#} else {
+#  message warning "SUMM-2" "TIMING: FAILED  Worst slack:     $worst_slack_in_ns ns"
+#}
+#set best_area [unfix [query measure cellarea $m]]
+#set best_area_in_u2 [expr round([expr $best_area * 1e12])]
+#
+#message info "SUMM-3" "AREA            Total cell area: $best_area_in_u2 um^2" 
+#puts ""
+#puts "###################### End Synthesis Summary ######################"
+#puts ""
+
+
+LINES
+
+##############################################################################
+
+}

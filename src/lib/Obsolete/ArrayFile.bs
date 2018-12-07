@@ -1,0 +1,97 @@
+-- Copyright 2000--2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id$
+
+package ArrayFile(
+	Array(..),
+	mkArrayFile, mkArrayFullFile, mkArrayWCFFile
+	) where
+
+import Array
+
+--@ \subsection{ArrayFile}
+--@ \index{ArrayFile@\te{ArrayFile} (package)}
+--@ \index{mkArrayFile@\te{mkArrayFile} (\te{ArrayFile} function)}
+--@ \index{mkArrayFullFile@\te{mkArrayFullFile} (\te{ArrayFile} function)}
+--@ The \te{ArrayFile} package provides the same functionality as the
+--@ \te{Array} package, but each constructor function takes an additional
+--@ file name argument.  The file contains the initial contents of the array.
+--@ The file should use the {\veri} hex memory file syntax.
+--@ 
+--@ The functions in this package cannot normally be used in synthesis.
+
+interface VArray si sa =
+    upd :: Bit si -> Bit sa -> PrimAction
+    sub :: Bit si -> Bit sa
+
+-- Only for i>0 and a>0
+vMkArray :: String -> Integer -> Integer -> Module (VArray i a)
+vMkArray file lo hi =
+    module verilog "RegFileLoad" (("file",primStringToInteger file),("addr_width",valueOf i),
+				  ("data_width",valueOf a), ("lo",lo), ("hi",hi)) "CLK" {
+	upd    = "ADDR_IN" "D_IN" "WE";
+	sub[5] = "ADDR" "D_OUT";
+    } [ sub < upd ]
+
+--@ \begin{libverbatim}
+--@ module mkArrayFile#(String file, i l, i h)(Array#(i, a))
+--@   provisos (Bits#(i, si), Bits#(a, sa));
+--@ \end{libverbatim}
+mkArrayFile :: (IsModule m c, Bits i si, Bits a sa) =>
+               String -> i -> i -> m (Array i a)
+mkArrayFile file l h = liftModule $
+  if valueOf sa == 0 then
+    module
+      interface
+	upd i x = action { }
+	sub i = unpack 0
+  else if valueOf si == 0 then
+    module
+      _a :: Reg a
+      _a <- mkRegU
+      interface
+	upd i x = _a := x
+	sub i = _a
+  else
+    module
+      _a :: VArray si sa
+      _a <- vMkArray file (primBitToInteger (pack l)) (primBitToInteger (pack h))
+      interface
+	upd i x = fromPrimAction (_a.upd (pack i) (pack x))
+	sub i = unpack (_a.sub (pack i))
+
+--@ \lineup
+--@ \begin{libverbatim}
+--@ module mkArrayFullFile#(String file)(Array#(i, a))
+--@   provisos (Bounded#(i), Bits#(i, si), Bits#(a, sa));
+--@ \end{libverbatim}
+mkArrayFullFile :: (IsModule m c, Bounded i, Bits i si, Bits a sa) =>
+                   String -> m (Array i a)
+mkArrayFullFile file = mkArrayFile file minBound maxBound
+
+vMkArrayWCF :: String -> Integer -> Integer -> Module (VArray i a)
+vMkArrayWCF file lo hi =
+    module verilog "RegFileLoad" (("file",primStringToInteger file),("addr_width",valueOf i),
+				  ("data_width",valueOf a), ("lo",lo), ("hi",hi)) "CLK" {
+	upd    = "ADDR_IN" "D_IN" "WE";
+	sub[5] = "ADDR" "D_OUT";
+    } [ upd <> sub ]
+
+--@ \begin{libverbatim}
+--@ module mkArrayWCFFile#(String file, i l, i h)(Array#(i, a))
+--@   provisos (Bits#(i, si), Bits#(a, sa));
+--@ \end{libverbatim}
+mkArrayWCFFile :: (IsModule m c, Bits i si, Bits a sa) =>
+                  String -> i -> i -> m (Array i a)
+mkArrayWCFFile file l h = liftModule $
+    module
+      _a :: VArray si sa
+      _a <- vMkArrayWCF file (primBitToInteger (pack l)) (primBitToInteger (pack h))
+      interface
+	upd i x = fromPrimAction (_a.upd (pack i) (pack x))
+	sub i = unpack (_a.sub (pack i))
+
+-- This is a really nasty primitive; it shouldn't be here.
+primitive primBitToInteger :: Bit n -> Integer
+primitive primStringToInteger :: String -> Integer
+

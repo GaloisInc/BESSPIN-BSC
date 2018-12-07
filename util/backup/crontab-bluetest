@@ -1,0 +1,5 @@
+# do NOT run this as user tinderbox, 
+# as it will overwrite the actual tinderbox crontab
+MAILTO=ken@bluespec.com
+0 4 * * * bash /home/backup/lapissvn.sh
+

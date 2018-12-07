@@ -1,0 +1,27 @@
+From c8a85767b1d00e93b0bd9769c6fa4fcdbf447c4d Mon Sep 17 00:00:00 2001
+From: Darius <darius@bluespec.com>
+Date: Wed, 10 Apr 2013 17:56:41 -0400
+Subject: [PATCH 4/5] Eliminate use of svn during build.
+
+---
+ doc/bsv_by_example/Makefile                 |    2 +-
+ doc/licenses/stp/Makefile                   |    2 +-
+ training/examples/WhitePapers/Makefile      |    2 +-
+ training/labs/Makefile                      |    2 +-
+ training/papers/Makefile                    |    4 ++--
+ training/slides/Makefile                    |    2 +-
+ util/synthesizer/DESIGNS/BoothMult/Makefile |    2 +-
+ vendor/verific/Makefile                     |    2 +-
+ 8 files changed, 9 insertions(+), 9 deletions(-)
+
+Index: bsc/util/synthesizer/DESIGNS/BoothMult/Makefile
+===================================================================
+--- bsc.orig/util/synthesizer/DESIGNS/BoothMult/Makefile	2017-07-24 21:28:04.457789854 -0400
++++ bsc/util/synthesizer/DESIGNS/BoothMult/Makefile	2017-07-24 21:28:04.421789573 -0400
+@@ -1,5 +1,5 @@
+ default:
+-	svn cat --non-interactive https://svn.bluespec.com:8080/bs/bsc/trunk/testsuite/bsc.interra/rtl_quality/booth_multiplier/Design.bsv > Design.bsv
++	cat ../../../../testsuite/bsc.interra/rtl_quality/booth_multiplier/Design.bsv > Design.bsv
+ 
+ 	bsc -verilog -g mkDesign Design.bsv
+ 

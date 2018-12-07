@@ -1,0 +1,360 @@
+
+/**
+
+@page _workstation_prd_ Product Requirement Document
+        
+@section _workstation_prd_introduction_  Introduction
+
+@subsection _workstation_prd_introduction_document_identifier_ Document Identifier
+
+This is a product requirement document for the bluespec workstation.  It is a
+launching point for simulators, compilers, editors and set of tools for
+analysing the output of the compilers and simulators.
+
+@subsection _workstation_prd_introduction_definitions_ Definitions of Terms and Acronyms
+
+        - @b BSV - bluespec system verilog
+        - @b BSC - bluespec system verilog compiler
+        - @b Bluewish/Bluetcl - bluespec wrapper for tcl/tk
+
+@subsection _workstation_prd_introduction_overview_ Requirements Overview
+
+Cockpit is an environment which provides edition, compilation, simulation, debug
+and analyze for bluespec designs.  The bluespec value added feature are analysis
+tools that leverage the rule based design methodology.\n 
+
+Cockpit is a launching point for bluespec tools (esepro simulator, esecomp, bsc)
+and some third party tools (editors, simulators, waform viewers).  Users should
+be able to use their favorite and familiar tools (editors, simulators, waveform
+viewers), thus minimizing the learning required.\n
+
+Additional tools for analysis of the code and results of simulation should be
+also implemented.\n
+
+Integration with esecomp and esepro is not part of phase 1.
+
+@subsection _workstation_prd_introduction_scope_ Scope 
+
+The section @ref _workstation_prd_functional_ describes the main functional
+requirements.  The section @ref _workstation_prd_performance_requirements_
+specifies constraints on runtime, memory and other resource usage.  The section
+@ref _workstation_prd_verification_requirements_ defines requirements on qa.
+for documentation requirements see section @ref
+_workstation_prd_documentation_requirements_.  For resource requirements and
+schedule see section @ref _workstation_prd_cost_and_schedule_requirements_.
+project effort estimations are provided in @ref
+_workstation_prd_effort_estimations_ section.  Dependencies from other projects,
+assumptions and risks are described in section @ref
+_workstation_prd_dependencies_assumptions_risks_. 
+
+@subsection _workstation_prd_introduction_references_ References
+
+[1].  esl_lrm_rev_30_march_2007.pdf - esl language reference manual.\n
+[2].  user_guide_rev_30_march_2007.pdf - ese tools user guide.\n
+@anchor _workstation_prd_iwidgets_hierarchy_
+[3].  http://incrtcl.sourceforge.net/iwidgets/iwidgets.html - the iwidgets
+library\n
+[4].  reference_guide_rev_30_march_2007.pdf - bluespec system verilog refrence
+guide\n
+[5].  bsv_user_guide_rev_30_march_2007.pdf - bluespec system verilog user
+guide\n
+
+@section _workstation_prd_functional_ Functional Requirements
+
+@subsection _workstation_prd_functional_main_features_ Main Features 
+
+The main features are:
+
+        - File browsing, editing. following editors should be supported: vi/vim,
+        emacs.
+                - in addition, a custom editor can be specified by user,
+                providing a command-line to invoke it on given file, and
+                position the cursor on the given line/column.
+        - Browsing error messages.  the compile errors should be listed in an
+        error window, and it should be possible to jump to the source code line
+        where the error was occurred, using the selected editor. 
+                - if there is already an opened editor window, it should be
+                reused (requires server mode editor)
+        - Simulation batch run with all simulators, including bluesim support.
+        in second phase it should be possible to have interactive simulation run
+        also.
+        - Waveform viewer (additional tools for generating waveforms).  it
+        should be possible to send commands to the already existing wave-form
+        viewer session from the main window.\n
+        this are coming in phase 2.
+        - Analysis tools.  the following types of analysis should be supported: 
+                - packages view.
+                - modules/instances hierarchical view.
+                - rule concept visualization, schedule visualization, conflicts
+                highlighting etc.
+                - methods visualization: usage, relation to rules, scheduling,
+                cross-reference.
+                - type analysis and decoding of raw values during debugging, to
+                improve the data inspection capabilities during debug for
+                variables of structured types.
+
+@subsection _workstation_prd_functional_window_hierarchy_ Window Hierarchy
+
+Following window hierarchy should be implemented as part of the bluespec workstation:
+        - File browser window
+                - browse directory content
+                - associate .bsv (.bi/.bo).  note that .bi./bo files may be in a
+                different directories
+                - launch editor on source files
+                - launch compiler on .bsv file (for bsc)
+                - makefile support
+                        - user should be able to compile using makefile rather
+                        than using bsc 
+                - there should be a notion of a "project"
+                - uuser should be able to add/remove files from the project
+                - compile settings should be stored in the project
+                - it should be possible to export project into a standalone
+                make-file based package which doesn't require the cockpit to
+                build/simulate/synthesize.  this feature is not required for the
+                first release.
+        - Setup window
+                - the settings should be stored in the project configuration
+                file (ideally in tcl format)
+                - tools setup (paths, options, flags, library, simulator)
+                - editor setup (vi/vim, emacs, other)
+                - simulator setup (bluesim, ncsim, vcs(i), modelsim, etc)
+                - environment setup
+                        - set of environment variables that should be defined
+                        before invoking tools 
+                - save and restore configuration
+        - Package window
+                - view all types defined in a package 
+                - view definition and composition of types 
+                - see default unpacking of a type 
+                - add/remove package to the project
+        - Module Browser window
+                - view the design hierarchy
+                - view rules within a module
+                        - rule execution order within the cycle
+                        - predicate expression
+                        - all method calls within a rule
+                        - doc attribute on a rule
+                - view any doc attributes within a module
+                - report which rules call an given instance/method
+                - report on statically unused methods of an instance
+        - Schedule Analysis window
+                - rule order
+                        - view source
+                        - blocking rules and method calls
+                - methods usage
+                - rule relationship
+                        - relation between two selected rules (c, sb, cf, sbr,
+                        etc.)
+                        - reason for the relation (shared resources, calling
+                        conflicting methods, etc.)
+        - Links to documentation.
+
+@section _workstation_prd_implementation_ Implementation Requirements
+
+Implementation of the first version should be done using tcl/tk with iwidgets
+library (see @ref _workstation_prd_iwidgets_hierarchy_ "[3]").  Bluespec
+analysis tools should provide tcl interface, and hence a custom wish
+interpreter.  Bluespec will provide customized tclsh/wish.  Bluespec workstation
+will run this special version of wish interpreter.\n
+
+@section _workstation_prd_performance_requirements_ Performance Requirements
+
+@b TBD
+
+@section _workstation_prd_verification_requirements_ Verification Requirements
+
+As this is a very gui-intensive application available tcl/tk gui testing tools
+should be researched and one should be chosen (ideally - a public domain tool).
+
+@section _workstation_prd_documentation_requirements_ Documentation Requirements
+
+During development process following documents will be created:
+        - @b Functional @b specification - describes the functionality of
+        product without going into implementation details. Also describes
+        external interface of product.
+        - @b Development @b specification - describes implementation details of
+        product.
+        - @b Use @b cases - definition of product usage scenarios in order to
+        describe main and intermediate usage.
+        - @b Test @b plan - description of test suite and tests scenarios
+        (acceptance tests, corner cases, etc.).
+ 
+@section _workstation_prd_cost_and_schedule_requirements_ Cost and Schedule Requirements
+
+@b TBD 
+
+@section _workstation_prd_dependencies_assumptions_risks_ Dependencies, Assumptions, Risks
+
+The main dependency from Bluespec is the documentation of tcl commands of the
+tools, and the BlueTCL interpreter availability.  Documentation of the ESE/BSV
+tools (compilers/simulators) is also required.  To minimize debugging effort, a
+set of TCL tests should be created that will run on the BlueTCL and will detect
+changes in the TCL commands/options which are used by the Bluespec
+Workstation.\n
+The functional and development specifications should be reviewed in time to
+avoid major rework. 
+
+@section _workstation_prd_effort_estimations_  Effort Estimations
+
+In the first phase, the GUI framework and project management functionality will
+be implemented, including invocation of tools.  In the second phase, more tools
+will be added, including analysis tools, based on parsing of .bo/.bi/,ba files.
+Below is the rough effort estimation, target deadlines, and deliverables for the
+Phase 1 tasks:
+        - PRD - 1 developer week - Week 24 (15 June)
+                - Functionality requirements
+                - Implementation/testing requirements
+                - Use-cases 
+        - Research: BlueTCL, iWidgets, Blueview, QA tools - 2 developer weeks -
+        Week 25 (22 June)
+                - Internal trainings&presentations on iWidgets, BlueTCL,
+                Bluespec tools overview
+                - Report on available TCL/TK QA automation tools and selection
+                of one
+        - Functional specification - 3 developer weeks - Week 28 (13 July)
+                - Black-box interface description (GUI windows, layouts, TCL
+                commands)
+                - Use-cases implementation (illustration of how each use-case
+                scenario will be implemented)
+                - Extensive interaction with between Bluespec and Instigate will
+                be required.
+        - Interface implementation (shell version) - 3 developer weeks - Week 28
+        (13 July)
+                - Black-box implementation, as specified in the Functional
+                Specification
+                - Includes both the GUI windows/dialogs, and the TCL commands
+                (with empty implementation)
+                - Extensive interaction with between Bluespec and Instigate will
+                be required.
+        - Test Plan - 1 developer week - Week 30 (27 July)
+                - Flow-tests, based on use-case scenarios
+                - Black-box tests, based on the black-box API description
+                (individual tests for each TCL command)
+                - GUI tests - plan for automated GUI tests (description of each
+                test-case)
+        - Development specification - 2 developer weeks - Week 31 (3 August)
+                - Overview of the architecture: source code files/directory
+                structure, class hierarchy, etc.
+                - Module level description: details about each subsystem/module,
+                down to the level of trivial functions/modules
+                - White-box test plan: overview of the unit-test framework and
+                tests
+        - Prototype implementation - 3 developer weeks - Week 31 (3 August)
+                - Implementation of major pieces, not necessarily complete/nice
+                - Used to validate the decisions made in the development
+                specification (concept proof)
+                - No QA will be done on this, but can be used by QA team to
+                generate/verify the test-suite
+        - Tests implementation - 2 developer weeks - Week 33 (17 August)
+                - Implementation of TCL scripts according to the test-plan
+                - Implementation of the automatic GUI tests according to the
+                test-plan (this can be started only after Alpha version is
+                present, because the Prototype may be too different from the 
+                real implementation and many GUI test scripts will have to be 
+                redone)
+        - Core features implementation (Alpha version) - 2 developer weeks -
+        Week 33 (17 August)
+        - Complete implementation (Beta version) - 1 developer weeks - Week 34 
+        (24 August)
+        - Stabilization (Release) - 1 developer weeks - Week 35 (31 August)
+
+@section _workstation_prd_questions_  Questions and Answers
+
+In this section questions and answers on functionality and implementation
+requirements are described.\n
+
+        - @b Question:  Why can't we have a generic setting mechanism to use any
+        editor (have user specify a command-line to invoke it with given file,
+        line-number and column-number) ?
+        - @b Answer:  While this is a good general purpose solutions, it
+        requires the user to have detailed knowledge of their editor.  I've been
+        using emacs for 20+ years, and I know I can invoke it to start on a
+        given line. Finding this option requires some research, and having it
+        work with the GUI some testing -- these are overheads I would not like
+        the user to incur.
+        - @b Question:  Should we support nedit ?
+        - @b Answer:  We will not support nedit at this time. 
+        - @b Question:  How about class data members, regs, wires, regular C++
+        methods, global C/C++ functions ?
+        - @b Answer:  The analysis tools are in need of further design work.
+        With regard to C++ methods, these are specific to ESE, and will not be
+        part of this project.
+        - @b Question:  Not clear what means "associate bsv (.bi/.bo) files".
+        - @b Answer:  In the bsc flow, a .bi/.bo file is a compiled version of a
+        .bsv file.  These are also referred to as packages.
+        - @b Question:  Should there be a notion of a "project", and have
+        ability to add/remove files to it?
+        - @b Answer:  Yes, this sounds like a good idea.
+        - @b Question:  Should user be able to specify different editors for
+        different types of files ?
+        - @b Answer:  There is no need for this feature.
+        - @b Question:  Ability to specify compiler options (either per file, or
+        in project settings) ?
+        - @b Answer:  For this phase, compiler options will be per project, set
+        via the setup window.  Since our focus is on bsv, we will only support
+        bsc compiler.
+        - @b Question:  What does "makefile support" mean?  Should there be an
+        "mport makefile" or "export makefile" feature to create a new project
+        from existing makefile (and back) ?
+        - @b Answer:  The initial support will allow one to compile via "make"
+        rather than bsc.
+        - @b Question:  Should we also allow adding symbols from within the
+        custom editor ?  E.g. vim has TCL interface support (plus built-in
+        language).
+        - @b Answer:  This is a good feature to have, but one beyond the scope
+        of the PRD.
+        - @b Question:  How about class data members, regs, wires, regular C++
+        methods, global C/C++ functions ?
+        - @b Answer:  This PRD does not cover the SystemC-based language
+        extensions.
+        - @b Question:  Shouldn't default for editors/viewers be taken from
+        user-preferences ?
+        - @b Answer:  The specific editors and viewers should be loaded from a
+        user specific location.  May I suggest the following.  If the features
+        are set in the user's locations (~/bluespec.tcl), then use them, else if
+        they are set in the project use them (not applicable in this case),
+        otherwise select reasonable defaults (vim as editor, Debussy as viewer,
+        Bluesim as simulator).
+        - @b Question:  Should all the files locations be restricted to be under
+        the project directory, or they can be located outside of it ?
+        - @b Answer:  There does not need to be a restriction.  The key flag is
+        the specification of the search path in bsc (-p option), and the -bdir
+        flag comes into play as well.  The default setting for -p is ".
+        $BLUESPECDIR/Prelude $BLUESPEDIR/Libraries" so these are the locations
+        which .bsv and (.bi/.bo) should be searched.  If source files are in
+        other directories, then the -p path must be adjusted (tclcmd: flags
+        set).
+        - @b Question:  Shouldn't paths for compiler, simulator and other tools
+        be taken from user-preferences ?
+        - @b Answer:  The Bluespec compiler requires the BLUESPECDIR to be set,
+        and in bluetcl/bluewish there is the same requirement, so no path
+        requirements should be required for bsc.  Moreover, we will provide a
+        compile tcl command at some point in the future.  With regard to the
+        simulator, bsc has a mode which enables the use of all commercial
+        simulators, along with a default main.v file.  This is invoked via bsc
+        -e \<xxx\> *.v.  Here the simulator is selected automatically or via an
+        environment variable.  See the user guide for more details.  The bsc -e
+        should be the default selection, to start the simulator.  There should
+        be a means to select the simulator in this case as well.  The command to
+        invoke the simulators should be on the user environment PATH, so
+        specifying a full path is not needed.  We will need to consider default
+        setting for other flags, eg,  -bdir, -vdir, -u, -simdir, etc.
+        - @b Question:  Should the full rebuild be required when removing a file
+        from the project ?
+        - @b Answer: No
+        - @b Question:  Editors like VIM can themselves open the error log and
+        browse errors and jump to the error location.  Some users may prefer to
+        use that, instead of our GUI window.
+        - @b Answer:  If this features is used, then we should support it.  I do
+        the same with emacs.  This feature should take a lower priority.
+        - @b Question:  Should a partial clean be also implemented ?  E.g.
+        delete .v files but do not delete .bo/.ba/.bi files ?
+        - @b Answer:  No need for a partial cleanup.
+        - @b Question:  Should the blue-sim-based simulation be available in any
+        case ?
+        - @b Answer:  Bluesim and Verilog simulation are disjoint use case.
+        Only one should be allowed during setup.
+
+*/
+
+// vim:syntax=doxygen:et:shiftwidth=8:tabstop=8:textwidth=80:

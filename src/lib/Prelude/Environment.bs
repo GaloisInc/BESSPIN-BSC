@@ -1,0 +1,6 @@
+-- Copyright 2000--2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id$
+
+package Environment(	) where { }
+

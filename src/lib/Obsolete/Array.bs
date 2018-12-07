@@ -1,0 +1,135 @@
+-- Copyright 2000--2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id$
+
+package Array(Array(..), mkArray, mkArrayFull, mkArrayWCF) where
+--@ \subsubsection{Array}
+
+--@ This package implements a 5-read-port 1-write-port array module.  Arrays
+--@ may be indexed by any type in the \te{Bits} class: since the package uses a
+--@ Verilog primitive module, the actual indexing is done with the bit
+--@ representations; thus the bit representation of the ``lower'' bound must be
+--@ less (in the sense of an unsigned bit-pattern) than that of the ``upper''
+--@ bound. 
+
+
+--@ \index{Array@\te{Array} (interface type)}
+--@ \index{upd@\te{upd} (\te{Array} interface method)}
+--@ \index{sub@\te{sub} (\te{Array} interface method)}
+--@ \index{mkArray@\te{mkArray} (\te{Array} function)}
+--@ \index{mkArrayFull@\te{mkArrayFull} (\te{Array} function)}
+--@ \begin{libverbatim}
+--@ interface Array #(type i, type a);
+--@     method Action upd(i x1, a x2);
+--@     method a sub(i x1);
+--@ endinterface: Array
+--@ \end{libverbatim}
+interface Array i a =
+    upd :: i -> a -> Action
+    sub :: i -> a
+
+--@ Arrays may be indexed using the ``[]'' notation.
+{-
+instance PrimSelectable (Array i a) i a
+  where
+   primSelectFn ar ix = ar.sub ix
+   primUpdateFn ar ix va = noAction
+-}
+
+interface VArray ni na =
+    upd :: Bit ni -> Bit na -> PrimAction
+    sub :: Bit ni -> Bit na
+
+-- Only for i>0 and a>0
+vMkArray :: Integer -> Integer -> Module (VArray i a)
+vMkArray lo hi =
+    module verilog "RegFile" (("addr_width",valueOf i), ("data_width", valueOf a), ("lo",lo), ("hi",hi)) "CLK" {
+	upd    = "ADDR_IN" "D_IN" "WE";
+	sub[5] = "ADDR" "D_OUT";
+    } [ sub < upd, sub <> sub ]
+
+--@ \begin{libverbatim}
+--@ module mkArray#(i l, i h)(Array#(i, a))
+--@   provisos (Bits#(i, si), Bits#(a, sa));
+--@ \end{libverbatim}
+mkArray :: (IsModule m c, Bits i si, Bits a sa) => i -> i -> m (Array i a)
+mkArray l h = liftModule $
+  if valueOf sa == 0 then
+    module
+      interface
+	upd i x = action { }
+	sub i = unpack 0
+  else if valueOf si == 0 then
+    module
+      _a :: Reg a
+      _a <- mkRegU
+      interface
+	upd i x = _a := x
+	sub i = _a
+  else
+    module
+      letseq lo = primBitToInteger (pack l)
+             hi = primBitToInteger (pack h)
+             lo' = if hi<lo then error ("bad indices for mkArray: ["
+				       +++ integerToString lo +++ ":"
+				       +++ integerToString hi +++ "]")
+		           else lo
+      _a :: VArray si sa
+      _a <- vMkArray lo' hi
+      interface
+	upd i x = fromPrimAction (_a.upd (pack i) (pack x))
+	sub i = unpack (_a.sub (pack i))
+
+--@ \lineup
+--@ \begin{libverbatim}
+--@ Module#(Array#(i, a)) mkArrayFull
+--@   provisos (Bounded#(i), Bits#(i, si), Bits#(a, sa));
+--@ \end{libverbatim}
+mkArrayFull :: (IsModule m c, Bounded i, Bits i si, Bits a sa) => m (Array i a)
+mkArrayFull = mkArray minBound maxBound
+
+vMkArrayWCF :: Integer -> Integer -> Module (VArray i a)
+vMkArrayWCF lo hi =
+    module verilog "RegFile" (("addr_width",valueOf i), ("data_width", valueOf a), ("lo",lo), ("hi",hi)) "CLK" {
+	upd    = "ADDR_IN" "D_IN" "WE";
+	sub[5] = "ADDR" "D_OUT";
+    } [ upd <> sub, sub <> sub ]
+
+--@ An array which for which the reads and the write are conflict-free.  For
+--@ the implications of this, see the documentation for \te{ConfigReg}.
+--@ \begin{libverbatim}
+--@ module mkArrayWCF#(i l, i h)(Array#(i, a))
+--@   provisos (Bits#(i, si), Bits#(a, sa));
+--@ \end{libverbatim}
+mkArrayWCF :: (IsModule m c, Bits i si, Bits a sa) => i -> i -> m (Array i a)
+mkArrayWCF l h = liftModule $
+    module
+      letseq lo = primBitToInteger (pack l)
+             hi = primBitToInteger (pack h)
+             lo' = if hi<lo then error ("bad indices for mkArrayWCF: ["
+				       +++ integerToString lo +++ ":"
+				       +++ integerToString hi +++ "]")
+		           else lo
+      _a :: VArray si sa
+      _a <- vMkArrayWCF lo' hi
+      interface
+	upd i x = fromPrimAction (_a.upd (pack i) (pack x))
+	sub i = unpack (_a.sub (pack i))
+
+{-
+-- @ # 1
+mkArrayFullWCF :: (IsModule m c, Bounded i, Bits i si, Bits a sa) => m (Array i a)
+mkArrayFullWCF = mkArrayWCF minBound maxBound
+-}
+
+{-
+_asub :: Array i a -> i -> a
+_asub a i = a.sub i
+
+_aupd :: Array i a -> i -> a -> Action
+_aupd a i e = a.upd i e
+-}
+
+-- This is a really nasty primitive; it shouldn't be here.
+primitive primBitToInteger :: Bit n -> Integer
+

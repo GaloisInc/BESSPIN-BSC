@@ -1,0 +1,122 @@
+#!/bin/sh
+# \
+exec $BLUESPECDIR/bin/bluewish "$0" -- "$@"
+
+lappend auto_path .
+lappend auto_path $::env(BLUESPECDIR)/tcllib/scemi
+lappend auto_path $::env(BLUESPECDIR)/tcllib/simtb
+lappend auto_path $::env(BLUESPECDIR)/tcllib/workstation
+lappend auto_path $::env(BLUESPECDIR)/tcllib/bluespec
+
+set sodir "$::env(BLUESPECDIR)/tcllib/lib.linux$::Bluetcl::w32or64"
+package ifneeded "BSDebug" 1.0 \
+    [list load [file join $sodir libsemulite.so]]
+
+package require emulite_control
+
+wm withdraw .
+
+proc usage {} {
+    set progname [file rootname [file tail $::argv0]]
+    puts ""
+    puts "usage: $progname <options>"
+    puts "Options:"
+    puts "   -mode   <mode>   set simulation mode or emulation mode (default emulation)"
+    puts "   -device <index>  set the device in the jtag chain you would like to view"
+    puts "   -top    <name>   specify top module for hierarchy viewing"
+    puts "   -xrf    <file>   the xrf file"
+    puts ""
+    puts " e.g: -xrf dut.xrf"
+}
+
+set BoolOptions [list -- -missing -help]
+set ValOptions [list -xrf -mode -top -device]
+
+if { [catch [list ::utils::scanOptions $BoolOptions $ValOptions true OPT "$argv"] opts] } {
+    puts stderr $opts
+    usage
+    exit 1
+}
+
+if {[info exists OPT(-help)]} {
+    usage
+    exit 1
+}
+
+set xrfFile  ""
+set top      ""
+set device   0
+
+set has_xrf    [info exists OPT(-xrf)]
+set has_top    [info exists OPT(-top)]
+set has_device [info exists OPT(-device)]
+
+if { $has_xrf } { set xrfFile [file normalize $OPT(-xrf)] }
+if {!$has_xrf} {
+    puts stderr "No xrf file has been specified."
+    usage
+    exit 1
+}
+if {$has_top} { set top $OPT(-top)}
+
+if {![info exists OPT(-mode)]} {
+    set mode "emu"
+} else {
+    set mode $OPT(-mode)
+}
+if { $mode != "emu" && $mode != "sim" } {
+    return -code error "Illegal mode value `$mode' . Legal values are 'emu' or 'sim'."
+}
+if {![info exists OPT(-gui)]} {
+    set tbgui "man"
+} else {
+    set tbgui $OPT(-gui)
+}
+
+if { $has_device } { set device $OPT(-device) }
+
+################################################################################
+###
+################################################################################
+
+package require Bluetcl
+package require Interp
+package require Redirect
+package require SimulationTestbench
+
+
+
+
+######################### OPTIONS #################
+
+# Select wave viewer  Gtk or Novas
+Waves::set_options viewer GtkWave
+# Waves::set_options viewer {Novas}
+Waves::set_options {GtkWave,Command} gtkwave {GtkWave,Options} -W
+Waves::set_options {Novas,Command} {nWave}
+Waves::set_options {Novas,Options} {-nologo}
+
+puts "mode $mode"
+if {$mode == "sim"} {
+    bsdebug::semulite init $device sim
+} else {
+    bsdebug::semulite init $device
+}
+
+if {$has_xrf} {
+    ::redirect::netlist import $xrfFile false false false
+} else { exit 1 }
+
+    
+######################### Starting the GUI #################
+    
+# log readback activities if the flag is set
+#if {[info exists OPT(-log)]} {
+#    redirect::netlist cmdlog on
+#    redirect::rdbk set cmdlog on
+     # This command may not exist
+#    catch {bsdebug::dut cmdlog on} msg
+#}
+
+emulite_control .control $top $mode $tbgui 
+wm state . normal

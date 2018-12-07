@@ -1,0 +1,152 @@
+#!/bin/sh
+# \
+exec $BLUESPECDIR/bin/bluewish "$0" -- "$@"
+
+global pid
+
+lappend auto_path .
+lappend auto_path $::env(BLUESPECDIR)/tcllib/workstation
+lappend auto_path $::env(BLUESPECDIR)/tcllib/bluespec
+
+# standard Bluespec colours and fonts
+fonts::set_colours
+fonts::initialize
+
+set sodir "$::env(BLUESPECDIR)/tcllib/lib.linux$::Bluetcl::w32or64"
+package ifneeded "BSDebug" 1.0 \
+	[list load [file join $sodir libluminaplus.so]]
+
+package require BSDebug
+package require emu_control
+
+wm withdraw .
+
+proc usage {} {
+    puts ""
+    puts "usage: $::argv0 <options>"
+    puts "Options:"
+    puts "   -log             create a log file"
+    puts "   -port   <number> specify TCP port to communicate with simtb tcl"
+    puts "   -top    <name>   specify top module for hierarchy viewing"
+    puts "   -xrf    <file>   the xrf file"
+    puts "   -unit_time       use \"unit time\" in creating the readback vcd file"
+    puts ""
+    puts " e.g: -xrf foo.xrf -port 9000"
+}
+
+set BoolOptions [list -- -help -log -unit_time]
+set ValOptions [list -port -top -xrf]
+
+if { [catch [list ::utils::scanOptions $BoolOptions $ValOptions true OPT "$argv"] opts] } {
+    puts stderr $opts
+    usage
+    exit 1
+}
+
+if {[info exists OPT(-help)]} {
+    usage
+}
+
+if {[llength $opts] > 0} {
+    usage
+    exit 1
+}
+
+set unit_time [info exists OPT(-unit_time)]
+
+set port     9000
+set top      ""
+set xrfFile  ""
+
+set has_port   [info exists OPT(-port)]
+set has_top    [info exists OPT(-top)]
+set has_xrf    [info exists OPT(-xrf)]
+
+if {$has_xrf} {
+    set xrfFile [file normalize $OPT(-xrf)]
+} else {
+    puts stderr "No xrf file has been specified."
+    usage
+    exit 1
+}
+
+if {![file readable $xrfFile]} {
+    puts stderr "File unavailable: $xrfFile"
+    exit 1
+}
+
+if {$has_top} {
+    set top $OPT(-top)
+}
+
+if { $has_port } {
+    set port $OPT(-port)
+} else {
+    puts stderr {No port specified, assuming 9000}
+    set port 9000
+}
+   
+################################################################################
+###
+################################################################################
+
+package require Bluetcl
+package require Interp
+package require Redirect
+package require SimulationTestbench
+package require Iwidgets 4.0
+package require Waves
+
+######################### DUT #################
+
+# Define a dummy DUT pane to satisfy the Semu GUI
+
+namespace eval GuiDut {
+    variable dut
+
+    proc mkDutControl { frame } {
+        return $frame
+    }
+
+    proc do_test {} {
+    }
+    proc do_reset {} {
+    }
+
+}
+
+######################### OPTIONS #################
+
+# Select wave viewer  Gtk or Novas
+Waves::set_options viewer GtkWave
+# Waves::set_options viewer {Novas}
+Waves::set_options {GtkWave,Command} gtkwave {GtkWave,Options} -W
+Waves::set_options {Novas,Command} {nWave}
+Waves::set_options {Novas,Options} {-nologo}
+
+######################### INIT #################
+
+# Initialize the socket connection
+bsdebug::luminaplus init $port
+
+# Load the XRF file
+::redirect::netlist import $xrfFile false $unit_time
+
+######################### Starting the GUI #################
+
+redirect::rdbk set verbose off
+
+# log readback activities if the flag is set
+if {[info exists OPT(-log)]} {
+    redirect::netlist cmdlog on
+    redirect::rdbk set cmdlog on
+}
+
+set mode   {emu}
+set tb     {none}
+set no_dbg 0
+
+emu_control .control $top $mode $tb $no_dbg
+
+wm state . normal
+

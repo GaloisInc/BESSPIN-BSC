@@ -1,0 +1,227 @@
+#!/bin/sh
+# the next line restarts using wish \
+exec $BLUESPECDIR/bin/bluewish "$0" -name "$1" -- "$@"
+
+# ----------------------------------------------------------------------
+#  DEMO: type viewer
+# ----------------------------------------------------------------------
+
+package require Iwidgets 4.0
+
+# ------------------------------
+# widget to add a package
+
+proc openPackage { } {
+    set typeList {
+	{{BSV Files} {.bsv}}
+    }
+    set absfile [tk_getOpenFile -filetypes $typeList]
+
+    # separate the path from the base filename
+    set path [file dirname $absfile]
+    set fname [file tail $absfile]
+
+    # get the package name
+    if [regexp {^(.+)\.bsv$} $fname tmp pkgname] {
+	puts "Loading package $pkgname"
+	flags set "-p +:$path"
+	bpackage load $pkgname
+	# refresh the viewer state
+	browsetype refresh
+	# refresh the widget
+	collapse_all
+    } else {
+	# if it isn't a .bsv file, then do nothing
+	puts "Load failed"
+    }
+}
+
+# ------------------------------
+# widget to add a type
+
+iwidgets::promptdialog .pd -title "Add Type" -modality application \
+    -labeltext "Type:"
+
+.pd hide Apply
+.pd hide Help
+
+proc addType { } {
+    if {[.pd activate]} {
+	set ty [.pd get]
+	puts "Adding type $ty"
+
+	# add the type
+	# XXX is there a way to check for success?
+	# XXX and only refresh the widget on success?
+	browsetype add $ty
+	# refresh the widget
+	collapse_all
+    } else {
+	# the user cancelled the dialog
+    }
+}
+
+proc clearTypes { } {
+    # clear the list
+    browsetype clear
+    # refresh the widget
+    collapse_all
+}
+
+# ---------------
+# menubar
+
+iwidgets::menubar .mb -helpvariable helpVar -menubuttons {
+    menubutton file -text "File" -menu {
+        options -tearoff false
+
+        command open -label "Open" \
+                -command openPackage
+
+        separator sep1
+
+        command exit -label "Exit" -command {exit}
+    }
+
+    menubutton type -text "Type" -menu {
+        options -tearoff false
+
+        command add -label "Add" \
+                -command addType
+
+        command clear -label "Clear" \
+                -command clearTypes
+    }
+}
+pack .mb -fill x -side top
+
+# ------------------------------
+# paned window
+
+# place the hierarchy and message text in a paned frame
+
+iwidgets::panedwindow .pw -width 8i -height 4i -orient vertical
+pack .pw -padx 4 -pady 4
+
+
+# ------------------------------
+# type browser
+
+proc getElems {file} {
+
+    if {$file == ""} {
+	set dir 0
+    } else {
+	set dir $file
+    }
+    set res [browsetype list $dir]
+    #puts "getElems $file = $res"
+    return $res
+}
+
+# ---------------
+
+proc select_node {uid status} {
+    global h
+    global msg
+
+    if {$status} {
+	$h selection remove $uid
+
+	# clear the display
+	set msg {}
+    } else {
+	# remove all previously selected
+	set others [$h selection get]
+	foreach other $others {
+	   $h selection remove $other
+	}
+
+	# select this one
+	$h selection add $uid
+
+	# update the display
+	set msg [browsetype detail $uid]
+    }
+}
+
+proc expand_node {uid} {
+    global h
+
+    $h expand $uid
+}
+
+proc collapse_node {uid} {
+    global h
+
+    $h collapse $uid
+}
+
+proc expand_recursive {node} {
+    global h
+
+    set children [getElems $node]
+    foreach c $children {
+        set uid [lindex $c 0]
+        $h expand $uid
+        expand_recursive $uid
+    }
+}
+
+proc expand_all {} {
+    expand_recursive 0
+}
+
+proc collapse_all {} {
+    global h
+    global msg
+
+    $h configure -querycommand "getElems %n"
+    # clear the message (since this deselects any item)
+    set msg {}
+}
+
+# ---------------
+
+#
+# Create the hierarchy mega-widget, adding commands to both the item
+# and background popup menus.
+#
+
+# put it in a new pane
+.pw add "left"
+set pane [.pw childsite "left"]
+
+set h \
+  [iwidgets::hierarchy $pane.h \
+    -querycommand "getElems %n" -visibleitems 30x15 \
+    -labeltext "Type Viewer" -selectcommand "select_node %n %s"]
+pack $h -side left -expand yes -fill both
+
+$h component itemMenu add command -label "Select" \
+    -command {select_node [$h current] 0}
+$h component itemMenu add command -label "Deselect" \
+    -command {select_node [$h current] 1}
+$h component itemMenu add separator
+$h component itemMenu add command -label "Expand" \
+    -command {expand_node [$h current]}
+$h component itemMenu add command -label "Collapse" \
+    -command {collapse_node [$h current]}
+
+$h component bgMenu add command -label "Expand All" -command expand_all
+$h component bgMenu add command -label "Collapse All" -command collapse_all
+$h component bgMenu add command -label "Clear Selections" \
+    -command {$h selection clear}
+
+
+# ------------------------------
+# Pane to display information about the selected type
+
+# put it in a new pane
+.pw add "right"
+set pane [.pw childsite "right"]
+
+set m [message $pane.m -textvariable msg -anchor nw -width 3i]
+pack $m -side left -expand yes -fill both
+
+# ------------------------------

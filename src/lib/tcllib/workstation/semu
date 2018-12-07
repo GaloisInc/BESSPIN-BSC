@@ -1,0 +1,71 @@
+#!/bin/sh
+### ##############################################################
+###
+### Author Instigate CJSC.
+###
+### (c) Copyright 2004 - 2009, Bluespec Inc.
+###
+##################################################################
+# \
+exec $BLUESPECDIR/bin/bluewish "$0" -- "$@"
+
+global env
+
+lappend auto_path $env(BLUESPECDIR)/tcllib/workstation
+lappend auto_path $env(BLUESPECDIR)/tcllib/simtb
+lappend auto_path $env(BLUESPECDIR)/tcllib/tablelist
+
+# puts "$auto_path"
+
+package require SemuGui
+
+set arg1 [lindex $argv 0]
+set arg2 [lindex $argv 1]
+
+if {[lindex $argv 2] != ""} {
+    puts "More arguments then expected!"
+    exit
+}
+
+set cfg ""
+set script ""
+
+if {$arg1 != ""} {
+    switch -exact -- [file extension $arg1] {
+	".cfg" {
+	    set cfg $arg1
+	}	
+	".tcl" {
+	    set script $arg1
+	}
+    }
+}
+
+if {$arg2 != ""} {
+    switch -exact -- [file extension $arg2] {	
+	".cfg" {
+	    set cfg $arg2
+	}	
+	".tcl" {
+	}
+    }
+}    
+
+if {$cfg != "" && ![file exists $cfg]} {
+    puts stderr "Error: The configuration file $cfg doesn't exist."
+    exit
+}
+
+
+semu_viewer .view "" $cfg
+
+pack .view -expand true -fill both
+
+if { $script != "" } {
+    if {![file exists $script]} {
+	puts stderr "Error: The tcl script file $script doesn't exist."
+	exit
+    } else {
+	source $script
+    }
+}

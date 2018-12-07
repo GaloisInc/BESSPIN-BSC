@@ -1,0 +1,276 @@
+#!/bin/sh
+# \
+exec $BLUESPECDIR/bin/bluewish "$0" -- "$@"
+
+global pid
+
+lappend auto_path .
+lappend auto_path $env(BLUESPECDIR)/tcllib/scemi
+lappend auto_path $env(BLUESPECDIR)/tcllib/simtb
+lappend auto_path $env(BLUESPECDIR)/tcllib/workstation
+lappend auto_path $env(BLUESPECDIR)/tcllib/bluespec
+package require CmdOptions
+package require BSDebug
+package require emu_control
+
+wm withdraw .
+
+::cmdoptions::setHelpSym "h"
+
+set options {
+    {params.arg "" "the sceMi parameters file"}
+    {ll.arg     "" "the logic allocation file"}
+    {rtl.arg    "" "the elaborated rtl netlist file"}
+    {syn.arg    "" "the post-synthesis netlist file"}
+    {slog.arg   "" "the synthesis log file"}
+    {pre.arg    "" "path/prefix for unspecified files"}
+    {mode.arg   "" "set simulation mode or emulation mode (default emulation)"}
+    {gui.arg    "" "specify gui_dut tcl code (default man)"}
+    {simtb.arg  "" "specify executable name of the simulation tb"}
+    {port.arg   "" "specify TCP port to communicate with simtb tcl"}
+    {top.arg    "" "specify top module for hierarchy viewing"}
+    {log        "create a log file"}
+    {check      "" "check if all needed files exist and then exit"}
+}
+
+set usage "-- usage: [::cmdoptions::getArgv0] \[options] ...\noptions:"
+set r [catch {array set ::params [::cmdoptions::getOptions argv $options $usage]} msg]
+
+if {$r} {
+    puts $msg
+    exit
+}
+
+if {$argc == 0} {
+    puts [::cmdoptions::usage $options $usage]
+    exit
+}
+
+set llFile   ""
+set rtlFile  ""
+set synFile  ""
+set slogFile ""
+
+set top $params(top)
+
+set has_params [expr {$params(params) != ""}]
+set has_ll     [expr {$params(ll)   != ""}]
+set has_rtl    [expr {$params(rtl)  != ""}]
+set has_syn    [expr {$params(syn)  != ""}]
+set has_slog   [expr {$params(slog) != ""}]
+set has_pre    [expr {$params(pre) != ""}]
+set has_simtb  [expr {$params(simtb) != ""}]
+set has_log    $params(log)
+
+
+if {[expr {$params(mode) == ""}]} {
+    set mode "emu"
+} elseif {[expr {$params(mode) == "emu"}]} {
+    set mode "emu"
+} elseif {[expr {$params(mode) == "sim"}]} {
+    set mode "sim"
+} else {
+    return -code error "Illegal mode value `$params(mode)' . Legal values are 'emu' or 'sim'."
+}
+
+if {[expr {$params(gui) == ""}]} {
+    set tbgui "man"
+} else {
+    set tbgui $params(gui)
+}
+
+set paramFile  [file normalize $params(params)]
+set llFile     [file normalize $params(ll)]
+set rtlFile    [file normalize $params(rtl)]
+set synFile    [file normalize $params(syn)]
+set slogFile   [file normalize $params(slog)]
+set prefix     [file normalize $params(pre)]
+set simtbFile  [file normalize $params(simtb)]
+
+if {!$has_params} {
+    if {$has_pre} {
+	set paramFile [file normalize "$prefix\.params"]
+    } else {
+	return -code error "No sceMi parameters file has been specified.\n"
+    }
+}
+
+if {$mode == "emu"} {
+    if {!$has_ll} {
+	if {$has_pre} {
+	    set llFile [file normalize "$prefix\.ll"]
+	} else {
+	    return -code error "No logic allocation file has been specified."
+	}
+    }
+    
+    if {!$has_rtl} {
+	if {$has_pre} {
+	    set rtlFile [file normalize "$prefix\.rtl"]
+	} else {
+	    return -code error "No elaborated rtl file has been specified."
+	}
+    }
+    
+    if {!$has_syn} {
+	if {$has_pre} {
+	    set synFile [file normalize "$prefix\.edf"]
+	} else {
+	    return -code error "No post-synthesis netlist file has been specified."
+	}
+    }
+    
+    if {!$has_slog} {
+	if {$has_pre} {
+	    set slogFile [file normalize "$prefix\.slog"]
+	} else {
+	    return -code error "No synthesis logfile has been specified."
+	}
+    }
+}
+
+if {$params(check) == ""} {
+	puts "Using SceMi parameters file: $paramFile"
+}
+
+foreach ff [list $paramFile $simtbFile] {
+    if { ! [file readable $ff ]  } {
+    puts stderr "Error: Could not open $ff"
+    exit 1
+    }
+}
+
+if {$mode == "emu"} {
+    foreach ff [list $rtlFile $llFile $synFile $slogFile] {
+	if { ! [file readable $ff ]  } {
+	    puts stderr "Error: Could not open $ff"
+	    exit 1
+	}
+    }
+}
+
+if {$params(check) != ""} {
+	exit 0
+}
+    
+
+
+################################################################################
+###
+################################################################################
+
+package require Bluetcl
+package require Interp
+package require Redirect
+package require SimulationTestbench
+package require Iwidgets 4.0
+package require Waves
+
+# standard Bluespec colours and fonts
+fonts::set_colours
+fonts::initialize
+
+######################### OPTIONS #################
+
+# Select wave viewer  Gtk or Novas
+Waves::set_options viewer GtkWave
+# Waves::set_options viewer {Novas}
+Waves::set_options {GtkWave,Command} gtkwave {GtkWave,Options} -W
+Waves::set_options {Novas,Command} {nWave}
+Waves::set_options {Novas,Options} {-nologo}
+
+if {$has_simtb} {
+    ## The testbench is a simulation
+
+    puts "Starting testbench simulation ..."
+    set name $params(simtb)
+    set port $params(port)
+    if {$port == "" } {
+	set port 5678
+    }
+    set pid [::simtb::startSimulator $name $port]
+
+    rename ::exit ::__exit
+    proc ::exit {} {
+	global pid
+	
+	set r [catch [list ::redirect::send "bsdebug::scemi delete"] msg]
+	set r [catch [list ::redirect::send_cmd 0 1] msg]
+	#	set r [catch [list ::redirect::send "exit"] msg]
+	# after 200
+	# set r [catch [list exec pkill -P $pid] msg]
+	# set r [catch [list exec kill -TERM $pid] msg]
+	::__exit
+    }
+    
+    ::redirect::send "lappend auto_path ."
+    ::redirect::send "lappend auto_path $env(BLUESPECDIR)/tcllib/simtb"
+    ::redirect::send "lappend auto_path $env(BLUESPECDIR)/tcllib/bluespec"
+    ::redirect::send "package require BSDebug"
+    ::redirect::send "package require Interp"
+    ::redirect::send "package require Redirect"
+    ::redirect::send "bsdebug::scemi init $paramFile"
+    ##  The interpreter bind phase can terminate and the simulator can proceed.
+    ::redirect::send_cmd 123456 1 true
+
+    if {$mode == "emu"} {
+	::redirect::netlist load $rtlFile $llFile $synFile $slogFile
+    }
+	
+    ######################### Starting the GUI #################
+    
+    # source the local files
+    if {$tbgui == "man"} {
+	source build/sim/scripts/gui_dut.tcl
+    } else {
+	source $tbgui/gui_dut.tcl
+    }
+    
+    redirect::rdbk set verbose off
+    
+    # log readback activities if the flag is set
+    if { $has_log } {
+	redirect::netlist cmdlog on
+	redirect::rdbk set cmdlog on
+	# This command may not exist
+	catch {bsdebug::dut cmdlog on} msg
+    }
+    
+    emu_control .control $top $mode $tbgui
+    wm state . normal
+    
+    wm protocol . WM_DELETE_WINDOW { exit };
+
+} else {
+
+    ## The testbench is not a simulation
+    if {$mode == "emu"} {
+
+	::redirect::netlist load $rtlFile $llFile $synFile $slogFile
+	
+	######################### Starting the GUI #################
+	
+	# source the local files
+	if {$tbgui == "man"} {
+	    source build/sim/scripts/gui_dut.tcl
+	} else {
+	    source $tbgui/gui_dut.tcl
+	}
+	
+	redirect::rdbk set verbose off
+
+	# log readback activities if the flag is set
+	if { $has_log } {
+	    redirect::netlist cmdlog on
+	    redirect::rdbk set cmdlog on
+	    # This command may not exist
+	    catch {bsdebug::dut cmdlog on} msg
+	}
+
+	emu_control .control $top $mode $tbgui
+	wm state . normal
+
+    } else {
+	return -code error "This script currently supports no mode but emulation.\n"
+    }
+}

@@ -1,0 +1,20 @@
+Create and work with sarge chroots not on bluetinder.
+
+For etch, debootstrap is not finding the right signing key.  Here is a workaround:
+
+  415  gpg --export ADB11277 | sudo apt-key add -
+  438  gpg --export 55BE302B | sudo apt-key add -
+
+Index: etch-make-chroots.sh
+===================================================================
+--- etch-make-chroots.sh	(revision 31898)
++++ etch-make-chroots.sh	(working copy)
+@@ -29,7 +29,7 @@
+ echo Something went wrong with BIT
+ fi
+ 
+-sudo debootstrap --arch="$arch" etch "$TARGET" "$url"
++sudo debootstrap --arch="$arch" --keyring=/etc/apt/trusted.gpg etch "$TARGET" "$url"
+ for GHC_VERSION in 6.12.3
+ do tar xjf /raid/tools/ghc/tarballs/ghc-$GHC_VERSION-etch$bit-tmp-install-with-cabal-prof.tar.bz2 -C $TARGET
+ done

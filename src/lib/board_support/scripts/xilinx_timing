@@ -1,0 +1,96 @@
+#!/usr/bin/env python
+
+#
+# Analyze a Xilinx synthesis area for timing closure success.
+#
+# Copyright Bluespec, Inc. 2009
+#
+
+import os
+import os.path
+import sys
+import optparse
+import subprocess
+import glob
+
+
+# ################################################################
+# Option parsing
+
+# Used for generating error messages due to incorrect option usage
+class Usage(Exception):
+  def __init__(self, status=0, msg=None):
+    self.status = status
+    self.msg = msg
+
+# Subclass optparse.OptionParser to make it throw an exception
+# instead of calling sys.exit()
+class MyOptionParser(optparse.OptionParser):
+  def exit(self, status=0, msg=None):
+    raise Usage(status, msg)
+
+# Create an option parser for this script
+def mkOptionParser():
+  parser = MyOptionParser(usage='usage: %prog [options] <timing report file>',
+                          version='%prog 1.0',
+                          description='Analyze a Xilinx synthesis area for timing closure success.'
+                         );
+
+  return parser
+
+
+# ##################################################################
+# Top-level program sequencing
+
+# The main entry point for the program
+def main(argv=None):
+  if argv is None:
+    argv = sys.argv
+
+  try:
+    # process command line arguments
+    parser = mkOptionParser()
+    opts, args = parser.parse_args()
+
+    # ensure that all required arguments were given
+    if len(args) != 2:
+      raise Usage(1,"Requires 2 argument(s): <tool> <timing report file>")
+    tool = args[0]
+    timing_report = args[1]
+
+    # verify the file exists
+    try:
+      f = open(timing_report, 'r')
+      f.close()
+    except IOError as e:
+      print >>sys.stderr, 'Timing Report: %s  does not exist' % timing_report
+      return -1
+      
+    # process a planahead timing report
+    if tool == 'planahead':
+      cmd = '''grep 'timing errors detected' %s | awk '{ sum += $1 }; END { print sum }' ''' % timing_report
+    else:
+      cmd = '''grep -c 'VIOLATED' %s | awk '{ sum += $1 }; END { print sum }' ''' % timing_report
+
+    #print cmd
+    timing_errors = int(subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0].strip())
+    if (timing_errors > 0):
+      print """WARNING:  **********  TIMING ERRORS DETECTED  **********"""
+      print """%d timing errors exist.  Please consult %s for details.""" % (timing_errors, timing_report)
+    else:
+      print """No timing errors exist."""
+
+    # a successful return code
+    return 0
+
+  # Handle command-line option errors
+  except Usage, usage:
+    if usage.msg:
+      print >>sys.stderr, usage.msg
+      print >>sys.stderr, 'for help use --help'
+    return usage.status
+
+# For non-interactive invocations, call main() and use its return value
+# as the exit code.
+if __name__ == '__main__':
+  sys.exit(main())

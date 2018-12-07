@@ -1,0 +1,8 @@
+# Ignore files copied here from other locations
+cudd
+flexifc.h
+yices_c.h
+yices.h
+yices_limits.h
+yices_types.h
+stp_c_interface.h

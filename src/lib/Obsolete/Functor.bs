@@ -1,0 +1,28 @@
+-- Copyright 2005 Bluespec, Inc.  All rights reserved.
+
+-- $Id: Functor.bs $
+
+package Functor(Functor(..)) where
+
+--@ XXX THIS PACKAGE NOT YET PUBLICLY AVAILABLE WITH BSV0.5
+
+import List
+
+--@ \subsubsection{Functor}
+--@
+--@ \index{Functor@\te{Functor} (package)|textbf}
+--@ (Advanced topic; can be skipped on first reading.)
+--@
+--@ The \te{Functor} class represents container datatypes
+--@ which allow a function on values to be lifted into
+--@ a mapping function over the collection of values.
+--@ #1
+
+class Functor f
+  where
+    fmap :: (a -> b) -> f a -> f b
+
+--@ A \te{List} is a \te{Functor}.
+instance Functor List
+  where
+    fmap = map

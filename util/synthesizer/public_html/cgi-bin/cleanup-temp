@@ -1,0 +1,16 @@
+#!/bin/bash
+
+echo "Content-type: text/html"
+echo
+echo "<html><head><title>Cleaning up ~synthesizer/TEMP </title></head></body>"
+
+echo "<p>I'll now try to do a: <code>rm -rf /export/home/synthesizer/TEMP/*</code>. Here is the output (empty usually means successful):</p>"
+echo "<table border=0 width=100% bgcolor=#e8e8e8><tr><td><code>"
+rm -rf /export/home/synthesizer/TEMP/* | ./addBR
+echo "</td></tr></table></code>"
+
+echo '<p><a href="https://svn.bluespec.com:8080/~synthesizer/cgi-bin/check-running">Back to checking if synthesizer is running</a></p>'
+echo '<p><a href="https://svn.bluespec.com:8080/~synthesizer">Back to synthesizer main page</a></p>'
+
+echo "</body></html>"
+

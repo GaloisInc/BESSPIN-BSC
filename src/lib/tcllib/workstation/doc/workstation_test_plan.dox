@@ -1,0 +1,307 @@
+/**
+
+  @page _workstation_test_plan_ Test Plan 
+
+@section _workstation_test_plan_introduction_  Introduction
+
+@subsection _workstation_test_plan_indentifier_ Document Identifier
+
+This is a test plan for the Bluespec Worksation project.  This should cover all
+GUI functionalities and Tcl commands.
+
+@subsection _workstation_test_plan_definition_of_terms_ Definition of Terms and Acronyms
+        - @b BSV - Bluespec System Verilog\n
+        - @b BSC - Bluespec System Verilog compiler\n
+        - @b Blue @b (tcl/wish) - Bluespec extension for tcl/wish interpreter
+        - @b Dejagnu - 
+
+@subsection _workstation_test_plan_overview_ Overview
+
+The functionality and implementation requirements are described in the PRD (see
+@ref _workstation_test_plan_workstation_prd_ "[1]").  Description of graphical
+user interface and Tcl commands are given in functional specification (see @ref
+_workstation_test_plan_workstation_fspec_ "[5]").  The implementation of Tcl
+commands is described in the development specification (see @ref
+_workstation_devspec_ "[6]").  The goal of this document is to
+describe the testing of the Bluespec Workstation.\n
+
+Workstation tests are divided into two independent phases :
+        - @ref _workstation_test_plan_gui_testing_
+        - @ref _workstation_test_plan_tcl_commands_testing_
+
+@subsection _workstation_test_plan_scope_ Scope 
+
+The section @ref  _workstation_test_plan_test_environment_usage_
+describes the testing environment usage. The section @ref
+_workstation_test_plan_test_environment_structure_ describes the test
+environment structure. The section @ref
+_workstation_test_plan_tools_used_by_suite_ defined tools which are
+used in test suite. The section @ref
+_workstation_test_plan_functionality_to_be_tested_ defines the test
+cases for graph visualization functionality. The section @ref
+_workstation_test_plan_gui_testing_ defines the test cases for
+Workstation. The section @ref _workstation_test_plan_tcl_commands_testing_
+defines the test cases for Workstation command line.
+
+@subsection _workstation_test_plan_references_ References
+
+@anchor _workstation_test_plan_workstation_prd_
+[1].  @ref _workstation_prd_ - Product requirement document for Bluespec
+Workstation\n
+@anchor _workstation_test_plan_workstation_fspec_
+[2].  @ref _workstation_fspec_ - Functional specification document for
+Bluespec Workstation\n
+@anchor _workstation_test_plan_workstation_devspec_
+[3].  @ref _workstation_devspec_ - Development specification document for
+Bluespec Workstation\n
+@anchor _workstation_test_plan_workstation_schedule_
+[4].  workstation/docs/workstation_schedule.planner - Schedule for Bluespec
+Workstation project\n
+@anchor _workstation_test_plan_bsv_docs_
+[5].  reference_guide_rev_30_march_2007.pdf - Bluespec System Verilog reference
+guide\n
+[6].  bsv_user_guide_rev_30_march_2007.pdf - Bluespec System Verilog user
+guide\n
+
+@section _workstation_test_plan_test_environment_usage_ Test Environment Usage
+
+The following commands should be used in order to execute the test-suite:
+        - @b make @b localcheck - runs the tests located in a leaf directory.
+          As a result the testrun.sum and testrun.log files are generated where
+          the status of each tests, the amount of PASSES/FAILURES and other 
+          details are reported.
+        - @b make @b check - this commands should be called only from a non
+          leaf directory.  It recursively cleans the results tests and runs the
+          tests.  As a result the testrun.sum and testrun.log files are 
+          generated where the status of each tests, the amount of 
+          PASSES/FAILURES and other details are reported.
+        - @b make @b clean - cleans the test results.  If the directory is
+          a non leaf one the clean is performed recursively.
+
+
+@section _workstation_test_plan_test_environment_structure_ Test Environment Structure
+
+The test-suite tests are located in the trunk/testsuite/bsc.bluetcl/workstation
+directory.  Only leaf directories contain tests.  Each group of tests is
+represented as a separate directory.\n
+For each group the tests are divided in two parts:
+        - positive tests
+        - negative tests
+
+Each of this subgroups is represented in a separate leaf directory located in
+the appropriate group directory.\n
+For example tests for @ref _workstation_test_plan_project_commands_tests_
+are represented in the @b project_tests directory which itself contains @b
+positive_commands and @b negative_commands leaf directories.
+
+@section _workstation_test_plan_tools_used_by_suite_ Tools Used by Test-suite
+
+The structured using Dejagnu based tests.
+
+@section _workstation_test_plan_functionality_to_be_tested_ Functionality to be Tested
+
+In the test-suite positive tests should provide the golden output.  For example
+for project manipulation commands the golden output should provide the correct
+values of project settings (name, directory, compilation type, compilation
+results location etc).  Negative tests should provide typical invalid input and
+should make sure that a clear and adequate error is reported.\n
+
+In the GUI testing each action should provide the functionality described
+in this document.
+
+@section _workstation_test_plan_gui_testing_ GUI Tests
+
+The GUI testing will be done manually.  Manual tests will be grouped by windows:
+        - @ref _workstation_test_plan_main_window_tests_
+        - @ref _workstation_test_plan_project_files_window_tests_
+        - @ref _workstation_test_plan_package_window_tests_
+        - @ref _workstation_test_plan_module_browser_window_tests_
+        - @ref _workstation_test_plan_type_browser_window_tests_
+        - @ref _workstation_test_plan_schedule_analysis_window_tests_
+        - @ref _workstation_test_plan_graph_windows_tests_
+        - @ref _workstation_test_plan_toolbutton_tests_
+
+@subsection _workstation_test_plan_main_window_tests_ Main Window tests
+
+@b Create @b a @b new @b project \n
+        - Open the workstation via @b bluespec command
+        - ...
+
+@subsection _workstation_test_plan_project_files_window_tests_ Project Files Window tests
+
+@subsection _workstation_test_plan_package_window_tests_ Pakcage Window tests
+
+@subsection _workstation_test_plan_module_browser_window_tests_ Module Browser Window tests
+
+@subsection _workstation_test_plan_type_browser_window_tests_ Type Browser Window tests
+
+@subsection _workstation_test_plan_schedule_analysis_window_tests_ Schedule Analysis Window tests
+
+@subsection _workstation_test_plan_graph_windows_tests_ Graph Windows tests
+
+@subsection _workstation_test_plan_toolbutton_tests_ Tool Button tests
+
+<b> Positive Test Cases</b>
+
+<b>Create a tool button with an existing command</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button name and command using
+          "register_tool_bar_item <name> <command>" function.
+        - Make sure that the name is not duplicated and is not one of 
+        "new open save tccompile compile link simulate clean build stop".
+        - Run the workstation.
+        - Make sure the tool button is created.
+        - Press the button.
+        - Make sure that appropriate command is executed.
+
+<b>Create a tool button with a set of commands</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button name and command using
+          "register_tool_bar_item <name> <command>" function.
+        - Make sure that the name is not duplicated and is not one of 
+        "new open save tccompile compile link simulate clean build stop".
+        - Make sure that the commands are included in double quotes "" and
+          divided by semicolon ';'. 
+        - Run the workstation.
+        - Make sure the tool button is created.
+        - Press the button.
+        - Make sure that appropriate commands are executed.
+
+<b>Create a tool button with an existing command and icon</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button name, command and icon using
+          "register_tool_bar_item <name> <command> <icon>" function.
+        - Make sure that the name is not duplicated and is not one of 
+        "new open save tccompile compile link simulate clean build stop".
+        - Run the workstation.
+        - Make sure the tool button is created.
+        - Make sure that the appropriate image is displayed on the button.
+        - Press the button.
+        - Make sure that appropriate command is executed.
+
+<b> Create a tool button with an existing command, icon and help string</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button name, command, icon and help string using
+          "register_tool_bar_item <name> <command> <icon> <helpstr>" function.
+        - Make sure that the name is not duplicated and is not one of 
+        "new open save tccompile compile link simulate clean build stop".
+        - Run the workstation.
+        - Make sure the tool button is created.
+        - Make sure that the appropriate image is displayed on the button.
+        - Make sure that the appropriate help string is displayed when the
+          mouse is over the button.
+        - Press the button.
+        - Make sure that appropriate command is executed.
+
+<b> Delete an existing user defined tool button from workstation</b>\n
+        - Close the workstation.
+        - Open ~/.bluespec/setup.tcl file.
+        - Delete the appropriate button initialization.
+        - Run the workstation.
+        - Make sure the tool button is not displayed.
+
+
+<b> Negative Test Cases</b>
+
+<b>Create a tool button with not defined name and command</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button with an empty name using
+          "register_tool_bar_item" function.
+        - Run the workstation.
+        - Make sure that appropriate error message is generated and the
+          Workstation is not opened.
+
+<b>Create a tool button with not defined command</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button with an empty command using
+          "register_tool_bar_item <name>" function.
+        - Run the workstation.
+        - Make sure that appropriate error message is generated and the
+          Workstation is not opened.
+
+<b>Create a tool button with an empty string as a icon</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button with an empty string instead of icon using
+          "register_tool_bar_item <name> <command> <""> " function.
+        - Run the workstation.
+        - Make sure that appropriate error message is generated and the
+          Workstation is not opened.
+
+<b>Create a tool button with already defined name</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button name and command using
+          "register_tool_bar_item <name> <command>" function.
+        - Make sure that the name is duplicated or is one of 
+        "new open save tccompile compile link simulate clean build stop".
+        - Run the workstation.
+        - Make sure that appropriate error message is generated and the
+          Workstation is not opened.
+
+<b>Create a tool button with already defined command</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button name and command using
+          "register_tool_bar_item <name> <command>" function.
+        - Make sure that the command is duplicated. 
+        - Run the workstation.
+        - Make sure that the Workstation is opened and appropriate warning
+          message is generated.
+
+<b>Create a tool button with not existing command</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button name and command using
+          "register_tool_bar_item <name> <command>" function.
+        - Make sure that the name is not duplicated and is not one of 
+        "new open save tccompile compile link simulate clean build stop".
+        - Make sure that the command is not a valid TCL command.
+        - Run the workstation.
+        - Make sure the tool button is created.
+        - Press the button.
+        - Make sure that error message is generated.
+
+<b>Create a tool button with not existing icon</b>\n
+        - Open ~/.bluespec/setup.tcl file.
+        - Initialize the tool button name, command and icon using
+          "register_tool_bar_item <name> <command> <icon>" function.
+        - Make sure that the name is not duplicated and is not one of 
+        "new open save tccompile compile link simulate clean build stop".
+        - Make sure that the image file does not exist.
+        - Run the workstation.
+        - Make sure that appropriate error message is generated and the
+          Workstation is not opened.
+
+
+@section _workstation_test_plan_tcl_commands_testing_ Tcl Command Tests
+
+Workstation provides command line interface with appropriate set of Tcl
+commands.  Each test is represented by Tcl script which contains workstation
+commands to be executed.  Tcl commands will be tested via Dejagnu based
+testsuite (expect based tests).\n
+
+Following are the the groups of the Tcl commands tests :
+        - @ref _workstation_test_plan_project_commands_tests_
+        - @ref _workstation_test_plan_file_commands_test_
+        - @ref _workstation_test_plan_buils_commands_tests_
+        - @ref _workstation_test_plan_analysis_commands_tests_
+
+@subsection _workstation_test_plan_project_commands_tests_ Project Commands
+        
+@b Positive @b tests \n
+
+@b File @b new_project_test.tcl \n
+
+
+@subsection _workstation_test_plan_file_commands_test_ File Manipulation commands
+
+@subsection _workstation_test_plan_buils_commands_tests_ Build commands
+
+@subsection _workstation_test_plan_analysis_commands_tests_ Analysis commands
+
+@section _workstation_fspec_dependencies_ Dependencies, Assumptions, Risks
+
+As the GUI testing is done manually there are no dependencies from a concrete
+tool.  For more details see the appropriate section of the Workstation
+Functional specification document(@ref _workstation_fspec_ "[2]").
+
+*/
+
+// vim:syntax=doxygen:et:shiftwidth=8:tabstop=8:

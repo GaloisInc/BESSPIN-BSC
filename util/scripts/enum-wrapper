@@ -1,0 +1,19 @@
+#!/bin/sh
+###
+### (c) Copyright 2005 - 2010, Bluespec Incorporated
+###
+
+
+if [ -z "$BLUESPECDIR" ] || [ ! -d $BLUESPECDIR ]; then
+    echo "Error: \$BLUESPECDIR is not set or does not exist $BLUESPECDIR"
+    exit 1
+fi
+
+BLUESPECEXEC=${BLUESPECDIR}/bin/enum
+
+if [ -z "$BLUESPECEXEC" ] || [ ! -x $BLUESPECEXEC ] ; then
+    echo "Error Bluespec executable not found BLUESPECEXEC  $BLUESPECEXEC"
+    exit 1;
+fi
+
+exec $BLUESPECEXEC "$@"

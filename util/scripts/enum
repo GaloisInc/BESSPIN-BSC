@@ -1,0 +1,21 @@
+#!/bin/sh
+###
+### (c) Copyright 2005 - 2008, Bluespec Incorporated
+###
+
+PLAT=`${BLUESPECDIR}/bin/bsenv platform`
+
+if [ -n "$BLUESPEC_LD_LIBRARY_PATH" ] ; then
+    LD_LIBRARY_PATH=${BLUESPEC_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
+fi
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${BLUESPECDIR}/SAT/${PLAT}:
+export LD_LIBRARY_PATH
+
+ENUMEXEC=${BLUESPECDIR}/bin/${PLAT}/enum
+
+if [ -z "$ENUMEXEC" ] || [ ! -x $ENUMEXEC ] ; then
+    echo "Error Enum executable not found ENUMEXEC  $ENUMEXEC"
+    exit 1;
+fi
+
+exec $ENUMEXEC "$@"

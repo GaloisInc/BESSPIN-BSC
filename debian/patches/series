@@ -1,0 +1,3 @@
+0002-Only-install-appropriate-version-of-emacsclient.patch
+0003-Allow-default-value-for-BLUESPECDIR.patch
+0004-Eliminate-use-of-svn-during-build.patch

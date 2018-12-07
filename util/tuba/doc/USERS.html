@@ -1,0 +1,944 @@
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <META NAME="GENERATOR" CONTENT="Mozilla/4.04 [en] (X11; I; Linux 1.2.13 i586) [Netscape]">
+   <META NAME="Author" CONTENT="John Stump">
+   <META NAME="Description" CONTENT="User's guide for the Tuba Tcl debugger">
+   <TITLE>Tuba User's Guide</TITLE>
+</HEAD>
+<BODY TEXT="#800000" BGCOLOR="#F5F5DC" LINK="#0000EE" VLINK="#551A8B" ALINK="#FF0000">
+<B><FONT SIZE=+4>Using Tuba</FONT></B>
+
+<P><FONT SIZE=+2>version 2.4</FONT>
+
+<P>
+<HR WIDTH="100%">
+<H1>
+Contents</H1>
+
+<DD>
+<A HREF="#new2.4">What's New in 2.4</A></DD>
+
+<DD>
+<A HREF="#Starting Tuba">Starting Tuba</A></DD>
+
+<DD>
+<A HREF="#The Main Window">A Tour Of The GUI</A></DD>
+
+<DD>
+<A HREF="#Executing Your Source">Executing Your Source</A></DD>
+
+<DD>
+<A HREF="#Variables">Variables</A></DD>
+
+<DD>
+<A HREF="#Breakpoints">Breakpoints</A></DD>
+
+<DD>
+<A HREF="#Source Code Navigation">Source Code Navigation</A></DD>
+
+<DD>
+<A HREF="#Handling Errors From Your Application">Handling Errors From Your
+Application</A></DD>
+
+<DD>
+<A HREF="#Proc Exclusions">Proc Exclusions</A></DD>
+
+<DD>
+<A HREF="#Sessions">Sessions</A></DD>
+
+<DD>
+<A HREF="#Customizing Tuba">Customizing</A></DD>
+
+
+<P>
+<HR WIDTH="100%">
+<H1>
+<A NAME="new2.4"></A>What's New in 2.4</H1>
+Version 2.4 includes many new changes, mostly bug fixes and a few added
+features.
+<BR>&nbsp;
+<H3>
+New Features</H3>
+
+<UL>
+<LI>
+<B>Proc Exclusions.</B> This feature allows you to exclude certain procs
+from being instrumented, thus you are not able to debug them. See the section
+on <A HREF="#Proc Exclusions">Proc Exclusions.</A></LI>
+
+<LI>
+<B>Sessions</B>. This feature allows you to save your debug sessions so
+that you can debug the same program with the exact same setup. Saved items
+include program, args, interpreter, working dir, options, and breakpoints.
+See the section on <A HREF="#Sessions">Sessions</A>.</LI>
+
+<LI>
+<B>Breakpoint retention on restart</B>. Now when you restart a program,
+you have the option of retaining your existing breakpoints. Set the appropriate
+checkbuttons as desired. See the snapshot of the <A HREF="#Restarting">new
+restart window</A> to see the changes.</LI>
+</UL>
+
+<H3>
+Bug Fixes</H3>
+This just lists some of the more annoying bugs, but many minor ones were
+also fixed.
+<UL>
+<LI>
+These problems with instrument caching have been fixed:</LI>
+
+<UL>
+<LI>
+Using a cached file resulted in an empty proc list and no valid breakpoint
+locations.</LI>
+
+<LI>
+Changing various options can change the output of the instrumentation,
+but Tuba ignored these changes and retrieved a cached version of a file.</LI>
+</UL>
+
+<LI>
+Tuba now employs a state model to know when various commands are allowed
+or not. Before, hitting something like the step into button without a program
+loaded generated an obscure error message. The current state is also displayed
+in the lower right hand corner of the main window.</LI>
+
+<LI>
+Status line redesigned. I added some fields and removed the source level
+field. Also, some fields are now scrollable entry boxes. See the <A HREF="#The Main Window">new
+main window</A> screenshot. Additions are:</LI>
+
+<UL>
+<LI>
+the line number</LI>
+
+<LI>
+the current session</LI>
+
+<LI>
+the currently displayed file (can be different than the current debugger
+position)</LI>
+</UL>
+
+<LI>
+Confirmation when you try to kill a running program. This confirmation
+happens on load program, restart, open session, and exit actions. If this
+gets too annoying, I'll make it a configurable item.</LI>
+</UL>
+
+<HR WIDTH="100%">
+<H1>
+<A NAME="Starting Tuba"></A>Starting Tuba</H1>
+
+<H2>
+<A NAME="commandlinenew_23"></A>Tuba Command Line</H2>
+<TT>tuba ?<I>options</I>? <I>program </I>?<I>args</I>?</TT>
+<UL><TT><I>options</I> </TT>can be:</UL>
+
+<UL>
+<UL><TT>-T</TT>
+<UL>Forces the debugger to use the Tcl-based parser.</UL>
+</UL>
+&nbsp;
+<UL><TT>-C</TT>
+<UL>Forces the debugger to use the C++ parser. This is the default. If
+the C++ parser can't be found, Tuba will use the Tcl-based parser.</UL>
+<TT>-R</TT>
+<UL>Do run-time instrumenting. This is slower but provides more accurate
+instrumenting. Use this option for those Tcl sources that do a lot of dynamic
+code execution where the regular instrumenter fails.</UL>
+</UL>
+&nbsp;
+<UL><TT>-i <I>interp</I></TT>
+<UL>debug program using the interpreter <I>interp</I>. Default is <TT>tclsh8.0</TT>.
+<I>interp </I>must be in your search path or must include a path.</UL>
+</UL>
+&nbsp;
+<UL><TT>-p <I>port</I></TT>
+<UL>Sets the socket port for process communication. Default is 1080.</UL>
+<TT>-w <I>dir</I></TT>
+<UL>Sets the working dir to <I><TT>dir</TT></I>. This will be the current
+directory while debugging your <I><TT>program</TT></I>. If <I><TT>dir</TT></I>
+is "", then the working directory will be the same directory where program
+resides. If no <TT>-w</TT> option is given, the default working directory
+is the current directory.</UL>
+<TT>-nc</TT>
+<UL>Turns off caching of instrumented sources.</UL>
+<TT>-c <I>dir</I></TT>
+<UL>Sets the cache dir to <I><TT>dir</TT></I>, overriding the default <TT>tuba/cache</TT>.</UL>
+<TT>-purge</TT>
+<UL>Purge the cache directory before starting.
+<BR>&nbsp;</UL>
+<TT>-e <I>file</I></TT>
+<UL>Specifies a file containing proc exclusion expressions. Any proc matching
+one of the expressions is not instrumented, and therefore excluded from
+the collection of debuggable procs.</UL>
+&nbsp;</UL>
+<I><TT>program </TT></I>is the program you wish to debug.
+
+<P><I><TT>args </TT></I>are any optional arguments your program may require.</UL>
+When started this way, Tuba always runs the program in the current directory.
+<H2>
+<A NAME="Restarting"></A>Restarting</H2>
+If you want to restart the current program, you can select the <TT>Debugger/Restart</TT>
+menu option.
+
+<P>If the program is already loaded and running, Tuba will ask you if you
+want to kill it.
+<CENTER><IMG SRC="images/restart.gif" NOSAVE HEIGHT=255 WIDTH=495></CENTER>
+
+
+<P>Restart allows you to enter a new set of command line arguments, as
+well as the interpreter and a new run directory.
+<H2>
+Loading a New Program</H2>
+Once you are inside Tuba, you can load in a different Tcl/Tk program. Do
+this by selecting the <TT>Debugger/Load new program </TT>menu option.
+
+<P>If a program is already loaded and running, Tuba will ask you if you
+want to kill it.
+
+<P>The following dialog box will pop up to get the program to load, any
+arguments to pass to the program when it is run, the interpreter to run
+the program, and the directory to run it in.
+
+<P><IMG SRC="images/loaddlg.gif" NOSAVE HEIGHT=211 WIDTH=499>
+
+<P>If you don't know the exact program or its location, you can hit the
+<TT>Browse </TT>button to bring up the standard Tcl open file dialog.
+
+<P>If there are no arguments, you can leave the arguments field blank.
+
+<P>Note that the interpreter must be based on Tcl/Tk version 8.0 in order
+to get the namespace functionality. Click the <TT>Browse</TT> button to
+search for it using the standard Tcl Open file dialog.
+
+<P>If you don't care about the run directory, leave it blank; it will default
+to the directory of the program.
+
+<P>After hitting Ok, the new source file will be loaded and instrumented
+and started, stopping on the first line of the file.
+
+<P>
+<HR WIDTH="100%">
+<H1>
+<A NAME="The Main Window"></A>A Tour Of The GUI</H1>
+&nbsp;
+<BR>&nbsp;The Tuba main window looks like this:
+<BR>&nbsp;
+<CENTER><TABLE CELLSPACING=0 NOSAVE >
+<TR NOSAVE>
+<TD><IMG SRC="images/mainwindow.gif" NOSAVE HEIGHT=470 WIDTH=617 ALIGN=LEFT></TD>
+
+<TD ALIGN=LEFT VALIGN=TOP BGCOLOR="#FFFFFF" NOSAVE>Menu bar&nbsp;
+
+<P>Tool bar&nbsp;
+<BR>Status Line&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+
+<P>Code window&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+<BR>&nbsp;
+
+<P>Current Line&nbsp;
+<BR>&nbsp;
+<BR>Message Line</TD>
+</TR>
+</TABLE></CENTER>
+&nbsp;
+<H2>
+Menu Bar</H2>
+The menu bar organizes all the possible debugger commands and actions.
+<H2>
+Tool Bar</H2>
+The tool bar provides some shortcuts to the most common debugging operations.
+They are described below.
+
+<P><IMG SRC="images/arrows2.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=20 WIDTH=24>Toggles
+a breakpoint at the current cursor position.
+
+<P><IMG SRC="images/cont.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=20 WIDTH=30>Continue
+(run) the debugger to the next breakpoint or until the program ends.
+
+<P><IMG SRC="images/step.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=20 WIDTH=30>Step
+to next line, stepping into procedure calls and source commands.
+
+<P><IMG SRC="images/over.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=20 WIDTH=30>Step
+over to next line, stepping over procedure calls and source commands.
+
+<P><IMG SRC="images/stopsign.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=20 WIDTH=18>Stops
+execution of the program and gives control back to the debugger.
+
+<P><IMG SRC="images/magnify.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=20 WIDTH=26>View
+variable; brings up a variable monitor dialog for the variable named by
+the current mouse selection.
+
+<P><IMG SRC="images/house.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=21 WIDTH=25>Make
+the home position (current debugging position) visible in the code window.
+
+<P><IMG SRC="images/finproc.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=20 WIDTH=26>Finish
+the current procedure level; i.e. continue execution and stop when our
+stack level is one less than currently.
+
+<P><IMG SRC="images/finsource.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=20 WIDTH=26>Finish
+the current source command; i.e. continue execution and stop when the source
+level is one less than currently.
+
+<P><IMG SRC="images/finish.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=20 WIDTH=26>Finish
+program. This removes all breakpoints and allows the program to run until
+it exists without any debugger intervention.
+
+<P><IMG SRC="images/exit.gif" HSPACE=5 NOSAVE BORDER=1 HEIGHT=20 WIDTH=25>Kills
+any running program and exits the Tuba debugger.
+<H2>
+Status Bar</H2>
+The status bar gives information about the home position, which is the
+current position in the program you're debugging.
+<UL>
+<LI>
+<B>File</B> The current file</LI>
+
+<LI>
+<B>Proc</B> The current proc</LI>
+
+<LI>
+<B>Level</B> The current stack level; i.e. how deep in the call stack are
+you</LI>
+
+<LI>
+<B>Source Level</B> The current source level; i.e. how many nested source
+commands are you in</LI>
+</UL>
+
+<H2>
+Source Code</H2>
+This shows the source code of the currently loaded file.
+<H2>
+Current Line</H2>
+The current line the debugger is stopped on is highlighted in blue.
+<H2>
+Message Box</H2>
+Informational messages from the debugger are displayed here.
+
+<P>
+<HR WIDTH="100%">
+<H1>
+<A NAME="Executing Your Source"></A>Executing Your Source</H1>
+
+<H2>
+Varying Degrees of Execution</H2>
+While debugging your program, there are several varying degrees of execution.
+The most used commands are continue, step into, and step over.
+
+<P><B>Continue</B>
+<UL>This continues your program's execution until a breakpoint is hit or
+the program exits.</UL>
+<B>Step Into</B>
+<UL>This will execute the current line of code and stop on the next line.
+Step Into, as the name implies, will step into a procedure call or source
+command (in Tuba, a source command is treated as a procedure call without
+a stack level change).</UL>
+<B>Step Over</B>
+<UL>This will also execute the current line of code, but it will not step
+into a procedure call or source command. In other words, the next line
+will be the line after the procedure call, not a line inside the procedure.</UL>
+
+<H2>
+Levels</H2>
+As your program runs, it goes through a number of levels.
+
+<P>Every time it makes a procedure call, it increments the <B>stack level.</B>
+This level can be retrieved with the Tcl command <TT>info level</TT>.When
+a procedure returns, the level is decremented.
+
+<P>The same kind of idea exists for source commands. When your program
+runs the source command, Tuba increments the <B>source level. </B>Source
+commands can be nested just like procedure calls.
+
+<P>These concepts are important for the next set of source execution commands:
+
+<P><B>Finish Proc</B>
+<UL>This continues the debugger until the program has returned from the
+current procedure. An internal breakpoint is set that says "break when
+my stack level is one less than my current level".</UL>
+<B>Finish Source</B>
+<UL>Similar to the finish proc command, this continues the debugger until
+it is no longer inside the file that was sourced. The internal breakpoint
+says "break when my source level is one less than my current source level".</UL>
+
+<H2>
+Finishing Without the Debugger</H2>
+When you want to continue running your program at full speed without the
+debugger getting in the way, the finish command will do that. Control will
+not come back to the debugger until the program exits. Even the stop button
+will not work.
+
+<P>
+<HR WIDTH="100%">
+<H1>
+<A NAME="Variables"></A>Variables</H1>
+Tuba provides two methods to view the variables of a running program.
+<H2>
+Variable Quick Browser</H2>
+The quick browser is a means to view a group of variables at once, whose
+values are for the most part short.
+
+<P>You bring up the variable quick browser window by selecting the <TT>View/Variables</TT>
+or <TT>Variables/View</TT> menu options.
+
+<P><IMG SRC="images/varwindow.gif" NOSAVE HEIGHT=394 WIDTH=610>
+
+<P>The listboxes on the right displays all the possible variables you can
+view. The variables are separated out in global or local groups.
+
+<P>The textbox on the left contain all the currently viewed variables.
+If you keep this window up and continue debugging, the variables in the
+window will get updated when they change. Those variables whose value has
+a blue background are arrays; those with white backgrounds are normal variables.
+
+<P>To add variables to the view textbox, select the variable (or variables,
+since it is a multiselect listbox) you want and hit the <TT>Add </TT>button.
+
+<P>To remove variables from the view textbox, simply click on the variable
+name, which is a button embedded in the textbox. This will remove the variable
+and the value from the window.
+
+<P>If you hit the Monitor button with variable(s) selected, it will bring
+up the variable monitor window for the selected variable(s). Another method
+to bring up a variable monitor is to click on the value of a variable that
+is in the view textbox. Variable monitors are described in the next section.
+<H3>
+<A NAME="quickbrowoptions_23"></A>Quick Browser Options</H3>
+The quick browser has a menu at the top for options. Here are the options
+that can be set:
+<UL><B>autoremove unset vars</B>
+<UL>When a variable is unset, the quick browser will show the variable
+with a value of &lt;unset>. If the autoremove option is set, then any unset
+variables will automatically be removed from the variable from the window.
+<BR>&nbsp;</UL>
+<B>show interpreter core globals</B>
+<UL>When this option is set, Tcl core globals are displayed in the global
+variables listbox.
+<BR>&nbsp;</UL>
+<B>save options</B>
+<UL>This command will save these options to the tuba init file.
+<BR>&nbsp;</UL>
+</UL>
+
+<H2>
+Variable Monitors</H2>
+Variable monitors give you more power with variables. A variable monitor
+window looks like this:
+
+<P><IMG SRC="images/varmonitorwindow.gif" NOSAVE HEIGHT=186 WIDTH=181>
+
+<P>There are several ways to bring up a variable monitor window. The first
+you've already seen from the previous section. Select a variable in the
+variable quick browser listbox and hit the Monitor button. You can also
+hit the value button in the view textbox of the variable quick browser.
+
+<P>Another way to bring up a variable monitor window is from the main window.
+Simply highlight the variable name in the code window that you want to
+monitor. Then hit the magnifying glass icon to bring up the window.
+
+<P>A variable monitor window has the following components:
+<UL>
+<LI>
+a label identifying what the variable name is</LI>
+
+<LI>
+a scrollable textbox with the variable's value. The size of this box has
+a max and min width and height.</LI>
+
+<LI>
+a watchpoint checkbox. This will be covered below in the Breakpoints section.
+(or <A HREF="#Variable Breakpoints">jump to it now</A>.)</LI>
+
+<LI>
+a <TT>Modify </TT>button. You can change the value in the text box. If
+you hit the <TT>Modify </TT>button, you will actually change the value
+of the variable in the program being debugged.</LI>
+</UL>
+
+<H2>
+Comparing the Quick Browser with the Monitor</H2>
+The following table shows the differences between the two methods of variable
+viewing. Hopefully from this you will get an idea when to use one over
+the other.
+<BR>&nbsp;
+<CENTER><TABLE BORDER CELLSPACING=3 CELLPADDING=3 BGCOLOR="#FFFFFF" >
+<TR BGCOLOR="#FFDEAD">
+<TH BGCOLOR="#FFFFFF"><FONT SIZE=+1>Feature</FONT></TH>
+
+<TH BGCOLOR="#FFFFFF"><FONT SIZE=+1>Quick Browser</FONT></TH>
+
+<TH BGCOLOR="#FFFFFF"><FONT SIZE=+1>Monitor</FONT></TH>
+</TR>
+
+<TR ALIGN=CENTER VALIGN=CENTER BGCOLOR="#FFFFFF">
+<TD>Can view several variables in one window</TD>
+
+<TD>Yes</TD>
+
+<TD>No</TD>
+</TR>
+
+<TR ALIGN=CENTER VALIGN=CENTER>
+<TD>Can view all (untruncated) variable value</TD>
+
+<TD>No</TD>
+
+<TD>Yes</TD>
+</TR>
+
+<TR ALIGN=CENTER VALIGN=CENTER>
+<TD>Can modify variable value</TD>
+
+<TD>No</TD>
+
+<TD>Yes</TD>
+</TR>
+
+<TR ALIGN=CENTER VALIGN=CENTER>
+<TD>Can set watchpoint on variable</TD>
+
+<TD>No</TD>
+
+<TD>Yes</TD>
+</TR>
+
+<CAPTION ALIGN=BOTTOM>Comparison of Browser to Monitor</CAPTION>
+</TABLE></CENTER>
+
+<HR WIDTH="100%">
+<H1>
+<A NAME="Breakpoints"></A>Breakpoints</H1>
+Breakpoints are events that tell the debugger that it needs to take control
+of the running program. Tuba supports three types of breakpoints.
+<H2>
+Line Breakpoints</H2>
+A line breakpoint is set on a specific line in a file. Whenever the execution
+of your program comes to this line, the breakpoint stops the execution
+and gives the debugger control.
+
+<P>There are a couple of ways to set a line breakpoint. The easiest is
+to click the right mouse button on the line or proc definition where you
+want the breakpoint. Another click of the right mouse button will turn
+it off.
+
+<P>Another way is to place the insertion cursor anywhere on the line you
+want to set a breakpoint on. Then hit the <TT>Toggle breakpoint</TT> button
+in the toolbar. This should turn the line red, which means there is a breakpoint
+on that line.
+
+<P>If you want to set a breakpoint on a line in a file that has not been
+loaded yet, you need to load the file.
+
+<P>To view your current set of breakpoints, select the menu option <TT>Breakpoints/View
+line BPs. </TT>This will bring up a dialog window like this:
+
+<P><IMG SRC="images/smbpswindow.gif" NOSAVE HEIGHT=223 WIDTH=468>
+
+<P>The listbox lists each active breakpoint, with the filename and line
+number. If you leave this window up, it will automatically keep updated
+as you create or remove breakpoints.
+
+<P>The <TT>Remove </TT>button will remove any breakpoints selected in the
+listbox. The listbox is a multiple select listbox, so you can remove many
+at once.
+
+<P>The <TT>Goto </TT>button will make the first selected breakpoint file
+and line visible in the source code window.
+
+<P><TT>Close </TT>will close the window.
+<H2>
+Procedure Breakpoints</H2>
+A procedure breakpoint consists of a procedure name. Whenever your executing
+program enters a procedure that has a procedure breakpoint, execution will
+transfer to the debugger.
+
+<P>One way to set a procedure breakpoint is the same as setting a line
+breakpoint. Put the insertion cursor on the line where the proc statement
+is and hit the <TT>Toggle BP</TT> button on the toolbar.
+
+<P>Sometimes you don't know where the proc is or you don't want to go hunting
+for it, but you know the proc name. You can set a procedure breakpoint
+by selecting the menu option <TT>View/Procedures.</TT>The window that comes
+up contains a list of all the known procedures that can have a procedure
+breakpoint.
+
+<P><IMG SRC="images/pbpswindow.gif" NOSAVE HEIGHT=223 WIDTH=258>
+
+<P>The <TT>Toggle BP</TT> button will toggle the selected procedure(s)
+breakpoint status. Those procedures that have breakpoints have <TT>(B)
+</TT>at the end of the name.
+
+<P>The <TT>Goto </TT>button will display the procedure in the code window.
+<H2>
+<A NAME="Variable Breakpoints"></A>Variable Breakpoints</H2>
+Sometimes called watchpoints, avariable breakpoint is one you set on a
+specific variable. Whenever this variable is modified, a breakpoint is
+triggered and control is transferred back to the debugger. Note that when
+the debugger gets control back, the current line is the line <B>after </B>the
+line that modified the variable.
+
+<P>To set a variable breakpoint, bring up a variable monitor window on
+a variable as described in the previous section. Check the checkbutton
+with the text "<TT>Break when variable set</TT>". This will set up a variable
+breakpoint for this variable.
+
+<P>To turn it off, uncheck the checkbutton or close the variable monitor
+window.
+
+<P>
+<HR WIDTH="100%">
+<H1>
+<A NAME="Source Code Navigation"></A>Source Code Navigation</H1>
+Tuba supports the possibility that the program you're debugging actually
+consists of multiple source files.
+
+<P>Once a file is sourced into yuor running program, the file is added
+to the list of loaded files. You can always display one of these files
+by bringing down the <TT>Goto </TT>menu button and selecting the file from
+the list brought up by the <TT>Loaded source file</TT> menu option.
+
+<P>If a file has not been loaded yet, you can still view it by selecting
+the <TT>File </TT>option in the <TT>View </TT>menu. Enter the file and
+it will be displayed in the code window. Even though the file has not been
+"officially" loaded by your program, you can still set breakpoints in the
+file as usual.
+
+<P>When you start browsing different source files, you often lose track
+of the current debugger position. When you want to quickly jump back to
+this spot so that you may resume debugging, you can hit the home button
+in the toolbar or select the <TT>Home debugger position</TT> menu option
+in the <TT>Goto </TT>menu.
+
+<P>
+<HR WIDTH="100%">
+<H1>
+<A NAME="Handling Errors From Your Application"></A>Handling Errors From
+Your Application</H1>
+Tuba attempts to catch errors thrown by your application. This gives the
+user a chance to look at the stack or variables at the time of the error
+to figure out what went wrong.
+
+<P>When the error is caught, you will see windows like this displayed:
+
+<P><IMG SRC="images/errorcatch.gif" NOSAVE HEIGHT=393 WIDTH=599>
+
+<P>In the source code window highlighted with a red background is the line
+that caused the error (actually, the last Tuba-known line; code that was
+not instrumented would not show up) and a dialog box tells you what the
+error is and gives you three options:
+<OL>
+<LI>
+Abort the application. Immediately aborts the running application.</LI>
+
+<LI>
+Let the error continue. This will rethrow the error, and assumes that your
+application has code somewhere to handle the error.</LI>
+
+<LI>
+Ignore the error and continue. This will continue execution to the next
+statement. Be careful with this! It can alter the logic of your code because
+the failed statement did not complete.</LI>
+</OL>
+Before selecting one of these options, you may go to the main Tuba window
+and perform the following tasks:
+<UL>
+<LI>
+View variables</LI>
+
+<LI>
+View the stack</LI>
+
+<LI>
+Change options</LI>
+</UL>
+These tasks would be run relative to the stack level where Tuba caught
+the error. The intent is to allow the user an opportunity to look more
+closely for the cause of the error.
+
+<P>You may turn off Tuba's interception of errors by deselecting the option
+"<TT>Intercept errors</TT>" in the <B>Options </B>menu.
+
+<P>Should your application terminate with an error, meaning your application
+did not catch an error, then Tuba will also catch this. But only a dialog
+informing the user what the error was will display. The user cannot inspect
+the code because the stack has already unwound and the context of the error
+is no longer available.
+
+<P>
+<HR WIDTH="100%">
+<H1>
+<A NAME="Proc Exclusions"></A>Proc Exclusions</H1>
+You may find yourself debugging in an environment that contains many procs
+that you don't really care to step into. Setting up proc exclusions is
+a way for you to disable some procs from being instrumented, thus rendering
+them undebuggable. This means you can't step into these procs, nor set
+breakpoints inside them. They run at full speed as originally written.
+
+<P>Proc exclusions are simply a white space-delimited list of proc expressions.
+If any of your procs match one of the expressions (matching being done
+via <TT>string match</TT>), then that proc is excluded from the instrumentation.
+Here is an example of a proc exclusion list:
+<UL>
+<PRE>debug
+::tk*
+::myns::X*</PRE>
+</UL>
+Proc exclusions can be entered two ways:
+<BR>&nbsp;
+<UL>1. via the <TT>-e &lt;<I>excl_file</I>></TT> command line option. The
+<I>excl_file</I> is a file containing the list of proc exclusion expressions.
+
+<P>2. via the <TT>Proc Exclusions... </TT>menu item in the <TT>Options</TT>
+menu. This will bring up a dialog box shown below:
+<BR>&nbsp;</UL>
+
+<CENTER><IMG SRC="images/procexclusions.gif" NOSAVE HEIGHT=329 WIDTH=327></CENTER>
+
+<UL>To enter a new exclusion, select &lt;NEW> in the list box and hit the
+Edit button (or double click on the listbox entry). This will put the &lt;NEW>
+entry in the entry field below the listbox for you to edit:</UL>
+
+<CENTER><IMG SRC="images/procexclusions2.gif" NOSAVE HEIGHT=329 WIDTH=327></CENTER>
+
+<UL>You see the save button has now become active. Enter in your new exclusion
+expression and hit the Save button (or hit the enter key). This will add
+it to the listbox.
+
+<P>To edit an existing expression, just double click it or select it and
+hit Edit. Edit the expression in the entry box and save it just like you
+did when creating a new entry. When you save, it will replace the entry
+in the listbox.
+
+<P>Removing expressions is just as easy: just select the entry in the listbox
+and hit Remove.
+
+<P>No changes actually take place until you hit the Ok button. You can
+cancel all your edits via the cancel button.</UL>
+<U>Note</U>: Although proc exclusions are in the <B>Options</B> menu, they
+do not get saved in your .tubarc file. This is because proc exclusions
+are not expected to be used for all debugging sessions, but rather for
+very specific programs. The exclusions are, however, saved in the session
+files, as described below.
+
+<P>
+<HR WIDTH="100%">
+<H1>
+<A NAME="Sessions"></A>Sessions</H1>
+Sometimes you may find yourself debugging the same program over and over,
+and setting the same breakpoints. This was a pain before, but now you can
+save your current debugging session environment into a session file. A
+session file can later be opened and your environment will be restored.
+
+<P>Here is a list of items stored in a session file:
+<OL>
+<LI>
+the interpreter</LI>
+
+<LI>
+the program you're debugging</LI>
+
+<LI>
+the arguments of the program</LI>
+
+<LI>
+the working directory</LI>
+
+<LI>
+proc exclusions</LI>
+
+<LI>
+line break points</LI>
+
+<LI>
+proc break points</LI>
+
+<LI>
+all debugger options in the Options menu</LI>
+</OL>
+The session functions are accessed from the <B>Debugger</B> menu. Here
+you can open existing sessions or create new ones. If you are currently
+working on a session, the status line in the main window will indicate
+the session file name.
+
+<P>You can save your debugger session at any time. Tuba will simply make
+a snapshot of your current environment. Sessions are stored in session
+files, which by default live in the directory <TT>$HOME/tuba</TT>. You
+can change this default directory by bringing up the <B>Locations</B> dialog
+from the <B>Options</B> menu. Of course, you can save your session files
+anywhere; you are given the standard Tk open and save dialog boxes for
+opening and saving session files.
+
+<P>Session files also contain information to handle stale breakpoints These
+are created when someone changes the source files and now the saved line
+breakpoints may be out of sync.
+
+<P>Timestamps of all the source files that have line breakpoints in them
+are stored in the session files. When you open a session, Tuba will compare
+all those timestamps with the files currently on your system. If any files
+have a different timestamp, you will get a window similar to this:
+<CENTER><IMG SRC="images/outofdate.gif" NOSAVE HEIGHT=368 WIDTH=475></CENTER>
+&nbsp;
+
+<P>The listbox will list all the files that have different timestamps.
+There are three things you can do, and you can do more than one if you
+wish:
+<OL>
+<LI>
+Edit the breakpoints. Hitting the Edit BPs button will bring up the line
+breakpoint window. In here, you can select the Goto action on selected
+breakpoints to see if they are in a place you originally intended. You
+can remove breakpoints and even create new ones in the main window.</LI>
+
+
+<P>When you are satisfied with the breakpoint settings, you can close the
+breakpoint window and hit Continue on the Stale Breakpoints window.
+<LI>
+Remove all BPs from selected files. You can select files in the listbox
+(multiple selections allowed) and select the middle pushbutton. This will
+remove all breakpoints in the selected files. When you are done, hit Continue.</LI>
+
+<LI>
+Continue. This will leave the breakpoints as they are.</LI>
+</OL>
+Once your session is loaded, you can continue debugging as before.
+<BR>
+<HR WIDTH="100%">
+<H1>
+<A NAME="Customizing Tuba"></A>Customizing Tuba</H1>
+Some features of Tuba are customizable, all which can be done via the <TT>Options
+</TT>menu.
+<UL>
+<LI>
+<B>Balloon help. </B>Turns balloon help on or off. When on, if you let
+the mouse cursor linger on a toolbar button for a short time, a small window
+pops up to tell you what the button is. This window automatically goes
+away when the mouse button is taken off the button.</LI>
+
+<LI>
+<B>Status line. </B>Turns on or off the status line display</LI>
+
+<LI>
+<B>Toolbar. </B>Turns on or off the toolbar display</LI>
+
+<LI>
+<B>Animate run. </B>When set, Tuba will display every line as it is executed
+during a continue command. Otherwise, the home position will only be displayed
+when the debugger is stopped and waiting for user interaction.</LI>
+
+<LI>
+<B>Debug system sources. </B>When set, Tcl core sources, such as parray,
+will be instrumented and debugged should you try to step into that code.
+Otherwise, Tuba does not instrument any sources found in the <TT>tcl_library</TT>
+directory.</LI>
+
+<LI>
+<B>Proc Exclusions.</B> Proc exclusions are expressions, that when match
+a proc name, excludes that proc from being instrumented. What this means
+is that the proc cannot be stepped into or breakpoints set on. This is
+handy for turning off certain procs that you don't want to debug during
+a debug session.</LI>
+
+<LI>
+<B>Intercept errors.</B> When set, Tuba will catch runtime errors as soon
+as possible and give the user a chance to inspect the stack and variables.
+Once an error is caught, the user can either abort the application, let
+the error continue up the call stack, or ignore the error and continue
+to the next statement.</LI>
+
+<LI>
+<B>Stack display. </B>This sets the default stack type when viewing the
+stack window. There are two types:</LI>
+
+<UL>
+<LI>
+<U>Level stack.</U> This is the information retrieved from the <TT>info
+level</TT> command. It is useful in seeing the arguments passed to each
+procedure.</LI>
+
+<LI>
+<U>Tuba stack.</U> This is the stack that Tuba maintains as your program
+runs. It displays the procedure called and what file and line it was called
+from.</LI>
+</UL>
+
+<LI>
+<B>Dynamic procs.</B> When Tuba encounters a dynamically defined proc,
+there are a number of actions to take. The action to take is defined by
+these options:</LI>
+
+<UL>
+<LI>
+<U>Instrument at load time</U>. This means go ahead and instrument the
+proc as it is in the source.</LI>
+
+<LI>
+<U>Instrument at run time</U>. This means don't instrument the proc until
+it is actually defined at run time. By this time, the dynamic portions
+will have been defined.</LI>
+
+<LI>
+<U>Ask.</U> This will cause Tuba to ask the user which action to take for
+every dynamic proc.</LI>
+</UL>
+
+<LI>
+<B>Instrumenting.</B> You can set various instrumentation options here:</LI>
+
+<UL>
+<LI>
+<U>Loadtime instrumenting</U>. This will instrument the entire source file
+when the file is loaded (via source command).</LI>
+
+<LI>
+<U>Runtime instrumenting</U>. This will instrument only the top level of
+statements at loadtime and will instrument the inner blocks (of procs,
+while loops, etc) as the source is run. This is slower, but it provides
+much more accurate and correct instrumentation on source code that cannot
+be instrumented fully at loadtime due to the dynamic nature of Tcl.</LI>
+
+<LI>
+<U>Cache instrumented file</U>. When this is set, instrumented source files
+are saved in a cache. Thus, when files are sourced and there is an up to
+date instrumented file in the cache, it is loaded. This speeds up Tuba
+considerably.</LI>
+</UL>
+
+<LI>
+<B>Parser</B>. You can choose which parser implementation to use. Changing
+this option will not have any immediate effect; you will have to restart
+or load a new program.</LI>
+
+<UL>
+<LI>
+<U>Tcl-based.</U> This is the parser written in Tcl; slower but compatible
+across all Tcl platforms.</LI>
+
+<LI>
+<U>C-based.</U> This is a faster parser written in C++.</LI>
+</UL>
+
+<LI>
+<B>Save options. </B>This menu option will save your current settings to
+the file ~/.tubarc, or in Windows, $HOME/tuba.ini. This file is read in
+every time you start up Tuba.</LI>
+</UL>
+
+</BODY>
+</HTML>

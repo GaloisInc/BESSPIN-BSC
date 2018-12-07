@@ -1,0 +1,92 @@
+-- Copyright 2000--2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id: Printer.bs,v 1.21 2003/01/10 21:39:15 elf Exp $
+
+package Printer(Printer(..), mkPrinter) where
+
+import Environment
+
+-- A package for debugging via C.
+
+--@ \subsection{Printer}
+--@ \index{Printer@\te{Printer} (interface type)|textbf}
+--@ This is a useful interface for debugging when you use the C back end.
+--@ 
+--@ \index{mkPrinter@\te{mkPrinter} (\te{Printer} interface method)}
+--@ The following code instantiates a printer:
+--@ \begin{verbatim}
+--@     p :: Printer
+--@     p <- mkPrinter
+--@ \end{verbatim}
+--@ and then the call {\mbox{\te{p.print "$s$"}}} has type {\te{Action}}
+--@ and, when performed, will print the string $s$.
+--@ The string $s$ must be a string literal, or an expression that can
+--@ be computed to a string literal at compile time.
+--@ The call {\mbox{\te{p.printBit "$e$"}}} takes an argument of type
+--@ \mbox{\te{Bit $n$}} and prints it in hexadecimal format.
+--@ The call {\mbox{\te{p.printBitDec "$e$"}}} takes an argument of type
+--@ \mbox{\te{Bit $n$}} and prints it in decimal format.
+
+--@ \begin{verbatim}
+--@ interface Printer;
+--@     method Action print(String x1);
+--@     method Action printBit(Bit#(n) x1);
+--@     method Action printBitDec(Bit#(n) x1);
+--@     method Action printCycle();
+--@     method Action exitWith(Bit#(8) x1);
+--@ endinterface: Printer
+--@ \end{verbatim}
+interface Printer =
+    print :: String -> Action
+    printBit :: Bit n -> Action
+    printBitDec :: Bit n -> Action
+    printCycle :: Action
+    exitWith :: Bit 8 -> Action		-- terminate execution
+
+interface Printer_ =
+    print_ :: Bit DummyStringSize -> PrimAction
+    printBit_ :: Bit n -> PrimAction
+    printBitDec_ :: Bit n -> PrimAction
+    printCycle_ :: PrimAction
+    exitWith_ :: Bit 8 -> PrimAction
+
+printer_ :: Module Printer_
+printer_ =
+    module verilog "Printer" "CLK" {
+	print_[1000] = "str" "print";	-- 1000 is just an arbitrary number to allow multiple prints in one clock cycle
+	printBit_[1000] = "arg" "printBit";
+	printBitDec_[1000] = "arg" "printBitDec";
+	printCycle_[1000] = "printCycle";
+	exitWith_[1000] = "rc" "exitWith";
+    } 
+--      [ [ print_, printBit_, printCycle_, printBitDec_, exitWith_] <> [ print_, printBit_, printCycle_, printBitDec_, exitWith_] ]
+
+      [ [print_, printBit_, printCycle_, printBitDec_, exitWith_]  <> 
+        [print_, printBit_, printCycle_, printBitDec_, exitWith_]
+      ]
+
+
+--@ \begin{verbatim}
+--@ module mkPrinter(Printer);
+--@ \end{verbatim}
+mkPrinter :: (IsModule m) => m Printer
+mkPrinter = liftModule $
+  if genC then
+    module
+      _p :: Printer_
+      _p <- printer_
+      interface
+	print s = fromPrimAction (_p.print_ (primStringToBit s))
+	printBit x = fromPrimAction (_p.printBit_ x)
+	printBitDec x = fromPrimAction (_p.printBitDec_ x)
+	printCycle = fromPrimAction _p.printCycle_
+	exitWith rc = fromPrimAction (_p.exitWith_ rc)
+  else
+    warning "mkPrinter not called from C\n" $
+    return $
+    interface Printer
+        print s = action
+        printBit x = action
+        printBitDec x = action
+	printCycle = action
+	exitWith rc = action

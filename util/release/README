@@ -1,0 +1,49 @@
+---------------------------------------------------------------------------
+
+To build a release, log into "earth" and run:
+
+  $ make -f Makefile.release VERSION=yyyy.mm.tag
+
+To build a release containing only 64-bit binaries and libraries, run:
+
+  $ make -f Makefile.release VERSION=yyyy.mm.tag release-64only
+
+Other options are available, as explained in comments in the Makefile.
+
+After building a release, delete the work directories by running:
+
+  $ make -f Makefile.release VERSION=yyyy.mm.tag clean
+
+The Makefile relies on permanent Debian sarge chroots in the following
+directories on "earth":
+
+  /home/2013-sarge/{32,64}/
+
+If there is a problem, you can consult the logs and the work directories.
+Details are in the comments further down in the Makefile.
+
+---------------------------------------------------------------------------
+
+The above directions are for building a release containing binaries and
+libraries for multiple environments, specifically chosen for compatibility.
+
+If you are building in a different environment and would like to simply
+package up those files into a release format.  That can be done by running:
+
+  $ make -f Makefile.native VERSION=yyyy.mm.tag BSCSRC=<path-to-bsc-repo>
+
+This will produce a tarball that does not include the documentation.
+If you with to include the documentation, then you will need to point make
+to the location of a bsc-doc repo, as follows:
+
+  $ make -f Makefile.native VERSION=yyyy.mm.tag \
+        BSCSRC=<path-to-bsc-repo> \
+	DOCSRC=<path-to-bsc-doc-repo>
+
+As with the official release process, you will need to clean the files after:
+
+  $ make -f Makefile.native VERSION=yyyy.mm.tag clean
+
+Other options are also available.  See comments in the Makefile.
+
+---------------------------------------------------------------------------

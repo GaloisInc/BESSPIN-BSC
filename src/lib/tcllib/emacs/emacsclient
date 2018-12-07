@@ -1,0 +1,15 @@
+#!/bin/sh
+###
+### (c) Copyright 2005 - 2008, Bluespec Incorporated
+###
+
+PLAT=`${BLUESPECDIR}/bin/bsenv platform`
+
+BLUESPECEXEC=${BLUESPECDIR}/tcllib/emacs/${PLAT}/emacsclient-22.1
+
+if [ -z "$BLUESPECEXEC" ] || [ ! -x $BLUESPECEXEC ] ; then
+    echo "Error Bluespec executable not found BLUESPECEXEC  $BLUESPECEXEC"
+    exit 1;
+fi
+
+exec $BLUESPECEXEC "$@"

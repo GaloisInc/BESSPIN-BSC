@@ -1,0 +1,2354 @@
+
+/**
+
+  @page _workstation_fspec_ Functional Specification 
+
+@section _workstation_fspec_introduction_  Introduction
+
+@subsection _workstation_fspec_introduction_document_id_ Document Identifier
+
+This is a functional specification for the Bluespec Workstation project.  It is
+a launching point for simulators, compilers, editors and set of tools for
+analysing the output of the compilers and simulators.  The overall tool is
+referred to as bluespec workstation, and will be invoked via the unix command
+"bluespec".
+
+@subsection _workstation_fspec_introduction_definition_of_terms_ Definition of Terms and Acronyms
+
+        - @b BSV - Bluespec System Verilog
+        - @b BSC - Bluespec System Verilog compiler
+        - @b Blue @b (tcl/wish) - Bluespec extension for tcl/wish interpreter
+
+@subsection _workstation_fspec_introduction_funcionality_ Overview of the functionality
+
+@anchor _workstation_fspec_introduction_functionality_interfaces_ @b Interfaces \n
+
+The tool will provide the following interfaces:
+
+        - @b Graphical @b User @b Interface
+        - @b Command @b Line @b Interface - various command line options for
+        invoking the blusepec workstation from within scripts
+        - @b Tcl @b Scripting @b API - most of the actions (ideally all) that
+        can be done through gui should also be available as Tcl commands
+
+@anchor _workstation_fspec_introduction_functionality_window_hierarchy_ @b Window @b Hierarchy \n
+
+Following window hierarchy will be implemented:
+
+       - @ref _workstation_fspec_main_window_ - top level window with menu-bar,
+       tool-bar, status bar and command/status window
+       - @ref _workstation_fspec_project_window_ - window with the view of
+       current active project files 
+       - @ref _workstation_fspec_editor_window_ - window for source code
+       view/edit (usually this will be an external editor)
+       - @ref _workstation_fspec_package_window_ - hierarchy viewer used to
+       view the package list and the contents of each package
+       - @ref _workstation_fspec_type_browser_window_ - hierarchy viewer used
+       to view types and their contents
+       - @ref _workstation_fspec_module_browser_window_ - window which
+       represents the elaborated module hierarchy and the contents of each
+       module
+       - @ref _workstation_fspec_schedule_analysis_window_ - window which
+       provides multiple perspectives on the schedule and rule operations
+
+As editors/waveform viewers are separate tools (they are represented in
+separate windows) the application will look more uniform if the GUI is
+implemented using separate windows instead of creating one main window and
+nesting the other windows inside it (see @ref
+_workstation_fspec_bluespec_workstation_ "Top Level Windows").
+
+@anchor _workstation_fspec_bluespec_workstation_  
+@image html bluespec_workstation.png "Top Level Windows" width=10cm
+@image latex bluespec_workstation.png "Top Level Windows" width=10cm
+
+The GUI action widgets (menu and tool-bar items) in the first phase will always
+be active, even if the command is not applicable, because all actions are
+mapped to corresponding Tcl commands, and the Tcl commands always do
+error-checking/reporting.  In later phases the GUI will be enhanced to disable
+actions that are not applicable in the current context.
+
+@anchor _workstation_fspec_introduction_functionality_help_system_ @b Help @b System \n
+
+The help is implemented in HTML, using Doxygen. \n
+In addition, all the widgets on the toolbar and menu-bar have hints, that are
+shown on the status bar when the mouse hovers over the button.
+
+@anchor _workstation_fspec_introduction_functionality_setup_files_ @b Setup @b Files \n
+
+Upon application startup several settings files are processed by the bluespec
+workstation.  These files should contain tcl commands.  Application will run
+these commands upon startup. \n
+There will be a user specific setup.tcl file (located in the ~/.bluespec
+directory), where user can override global settings, such as editor selection
+or set of simulators supported by the workstation.  If the file doesn't exist 
+it will be created with global settings. \n
+The user will have an ability to add tool bar buttons from ~/.bluspec/setup.tcl
+file
+Note that bluetcl and bluewish both load ~/bluespec_rc.tcl or bluespec_rc.tk
+after loading $bluespecdir/tcllib/bluespec/bluespec.tcl or bluespec.tk.  This
+behavior can be changed if required.
+
+
+@subsection _workstation_fspec_introduction_scope_ Scope 
+
+Section @ref _workstation_fspec_main_window_ provides functionality of the Main
+Window.  Following sections define functionality of each module in details.
+Section @ref _workstation_fspec_tcl_commands_ provides detailed description of tcl commands available in the tool.
+In section 11 it is shown that all the use-cases specified in the Use Cases
+document can be implemented by the provided tcl commands and/or gui actions.
+Dependencies from bluespec and other projects are listed in the section @ref
+_workstation_fspec_dependencies_. Section 13 contains list of questions and
+answers arose as result of  interaction with bluespec.
+
+@subsection _workstation_fspec_introduction_references_ References
+
+@anchor _workstation_fspec_workstation_docs_
+[1].  workstation/docs/prd.odt - product requirement document for bluespec
+workstation \n
+@anchor _workstation_fspec_bsv_docs_
+[2].  reference_guide_rev_30_march_2007.pdf - bluespec system verilog reference
+guide \n
+[3].  bsv_user_guide_rev_30_march_2007.pdf - bluespec system verilog user
+guide \n
+@anchor _workstation_fspec_iwidgets_library_
+[4]. http://incrtcl.sourceforge.net/iwidgets/iwidgets.html - the iWidgets
+library\n
+@anchor _workstation_fspec_schedule_
+[5].  workstation/docs/workstation_schedule.planner - schedule for bluespec
+workstation project \n
+
+@section _workstation_fspec_main_window_ Main Window
+
+The main window is the central widget of the bluespec workstation, containing
+the application menu-bar, tool-bar, command/status window and a status bar,
+where short help for menu actions is displayed (see @ref
+_workstation_fspec_main_window_img_ "Main Window").
+
+@anchor _workstation_fspec_main_window_img_  
+@image html main_window.png "Main Window" width=10cm
+@image latex main_window.png "Main Window" width=10cm
+
+The main menu will have the following sub-menus:
+
+        - @ref _main_window_project_menu_ - commands for manipulating the
+        project
+        - @ref _main_window_edit_menu_ - clipboard manipulation commands
+        - @ref _main_window_build_menu_ - commands to compile/link/simulate the
+        project
+        - @ref _main_window_window_menu_ - commands for manipulating windows 
+        - @ref _main_window_message_menu_ - commands for manipulating messages
+        in the log window
+        - @ref _main_window_help_menu_ - commands to launch help browser
+
+@subsection _main_window_project_menu_ Project menu
+
+This menu provides commands for manipulating the current project:
+        - @ref _main_window_project_menu_new_ "New..." - creates a new project
+        - @ref _main_window_project_menu_open_ "Open..." - opens an existing
+        project 
+        - @ref _main_window_project_menu_save_ "Save" - saves the current
+        project 
+        - @ref _main_window_project_menu_saveas_ "Save as..." - saves the
+        current project in another location
+        - @ref _main_window_project_menu_options_ "Options..." - opens the
+        project options dialog window
+        - @ref _main_window_project_menu_topfile_ "Top file..." - opens the top
+        file dialog window
+        - @ref _main_window_project_menu_close_ "Close" - closes the currently
+        opened project
+        - @ref _main_window_project_menu_quit_ "Quit" - quits the workstation 
+
+@anchor _main_window_project_menu_new_ @b Project->New \n
+
+This action creates an empty project.  As result of this action the current
+project (if there is any) will be closed and an open-dialog will be created
+with "directory", "name", "top file" and "top module" fields (see @ref
+ _project_new_dialog_ "Project New dialog").  By default the "directory" field
+is set to the current working directory($pwd) and the "name" field is set to
+the name of the current directory.  If the current project has been modified
+after last save then a message-dialog will be created with "Save", "Discard"
+and "Cancel" buttons.  If the project with the specified name already exists
+then a message-dialog will be created with "overwrite" and "Cancel" buttons. \n
+
+User will be informed about occurred errors via a message window with the
+description of the error. \n
+
+Following is the list of error messages for the described action :
+        - "Can not create new project.  There is no write permission." - user
+        has no write permission in specified location
+        - "Can not create new project.  There is no enough space." - there is no
+        enough space on hard drive
+        - "Can not save current project.  There is no write permission." - user
+        has chosen "Save" but has no write permission to current project
+        - "Can not save current project.  There is no enough space." - user has
+        chosen "Save" but there is no enough space on hard drive to save the
+        current project
+
+@anchor _project_new_dialog_
+@image html project_new_dialog.png "Project New" width=10cm
+@image latex project_new_dialog.png "Project New" width=10cm
+
+@anchor _main_window_project_menu_open_ @b Project->Open \n
+
+This action closes the current project (if there is any open) and opens the
+project open window to chose a project (see @ref _project_open_dialog_
+"Project Open dialog").  Project will be opened with double-clicking on
+project name. bspec file.  The default should be set on current directory
+($pwd).  If the current project is modified after last save then a
+message-dialog will be created with "Save", "Discard" and "Cancel" buttons. \n
+
+User will be informed about occurred errors via message window with description
+of error. \n
+Following is the list of error messages for the described action:
+        - "Can not open project.  There is no read permission to the
+        configuration file." - user has no read permission to the configuration
+        file
+        - "Can not save current project.  There is no write permission." - user
+        has chosen "Save" but has no write permission to current project
+        - "Can not save the current project.  There is no enough space." - user
+        has chosen "Save" but there is no enough space on hard drive to save
+        the current project
+
+@anchor _project_open_dialog_
+@image html project_open_dialog.png "Project Open" width=10cm
+@image latex project_open_dialog.png "Project Open" width=10cm
+
+@anchor _main_window_project_menu_save_ @b Project->Save \n
+
+This action saves all information related to the current project. All
+configuration parameters for current project should be saved in the
+project name.bspec file in the project directory. \n
+User will be informed about occurred errors via message window with the
+description of the error. \n \n
+Following is the list of error messages for the described action:
+        - "Can not save the project.  There is no write permission to the ***
+        file." - user has no write permission to the *** file
+        - "Can not save the project.  There is no enough space." - there is no
+        enough space on hard drive to save the project
+
+@anchor _main_window_project_menu_saveas_ @b Project->Save @b as \n
+
+This action creates the save as dialog with "Name" and "Location" fields (see
+@ref _project_saveas_dialog_ "Project Save as dialog").  If a project with the
+specified name already exists then message-dialog with "Overwrite" and "Cancel"
+buttons will be created. \n
+User will be informed about occurred errors via message window with the
+description of the error.  All error cases considered for @ref
+_main_window_project_menu_save_ "Project->Save" action will also be handled for
+this operation. \n
+In addition the following error message will be also reported:
+        - "Can not save the project.  There is no write permission to specified
+        location." - user has no write permission in specified location
+
+@anchor _project_saveas_dialog_
+@image html project_saveas_dialog.png "Project Save as" width=10cm
+@image latex project_saveas_dialog.png "Project Save as" width=10cm
+
+@anchor _main_window_project_menu_options_ @b Project->Options \n
+
+This action creates the project options dialog (see @ref
+_project_options_dialog_ "Project Options dialog").  It consists of the
+following tabs :
+
+        - @ref _project_options_files_tab_ "Files" - Specifying files,
+          locations, search paths
+        - @ref _project_options_compile_tab_ "Compile" - sets options for
+        the @ref _main_window_build_menu_compile_ "Compile" command 
+        - @ref _project_options_link_sim_tab_ "Link/Simulate" - sets options
+          for the @ref _main_window_build_menu_link_ "Link" and the @ref
+                  _main_window_build_menu_simulate_ "Simulate" commands
+        - @ref _project_options_editor_tab_ "Editor" - sets the editor for the
+        current project
+        - @ref _project_options_waveform_viewer_tab_ "Waveform Viewer" - sets
+        options for the "Waveform Viewer" command
+
+User will be informed about occurred errors only during compilation. 
+
+@anchor _project_options_files_tab_ @b Files @b tab \n
+
+The tab consist of the following fields:
+        - Entry-fields for the following settings:
+                - Top file
+                - Top module
+                - .bo/.ba/.bi files location - for specifying path where
+                  generated .bo/.ba files will be located
+                - Bluesim files location - for specifying path where bluesim
+                  intermediate files will be located. This field will be used
+                  only if bluesim is chosen.
+                - Verilog files location - for specifying path where generated
+                  verilog files will be located
+                - Info files locations
+        - Search path section
+        - Display include pattern and Display exclude pattern entries.
+
+The search Path section consists of the following fields:
+        - list-box - contains the list of project search paths
+        - "Add" button - opens a dialog window to specify a directory to add to
+        the search paths
+        - "Remove" button - removes the specified paths from the search paths
+        list
+        - "Move up" button - moves the selected path up in the search path list
+        - "Move down" button - moves the specified path down in the search path
+        list
+
+@anchor _project_options_dialog_
+@image html project_options_dialog.png "Files tab of Project Options dialog" width=10cm
+@image latex project_options_dialog.png "Files tab of Project Options dialog" width=10cm
+
+@anchor _project_options_compile_tab_ @b Compile @b tab \n
+
+This tab consists of the following fields:
+        - radio-box with Bluesim and Verilog fields - to specify the compiler (
+          for specifying  either -sim or -verilog option to pass to bsc)
+        - radio-box with bsc and make fields - to specify the compilation type \n
+
+If bsc is chosen then following fields will be activated :
+
+        - Options - field for specifying additional options to pass to bsc
+        - RTS options - field for specifying RTS options to pass to bsc \n
+
+If make is chosen then following fields will be activated :
+
+        - Makefile - field for specifying makefile for the project
+        - Target - field for specifying make target 
+        - Clean target - field for specifying optional target which
+        will be called under "build->clean" action
+        - Full clean target - field for specifying optional target
+        which will be called under "build->full clean" action
+        - Make options - field for specifying options to pass to the editor
+
+@anchor _project_options_compile_tab
+@image html project_options_compile_tab.png "Compile tab of Project Options dialog" width=10cm
+@image latex project_options_compile_tab.png "Compile tab of Project Options dialog" width=10cm
+
+@anchor _project_options_link_sim_tab_ @b Link/Simulate @b tab \n
+
+This tab consists of the following fields:
+        - radio-box with Bluesim and Verilog fields - to specify the compiler (
+          for specifying  either -sim or -verilog option to pass to bsc)
+        - radio-box with Link via bsc, Link via make and Link via custom
+          command fields
+
+If "Link via bsc" is chosen then the following fields will be activated
+
+        - Output name - field for specifying the name of the executable
+        file
+        - Output dir - field for specifying the directory for the
+        executable file
+        - Link options - field for specifying options to pass to bsc
+        - Run options - field for specifying options to pass to bsc (is active
+          if Bluesim radio-box is selected)
+        - Verilog Simulator options - field for specifying verilog simulator
+          (is active if Verilog radio-box is selected)
+        - Simulate options - field for specifying verilog simulator options (is
+          active if Verilog radio-box is selected)
+
+If "Link via make" is chosen then following fields will be activated
+
+        - Makefile - field for specifying the makefile for the project
+        - Link target - field for specifying the target to be called under the
+          Build->Link command execution
+        - Simulate target - field for specifying the target to be called
+          under the Build->Simulate command execution
+        - Clean target - field for specifying the target to be called
+          under the Build->Clean command execution
+        - Full clean target - field for specifying the target to be called
+          under the Build->Full clean command execution
+        - Options - field for specifying options to pass to the makefile
+
+If "Link via custom command" is chosen then following fields will be activated
+
+        - Link command - field for specifying a link command 
+        - Simulate command - field for specifying a simulate command 
+
+@anchor _project_options_link_sim_tab
+@image html project_options_link_sim_tab.png "Link/Simulate tab of Project Options dialog" width=10cm
+@image latex project_options_link_sim_tab.png "Link/Simulate tab of Project Options dialog" width=10cm
+
+@anchor _project_options_editor_tab_ @b Editor @b tab \n
+
+This tab consists of the following fields:
+        - Radio-box with default list of editors (Gvim/Emacs)
+        - < Editor > command - entry-field to specify the command to be
+          executed for the editor
+
+@anchor _project_options_editor_tab
+@image html project_options_editor_tab.png "Editor tab of Project Options dialog" width=10cm
+@image latex project_options_editor_tab.png "Editor tab of Project Options dialog" width=10cm
+
+@anchor _project_options_waveform_viewer_tab_ @b Waveform @b Viewer @b tab \n
+
+This tab consists of the following fields:
+        - Entry field for "Verilog Hierarchy" 
+        - Entry field for "Start timeout (sec)" 
+        - Radio buttons "close viewer on Bluespec close"  Yes/No:  defaults to
+        Yes
+        - Radio button for selecting Waveform Tool
+        - Entry box for Command for each viewer
+        - Entry box for Options for each viewer
+ 
+@anchor _project_options_viewer_tab
+@image html project_options_viewer_tab.png "Viewer tab of Project Options dialog" width=10cm
+@image latex project_options_viewer_tab.png "Viewer tab of Project Options dialog" width=10cm
+
+@anchor _main_window_project_menu_topfile_ @b Project->Top @b File... \n
+
+This action creates the Top File dialog window (see @ref
+_project_top_file_dialog_ "Top File dialog").  It consists of the following
+fields:
+        - Project file - list-box with names of project files
+        - Top file - text entry
+
+If the specified module does not exist in top file, then user will be informed
+about this only during compilation.
+
+@anchor _project_top_file_dialog_
+@image html project_top_file_dialog.png "Top File dialog" width=10cm
+@image latex project_top_file_dialog.png "Top File dialog" width=10cm
+
+@anchor _main_window_project_menu_close_ @b Project->Close \n 
+
+This action closes the current project.  If the current project is modified
+after last save then a message-dialog will be created with "Save", "Discard"
+and "Cancel" buttons. \n
+
+@anchor _main_window_project_menu_quit_ @b Project->Quit \n
+
+This action quits the Bluespec Workstation.  If the current project is modified
+after last save then a message-dialog will be created with "Save", "Discard"
+and "Cancel" buttons. \n
+
+@subsection _main_window_edit_menu_ Edit menu
+
+This menu provides commands for manipulating with the selection/clipboard :
+
+        - @ref _main_window_edit_menu_copy_ "Copy" - copy the selection 
+        - @ref _main_window_edit_menu_paste_ "Paste" - paste from the clipboard
+
+The selection can be a text in some edit-box (e.g. TCL command prompt).
+
+@anchor _main_window_edit_menu_copy_ @b Edit->Copy \n
+
+This action copies to buffer the selection.  The information which is already in
+buffer will be lost. 
+
+@anchor _main_window_edit_menu_paste_ @b Edit->Paste \n
+
+This action copies from buffer to the command line.
+
+@subsection _main_window_build_menu_ Build menu
+
+This menu allows to invoke compiler, simulator and other tools:
+
+        - @ref _main_window_build_menu_typecheck_ "Type Check" - invokes BSC or
+          make on the current project without compiling options
+        - @ref _main_window_build_menu_compile_ "Compile" - invokes BSC or make
+        on the current project
+        - @ref _main_window_build_menu_link_ "Link" - invokes BSC with
+        specified options, make or a custom command
+        - @ref _main_window_build_menu_simulate_ "Simulate" - invokes the
+        selected simulator
+        - @ref _main_window_build_menu_rebuild_ "Full Rebuild" - invokes a set
+          of commands
+        - @ref _main_window_build_menu_stop_ "Stop" - stops the currently
+        processing build action
+        - @ref _main_window_build_menu_clean_ "Clean" - cleans last
+        compile/simulation results
+        - @ref _main_window_build_menu_full_clean_ "Full clean" - cleans all
+        result files, the executable file and logs
+
+@anchor _main_window_build_menu_typecheck_ @b Build->Type @b Check \n
+
+This action compiles current project with already specified options.  It runs
+"make" or "bsc". 
+
+@anchor _main_window_build_menu_compile_ @b Build->Compile \n
+
+This action compiles current project with already specified options.  It runs
+"make" or "bsc". 
+
+@anchor _main_window_build_menu_link_ @b Build->Link \n
+
+This action links the current project according to the settings set in the Project Options dialog.
+
+@anchor _main_window_build_menu_simulate_ @b Build->Simulate \n
+
+This action simulates current project with already specified simulator.
+
+@anchor _main_window_build_menu_rebuild_ @b Build->Full @b Rebuild \n
+
+This action calls the following commands:
+        - @ref _main_window_build_menu_full_clean_ "Full clean"
+        - @ref _main_window_build_menu_compile_ "Compile" 
+        - @ref _main_window_build_menu_link_ "Link"
+        - @ref _main_window_build_menu_simulate_ "Simulate"
+
+@anchor _main_window_build_menu_stop_ @b Build->Stop \n
+
+This action becomes active only during Compilation/Link/Simulation process.  It
+stops the corresponding process.
+
+@anchor _main_window_build_menu_clean_ @b Build->Clean \n
+
+This action cleans all the intermediate files generated during last
+compilation/link of the current project. \n
+If compilation/link via makefile is selected and appropriate optional target is
+specified, then this target will be executed.
+
+@anchor _main_window_build_menu_full_clean_ @b Build->Full @b Clean \n
+
+This action cleans all compilation/simulation logs and result files.  If
+compilation via makefile is selected and appropriate optional target is
+specified, then this target will be executed.
+
+@subsection _main_window_window_menu_ Window menu
+
+This menu provides functionality for managing other components of Bluespec
+Workstation :
+        - @ref _main_window_window_menu_project_files_ "Project Files" -
+        activate the project window
+        - @ref _main_window_window_menu_editor_ "Editor Window" -  activate the
+        editor window
+        - @ref _main_window_window_menu_package_ "Package Window" - activate
+        the package window
+        - @ref _main_window_window_menu_type_browser_ "Type Browser" - activate
+        the type browser window
+        - @ref _main_window_window_menu_module_browser_ "Module Browser" -
+        activate the module browser window
+        - @ref _main_window_window_menu_schedule_analysis_ "Schedule Analysis"
+        activate the schedule analysis window
+        - @ref _main_window_window_menu_minimize_all_ "Minimize all" - minimize
+        all windows except the main window
+        - @ref _main_window_window_menu_close_all_ "Close All" - closes all
+        currently open windows except the Main window
+
+@anchor _main_window_window_menu_project_files_ @b Window->Project @b Files \n
+
+This action  activates the @ref _workstation_fspec_project_window_.  If it is
+already active then focus will be set on it.
+
+@anchor _main_window_window_menu_editor_ @b Window->Editor \n
+
+This action  activates the @ref _workstation_fspec_editor_window_.  If it is
+already active then focus will be set on it.
+
+@anchor _main_window_window_menu_package_ @b Window->Package @b Window \n
+
+This action  activates the @ref _workstation_fspec_package_window_.  If it is
+already active then focus will be set on it.
+
+@anchor _main_window_window_menu_type_browser_ @b Window->Type @b Browser \n
+
+This action  activates the @ref _workstation_fspec_type_browser_window_.  If it
+is already active then focus will be set on it.
+
+@anchor _main_window_window_menu_module_browser_ @b Window->Module @b Browser \n
+
+This action  activates the @ref _workstation_fspec_module_browser_window_.  If
+it is already active then focus will be set on it.
+
+@anchor _main_window_window_menu_schedule_analysis_ @b Window->Schedule @b Analysis \n
+
+This action  activates the @ref _workstation_fspec_schedule_analysis_window_.  
+If it is already active then focus will be set on it.
+
+@anchor _main_window_window_menu_minimize_all_ @b Window->Minimize @b all \n
+
+This action minimizes all active windows except the @ref
+_workstation_fspec_main_window_.
+
+@anchor _main_window_window_menu_close_all_ @b Window->Close @b All \n
+
+This action closes all active windows except the @ref
+_workstation_fspec_main_window_.
+
+@subsection _main_window_message_menu_ Message menu
+
+This menu provides functionality for managing the text in the status window of
+Bluespec Workstation :
+
+        - @ref _main_window_message_menu_find_ "Find" - finds the specified
+        string in status window
+        - @ref _main_window_message_menu_save_ "Save" - saves the status
+        windows contents
+        - @ref _main_window_message_menu_clear_ "Clear" - clears the contents
+        of status window
+
+@anchor _main_window_message_menu_find_ @b Message->Find \n
+
+Upon this action a dialog window is opened where the user can specify a string
+and search it in the status window.
+
+@anchor _main_window_message_menu_save_ @b Message->Save \n
+
+Upon this action a save as dialog window is opened where the user can specify a
+location to save the status window contents.
+
+@anchor _main_window_message_menu_clear_ @b Message->Clear \n
+
+This action clears the contents of the status window.
+
+@subsection _main_window_help_menu_ Help menu
+
+        - @ref _main_window_help_menu_contents_ "Contents" - opens help contents
+        - @ref _main_window_help_menu_bsv_ "BSV" - opens bsv help contents
+        - @ref _main_window_help_menu_about_ "About" - opens about dialog
+
+@anchor _main_window_help_menu_contents_ @b Help->Contents... \n
+
+This action opens the Workstation Help in Doxygen format.
+
+@anchor _main_window_help_menu_bsv_ @b Help->BSV... \n
+
+This action opens the BSV Help document in Doxygen format.
+
+@anchor _main_window_help_menu_about_ @b Help->About... \n
+
+This action creates a message window with information about version and license
+of the Bluespec Workstation.
+
+@subsection _main_window_toolbar_ Toolbar
+
+The toolbar may contain any of the actions available in the menu. \n
+Currently the following items are available:
+
+        - @b New - performes the @ref _main_window_project_menu_new_
+        "Project->New"
+        - @b Open - performes the @ref _main_window_project_menu_open_
+        "Project->Open"
+        - @b Save - performes the @ref _main_window_project_menu_save_
+        "Project->Save"
+        - @b Compile - performes the @ref _main_window_build_menu_compile_
+        "Build->Compile"
+        - @b Link - performes the @ref _main_window_build_menu_link_
+        "Build->Link"
+        - @b Simulate - performes the @ref _main_window_build_menu_simulate_
+        "Build->Simulate"
+        - @b Clean - performes the @ref _main_window_build_menu_stop_
+        "Build->Clean"
+        - @b Full @b Rebuild - performes the @ref
+        _main_window_build_menu_full_clean_ "Full clean" -> @ref
+        _main_window_build_menu_compile_ "Compile" ->  @ref
+        _main_window_build_menu_link_ "Link" -> @ref
+        _main_window_build_menu_simulate_ "Simulate"
+        - @b Stop - performes the @ref _main_window_build_menu_stop_ 
+        "Build->Stop"
+
+@subsection _main_window_command_status_window_ Command/Status window
+
+This window is intended for representing executed commands and
+error/warning/info messages arose during tools execution.  This window
+contains two components (sub-windows) :
+
+        - Command line - provides entry point for TCL commands with automatic
+        command completion and option completion (Tab), as well as with command
+        line history (UP/DOWN)
+        - Window for representation of errors/warnings/infos generated by Tcl
+        commands and external tools.  Messages will have specific color
+        highlighting :
+                - Red - for error messages
+                - Yellow - for warnings  
+                - It will be possible to directly jump into the corresponding
+                source code by double-clicking the error message.
+
+
+@section _workstation_fspec_project_window_ Project Window
+
+This window is intended for representing project contents.  It contains list of
+all .bsv files in the project and makefile, in the case that project is based
+on makefile, rather than bsc.  It also provides a functionality to
+include/exclude files with the specified extensions. \n
+
+The window consists of following parts (see @ref _project_window_ "Project
+Window"):
+        - menubar
+        - hierarchy
+        - status bar
+ 
+The menubar consists of the following items:
+        - @ref _project_window_project_menu_
+        - @ref _project_window_file_menu_
+        - @ref _project_window_editor_menu_
+
+All menu actions are available through the context-sensitive pop-up menu.  The
+mouse left-click on the file opens a context-sensitive menu with the following
+actions:
+
+        - @b Edit - performs the @ref _project_window_file_menu_edit_
+        "File->New", this action is also available through mouse left button
+        double-click on the file
+        - @b Refresh - performs the @ref _project_window_file_menu_refresh_
+        "File->Refresh"
+        - separator
+        - @b Compile - performs the @ref _project_window_file_menu_compile_
+        "File->Compile"
+        - @b Compile @b with @b deps - performs the @ref
+        _project_window_file_menu_compile_with_deps_ "File->Compile with deps"
+
+The mouse left-click on the background of the hierarchy opens a
+context-sensitive menu with the following actions:
+
+        - @b New @b File - performs the @ref _project_window_file_menu_new_ 
+        "File->New"
+        - @b Compile - performs the @ref _project_window_project_menu_compile_
+        "Project->Compile"
+        - @b Refresh - performs the @ref _project_window_project_menu_refresh_
+        "Project->Refresh"
+        
+@anchor _project_window_
+@image html project_window.png "Project Window" width=10cm
+@image latex project_window.png "Project Window" width=10cm
+
+@subsection _project_window_project_menu_ Project menu
+
+This menu consists of the following menu actions:
+
+        - @ref _project_window_project_menu_display_rules_ "Display Rules"
+        - @ref _project_window_project_menu_compile_ "Compile"
+        - @ref _project_window_project_menu_refresh_ "Refresh"
+        - @ref _project_window_project_menu_close_ "Close"
+
+@anchor _project_window_project_menu_display_rules_ @b Project->Display @b Rules \n
+
+Upon this action a dialog window will be opened with the following fields:
+        
+         - Included patterns - entry-field to spacify the files which should
+         be shown in the Project Files Window
+         - Excluded patterns - entry-field to spacify the files which should
+         not be shown in the Project Files Window
+
+@anchor _project_window_project_menu_compile_ @b Project->Compile \n
+
+This action performes the @ref _main_window_build_menu_compile_ "Build->Compile" action of the @ref _workstation_fspec_main_window_.
+
+@anchor _project_window_project_menu_refresh_ @b Project->Refresh \n
+
+Upon this action the information shown in the window is updated.
+
+@anchor _project_window_project_menu_close_ @b Project->Close \n
+
+This action closes the Project Files window.
+
+@subsection _project_window_file_menu_ File menu
+
+This menu consists of the following menu actions:
+        - @ref _project_window_file_menu_new_ "New"
+        - @ref _project_window_file_menu_edit_ "Edit"
+        - @ref _project_window_file_menu_refresh_ "Refresh"
+        - @ref _project_window_file_menu_compile_ "Compile"
+        - @ref _project_window_file_menu_compile_with_deps_ "Compile with deps"
+
+@anchor _project_window_file_menu_new_ @b File->New \n
+
+Upon this action the File New dialog will be opened with fields to specify the
+file name and location (see @ref _file_new_dialog_ "File New dialog").  The
+location should be chosen from the list of project search paths.  After
+specifying the file path it will be opened in the editor window.  If the editor
+is already open (in server mode), the same session should be reused (assuming
+editor supports multiple windows) since our current set of editors (emacs and
+vim) both support server mode.
+
+@anchor _file_new_dialog_
+@image html file_new_dialog.png "File New" width=10cm
+@image latex file_new_dialog.png "File New" width=10cm
+
+@anchor _project_window_file_menu_edit_ @b File->Edit \n
+
+This action launches the specified editor on the selected file.
+
+@anchor _project_window_file_menu_refresh_ @b File->Refresh \n
+
+This action allows to update the status of the currently selected file.  This
+may be used to force an update of information when the user feels that the
+current status may be out of date or incorrect.
+
+@anchor _project_window_file_menu_compile_ @b File->Compile \n
+
+This action compiles the currently selected file with bsc without considering
+dependencies from other files and packages.  The compile type (either Verilog
+or Bluesim) follows the options specified in the Project Options dialog.
+
+@anchor _project_window_file_menu_compile_with_deps_ @b File->Compile @b with @b deps \n
+
+This action compiles the selected file with considering dependencies from other
+packages.  In this case bsc with -u flag will be run. The compilation treats
+this as the top file/package.
+
+@subsection _project_window_editor_menu_ Editor menu
+
+This menu consists of the following menu actions:
+        - @ref _project_window_editor_menu_save_ "Save"
+        - @ref _project_window_editor_menu_save_as_ "Save as"
+        - @ref _project_window_editor_menu_close_ "Close"
+        - @ref _project_window_editor_menu_close_all_ "Close all"
+
+@anchor _project_window_editor_menu_save_ @b Editor->Save \n
+
+This action saves changes for current file made after last open/edit. \n
+User will be informed about occurred errors via message window with description
+of error.  Occurred errors will be shown in the editor window.
+
+@anchor _project_window_editor_menu_save_as_ @b Editor->Save @b As \n
+
+This action opens the File Save As dialog window with fields for specifying
+name and location (see @ref _file_saveas_dialog_ "File Save as dialog").  The
+location should be chosen from the list of project search paths. In case when
+file with user specified name already exists message-dialog will be created
+with "Overwrite" and "Cancel" buttons.  User will be informed about occurred
+errors via messages in the editor window.
+
+@anchor _file_saveas_dialog_
+@image html file_saveas_dialog.png "File Save as" width=10cm
+@image latex file_saveas_dialog.png "File Save as" width=10cm
+
+@anchor _project_window_editor_menu_close_ @b Editor->Close \n
+
+This action saves all currently open files. Final behavior may depend on
+particulars of the editor selected by the user.
+
+@anchor _project_window_editor_menu_close_all_ @b Editor->Close @b All \n
+
+This action closes all currently active files.
+
+@section _workstation_fspec_editor_window_ Editor window
+
+This is an external tool, specified by the user. \n Currently the tool supports
+only @b Gvim and @b Emacs editors.  If the editor is set to @b Gvim then the
+following editor commands will be available from the Project Files window: 
+
+        - @ref _project_window_editor_menu_save_ "Editor->Save"
+        - @ref _project_window_editor_menu_save_as_ "Editor->Save as"
+        - @ref _project_window_editor_menu_close_ "Editor->Close"
+        - @ref _project_window_editor_menu_close_all_ "Editor->Close all"
+
+@section _workstation_fspec_package_window_ Package Window
+
+The package window is the pre-elaboration viewer for the design.  From this
+window user can load packages into Bluespec Workstation, and then browse their
+contents.  The window consists of two panes.  The left pane is hierarchical
+browser which contains packages and their contents.  Package contains
+definitions for types (which includes interfaces), functions, and modules.  If
+the package imports other packages, those will be considered as a part of the
+design.  The right pane contains specific details for the selected pattern in
+the left pane. \n
+
+The view is hierarchical to limit the amount of information displayed.  There
+are 4 levels in the hierarchy.  At the top level are  the search paths of the
+project. The second level are the packages, and the initial seed will be a list
+of all loaded packages.  The third layer is the major component groups within a
+package ("Modules and Functions" and "Types and Interfaces").  The bottom layer
+are the components of each group. \n 
+
+When any element of the package is selected, information about that element is
+displayed in the right pane of the window.  The displayed information for the
+particular component is dependent on the data, and is controlled by the
+structure returned from Bluetcl.  \n
+
+The following information will be shown in the right pane for each element type:
+
+        - @b Interface - name, type argument, composition (names and types) 
+        - @b Enum - name, width, members 
+        - @b Struct - name, members (name and type) 
+        - @b Typedef - name, definition 
+        - @b Union - name, members (name and type) 
+        - @b Module - name, interface type, arguments
+        - @b Function - name, return type, type s of arguments
+        
+Package window provides a main menu and a pop-up menu. \n \n
+
+@anchor _package_window_
+@image html package_window.png "Package Window" width=10cm
+@image latex package_window.png "Package Window" width=10cm
+
+Main menu consists of following sub-menus:
+        - @ref _package_window_package_menu_ - commands for loading and
+        searching packages
+        - @ref _package_window_view_menu_ - commands for expanding and
+        collapsing the hierarchy view
+        - @ref _paned_window_popup_menu_ - commands from the main menu which
+        are available through mouse sensitive menu
+
+@section _package_window_package_menu_ Package menu
+
+This menu provides commands for manipulating packages:
+
+        - @ref _package_window_package_menu_loadtop_ "Load Top Package" - loads
+        the top package
+        - @ref _package_window_package_menu_load_ "Load" - loads the selected
+        package
+        - @ref _package_window_package_menu_reload_ "Reload" - reloads all
+        currently loaded packages
+        - @ref _package_window_package_menu_refresh_ "Refresh" - refreshes the
+        package hierarchy
+        - @ref _package_window_package_menu_import_hierarchy_ "Import
+        hierarchy" - shows the import hierarchy in a separate window
+        - @ref _package_window_package_menu_search_ "Search" - searches for a
+        given string within the definition of all packages
+        - @ref _package_window_package_menu_close_ "Close" - closes the Package
+        window
+
+
+@anchor _package_window_package_menu_loadtop_ @b Package->Load @b Top @b Package \n
+
+Upon this action the top package is loaded. 
+
+@anchor _package_window_package_menu_load_ @b Package->Load... \n
+
+Upon this action a selection dialog will be created with list of packages for
+the current project.  The selected package will be loaded and will become
+visible in the package window.
+
+@anchor _package_window_package_menu_reload_ @b Package->Reload \n
+
+As a result of this action all loaded packages will be reloaded.  This is
+typically used after compile.
+
+@anchor _package_window_package_menu_refresh_ @b Package->Refresh \n
+
+As a result of this action the package hierarchy is updated.
+
+@anchor _package_window_package_menu_import_hierarchy_ @b Package->Import @b hierarchy \n
+
+Upon this action a separate window will be created with representation of
+import hierarchy for the selected package from the package hierarchy.  It will
+include tree-view of loaded packages starting from  the specified one.
+
+@anchor _package_window_package_menu_search_ @b Package->Search... \n
+
+Upon this action a dialog window will be created with field for specifying
+string to search within the package hierarchy.  The dialog will have "Next",
+"Previous" and "Cancel" buttons. \n
+The search will also be available in the left corner of the status bar of the
+Package window.
+ 
+@anchor _package_window_package_menu_close_ @b Package->Close \n
+   
+This action closes the Package window.
+
+
+@subsection _package_window_view_menu_ View menu
+
+This menu provides commands for changing the structure of hierarchical tree
+view:
+        - @ref _package_window_view_menu_expand_ "Expand" - expand the selected
+        item
+        - @ref _package_window_view_menu_collapse_ "Collapse" - collapse the
+        selected item
+        - @ref _package_window_view_menu_collapse_all_ "Collapse All" -
+        collapsing the view to only the package list
+        - @ref _package_window_view_menu_send_to_type_ "Send to Type" - send
+        the selected type to the type viewer 
+        - @ref _package_window_view_menu_view_source_ "View Source" - open
+        definition at source
+  
+@anchor _package_window_view_menu_expand_ @b View->Expand \n
+
+As a result of this action the selected item of a hierarchy will be expanded to
+show its components.
+
+@anchor _package_window_view_menu_collapse_ @b View->Collapse \n
+
+As a result of this action the sub-tree of selected item will be hidden.
+
+@anchor _package_window_view_menu_collapse_all_ @b View->Collapse @b All \n
+
+As a result of this action the hierarchical view will be narrowed to the
+search paths list.
+
+@anchor _package_window_view_menu_send_to_type_ @b View->Send @b to @b Type \n
+
+As a result of this action the Type Browser window will be opened for the
+selected item.  If it is already opened then the selected item will be added to
+its hierarchy view.
+
+@anchor _package_window_view_menu_view_source_ @b View->View @b Source \n
+
+As a result of this action the editor will be launched on the part of source
+code where the selected construct is defined.
+
+@subsection _paned_window_popup_menu_ Pop-up Menu
+
+The mouse right click on the item of the package hierarchy activates a pop up
+menu with following items:
+
+        - @b Expand - performs the @ref _package_window_view_menu_expand_ 
+        "View->Expand"
+        - @b Collapse - performes the @ref _package_window_view_menu_collapse_ 
+        "View->Collapse"
+        - @b Send @b to @b Type - performes the @ref
+        _package_window_view_menu_send_to_type_ "View->Send to Type"
+        - @b View @b Source - performes the @ref
+        _package_window_view_menu_view_source_ "View->View Source"
+
+@section _workstation_fspec_type_browser_window_ Type Browser Window
+
+The type browser window is the primary means for viewing information about
+types and interfaces.  The window contains a menubar, status bar and a paned
+window with two panes.  The left pane is a hierarchy browser which show a type
+and its composition.  The right pane contains information about the selected
+type returned from the Bluetcl engine.
+
+@anchor _type_browser_
+@image html type_browser.png "Type Browser" width=10cm
+@image latex type_browser.png "Type Browser" width=10cm
+
+The Type Browser window menu consists of following sub-menus:
+
+        - @ref _type_browser_window_types_menu_ - commands for adding/removing
+        types to the hierarchy view
+        - @ref _type_browser_window_view_menu_ - commands for expanding and
+        collapsing the hierarchy view
+
+
+@subsection _type_browser_window_types_menu_ Types menu
+
+This menu provides commands for manipulating types:
+
+        - @ref _type_browser_window_types_menu_add_ "Add" - add a new type to
+        the view
+        - @ref _type_browser_window_types_menu_remove_ "Remove"- remove
+        selected type from the view
+        - @ref _type_browser_window_types_menu_close_ "Close" - closes the Type
+        Browser window
+
+@anchor _type_browser_window_types_menu_add_ @b Types->Add \n
+
+Upon this action a dialog window will be created to add a new type to the view.
+
+@anchor _type_browser_window_types_menu_remove_ @b Types->Remove \n
+
+As a result of this action the selected item will be removed from the hierarchy
+view.
+
+@anchor _type_browser_window_types_menu_close_ @b Types->Close \n
+
+This action closes the Type Browser window.
+
+@subsection _type_browser_window_view_menu_ View menu
+
+This menu provides commands for changing the structure of hierarchical tree
+view:
+
+        - @ref _type_browser_window_view_menu_expand_ "Expand" - expand the
+        selected item
+        - @ref _type_browser_window_view_menu_collapse_ "Collapse" - collapse
+        the selected item
+        - @ref _type_browser_window_view_menu_collapse_all_ "Collapse All" -
+        collapsing the view to only the type list
+        - @ref _type_browser_window_view_menu_view_source_ "View Source" - open
+        definition at source
+  
+@anchor _type_browser_window_view_menu_expand_ @b View->Expand \n
+
+As a result of this action the selected item of a hierarchy will be expanded to
+show its components.
+
+@anchor _type_browser_window_view_menu_collapse_ @b View->Collapse \n 
+
+As a result of this action the sub-tree of selected item will be hidden.
+
+@anchor _type_browser_window_view_menu_collapse_all_ @b View->Collapse @b All \n
+
+As a result of this action the hierarchical view will be narrowed to the
+type list.
+
+@anchor _type_browser_window_view_menu_view_source_ @b View->View @b Source \n
+
+As a result of this action the editor will be launched on the part of source
+code where the selected construct is defined.
+
+
+@section _workstation_fspec_module_browser_window_ Module Browser Window
+
+The module browser window is the post-elaboration model viewer.  The window
+contains a menubar and a paned window with two panes.  The left pane will be a
+hierarchy widget, based on the Bluetcl command browseinst.  The right pane will
+contain a set of action buttons.  The action buttons deal with the item selected
+from the instance hierarchy, and are the communication channels to the source
+and wave viewers.  Those are the following:
+        - @b View @b instance - opens the editor at the instance position
+        - @b View @b Module @b definition - opens the editor at the module
+        position
+        - @b View @b Interface @b definition - opens the editor at the
+        interface position
+        - @b Send @b to @b Wave - sends the selected item to the wave viewer
+
+The status bar of the Module Browser window consists of the following fields
+(ordered from left to right):
+                 
+        - @b Roll-over @b help - label which supports quick help for the menu
+        actions
+        - @b "Viewer" @b connected - e.g.  "Novas connected"   or "Novas not
+        connected"
+        - @b n @b packages @b loaded
+        - @b n @b modules @b loaded
+
+@anchor _module_browser_
+@image html module_browser.png "Module Browser" width=10cm
+@image latex module_browser.png "Module Browser" width=10cm
+
+Main menu consists of following sub-menus:
+
+        - @ref _module_browser_window_module_menu_ - commands for loading
+        modules
+        - @ref _module_browser_window_view_menu_ - commands for expanding and
+        collapsing the hierarchy view
+        - @ref _module_browser_window_waveviewer_menu_ - 
+
+@subsection _module_browser_window_module_menu_ Module menu
+
+This menu provides commands for manipulating modules:
+
+        - @ref _module_browser_window_module_menu_load_top_ "Load Top module" -
+        loads the top module
+        - @ref _module_browser_window_module_menu_load_ "Load..." - loads the
+        selected module
+        - @ref _module_browser_window_module_menu_reload_ "Reload" - reloads
+        the currently loaded module
+        - @ref _module_browser_window_module_menu_close_ "Close" - closes the
+        Module Browser window
+
+@anchor _module_browser_window_module_menu_load_top_ @b Module->Top @b Module \n 
+
+This action loads the top module.
+
+@anchor _module_browser_window_module_menu_load_ @b Module->Load \n
+
+Upon this action a selection dialog will be created with the list of modules
+for the current project.  The selected module will be loaded and will become
+visible in the Module Browser window.
+
+@anchor _module_browser_window_module_menu_reload_ @b Module->Reload \n
+
+As a result of this action the currently loaded module will be reloaded.  This
+is typically used after compile.
+
+@anchor _module_browser_window_module_menu_close_ @b Module->Close \n
+
+This action closes the Module Browser window.
+
+
+@subsection _module_browser_window_view_menu_ View menu
+
+This menu provides commands for changing the structure of hierarchical tree
+view:
+        - @ref _module_browser_window_view_menu_expand_ "Expand" - expand the
+        selected item
+        - @ref _module_browser_window_view_menu_collapse_ "Collapse" - collapse
+        the selected item
+        - @ref _module_browser_window_view_menu_collapse_all_ "Collapse All" -
+        collapsing the view to only the package list
+        - separator
+        - @ref _module_browser_window_view_menu_show_schedule_ "Show Schedule"
+        - opens the Schedule Analysis window for the selected module
+        - @ref _module_browser_window_view_menu_view_source_ "View Source" -
+        open definition at source
+
+All of the items of this menu will also be available through mouse sensitive
+pop-up menu in the hierarchy pane of the Module Browser window.
+
+@anchor _module_browser_window_view_menu_expand_ @b View->Expand \n
+
+As a result of this action the selected item of a hierarchy will be expanded to
+show its components.
+
+@anchor _module_browser_window_view_menu_collapse_ @b View->Collapse \n
+
+As a result of this action the sub-tree of selected item will be hidden.
+
+@anchor _module_browser_window_view_menu_collapse_all_ @b View->Collapse @b All \n
+
+As a result of this action the hierarchical view will be narrowed to the
+instance list.
+
+@anchor _module_browser_window_view_menu_show_schedule_ @b View->Show @b Schedule \n
+
+As a result of this action the Schedule Analysis window will be opened for the
+loaded module.
+
+@anchor _module_browser_window_view_menu_view_source_ @b View->View @b Source \n
+
+As a result of this action the editor will be launched on the part of source
+code where the selected construct is defined.
+
+@subsection _module_browser_window_waveviewer_menu_ Wave Viewer menu
+
+This menu provides the following actions:
+
+        - @ref  _module_browser_window_waveviewer_menu_start_ "Start" - 
+        - @ref  _module_browser_window_waveviewer_menu_attach_ "Attach..." - 
+        - @ref  _module_browser_window_waveviewer_menu_load_ "Load Dump
+        File..." - brings up dialog to obtain a file
+        - @ref  _module_browser_window_waveviewer_menu_reload_ "Reload File"
+        - @ref  _module_browser_window_waveviewer_menu_options_ "Options..." -
+        This will open the Options dialog onto the Waveform Viewer tab.
+
+@anchor _module_browser_window_waveviewer_menu_start_ @b Wave @b Viewer->Start \n
+
+This action start the Waveform Viewer.
+
+@anchor _module_browser_window_waveviewer_menu_attach_ @b Wave @b Viewer->Attach... \n
+
+TBD
+
+@anchor _module_browser_window_waveviewer_menu_load_ @b Wave @b Viewer->Load @b Dump @b File... \n
+
+TBD
+
+@anchor _module_browser_window_waveviewer_menu_reload_ @b Wave @b Viewer->Reload @b File \n
+
+TBD
+
+@anchor _module_browser_window_waveviewer_menu_options_ @b Wave @b Viewer->Options... \n
+
+Upon this action the Project Options dialog is opened onto the Waveform Viewer tab.
+
+@section _workstation_fspec_schedule_analysis_window_ Schedule Analysis
+
+The Schedule Analysis window is the primary window for viewing and querying
+information about a schedule for one module. This window contains of four tabs
+describing separate perspectives on the schedule.
+
+        - @ref _schedule_analysis_window_schedule_warning_ - warning messages,
+        decisions 
+        - @ref _schedule_analysis_window_rule_order_ - view the generated rule
+        and method execution order
+        - @ref _schedule_analysis_window_method_call_ - view methods of each
+        instance of the module
+        - @ref _schedule_analysis_window_rule_relations_ - show the
+        relationship between two selected
+
+@subsection _schedule_analysis_window_schedule_warning_ Schedule Warnings
+
+The schedule warning perspective represents the warning messages from the
+compile process to the workstation.  This provides a view of any messages or
+warnings which occurred during scheduling for the loaded module.
+
+@anchor _schedule_analysis_
+@image html schedule_analysis.png "Schedule Analysis" width=10cm
+@image latex schedule_analysis.png "Schedule Analysis" width=10cm
+
+@subsection _schedule_analysis_window_rule_order_ Rule Order
+
+The main view is the rule and method execution sequence for a module.  It is a
+dual pane window, where the left pane contains the list of rules and methods
+represented in the execution order.  The right has specific information about
+the selected rule/method. \n
+
+For each rule/method the following information is shown in the right pane:
+
+        - @b Predicate
+        - @b Methods @b called @b in @b predicate
+        - @b Methods @b called @b in @b body
+        - @b Blocking @b rules
+
+@anchor _schedule_analysis_rule_order
+@image html schedule_analysis_rule_order.png "Rule Order tab of Schedule Analysis window" width=10cm
+@image latex schedule_analysis_rule_order.png "Rule Order tab of Schedule Analysis window" width=10cm
+
+@subsection _schedule_analysis_window_method_call_ Method Call
+
+In the method call perspective, user can view the schedule from the methods
+call point of view and the relation to the rules by which they are called.  It
+is a dual pain window, where the left pane is a hierarchy view (instance then
+method call).  The right pane presents the list of rules which call this
+particular instance/method.
+
+@anchor _schedule_analysis_method_call
+@image html schedule_analysis_method_call.png "Method Call tab of Schedule Analysis window" width=10cm
+@image latex schedule_analysis_method_call.png "Method Call tab of Schedule Analysis window" width=10cm
+
+@subsection _schedule_analysis_window_rule_relations_ Rule Relations
+
+In this perspective, the objective is to be able to select two rules, and view
+the scheduling relationship between them.  Rule selection will be from two
+combo-boxes.  The shown relationships will include the scheduling relation, the
+disjointness of the predicates and reason for the relation (shared resource,
+calling conflicting method, etc).  The displayed information will be data-driven
+based on information returned from the Bluetcl commands.
+
+@anchor _schedule_analysis_rule_rel
+@image html schedule_analysis_rule_rel.png "Rule Relations tab of Schedule Analysis window" width=10cm
+@image latex schedule_analysis_rule_rel.png "Rule Relations tab of Schedule Analysis window" width=10cm
+
+The main menu of the Schedule Analysis window consist the following submenus:
+
+        - @ref _schedule_analysis_window_module_menu_ 
+        - @ref _schedule_analysis_window_scheduling_graphs_menu_ 
+
+@subsection _schedule_analysis_window_module_menu_ Module menu
+
+This menu provides commands for manipulating modules:
+
+        - @ref _schedule_analysis_window_module_menu_load_ "Load" - loads a
+        module (.ba file)
+        - @ref _schedule_analysis_window_module_menu_reload_ "Reload" - reloads
+        the currently loaded module
+        - @ref _schedule_analysis_window_module_menu_search_ "Search" -
+        searches for a string
+        - @ref _schedule_analysis_window_module_menu_view_source_ "View Source"
+        - opens the definition of the selected rule/method in the Editor window
+        - @ref _schedule_analysis_window_module_menu_close_ "Close" - closes
+        the Schedule Analysis window
+
+@anchor _schedule_analysis_window_module_menu_load_ @b Module->Load \n
+
+Upon this action a selection dialog will be created with the list of modules
+for the current project.  The selected module will be loaded and will become
+visible in the Schedule Analysis window.
+
+@anchor _schedule_analysis_window_module_menu_reload_ @b Module->Reload \n
+
+As a result of this action all loaded modules will be reloaded.  This is
+typically used after compile.
+
+@anchor _schedule_analysis_window_module_menu_search_ @b Module->Search \n
+
+Upon this action dialog window will be created to specify a string which should
+be searched in the hierarchy.  This menu item is not active for the rule
+relationship perspective.
+
+@anchor _schedule_analysis_window_module_menu_view_source_ @b Module->View @b Source \n
+
+Upon this action the editor will be launched on the source code for the
+selected rule.  This menu item is active only for the rule order perspective.
+
+@anchor _schedule_analysis_window_module_menu_close_ @b Module->Close \n
+
+This action closes the Schedule Analysis window.
+
+@subsection _schedule_analysis_window_scheduling_graphs_menu_ Scheduling Graphs menu
+
+This menu provides commands for activating graph windows:
+
+        - @b Conflict - Activates the Conflict Graph window
+        - @b Execution - Activates the Execution Graph window
+        - @b Urgency - Activates the Urgency Graph window
+        - @b Combined - Activates the Combined Graph window
+        - @b Combined @b Full - Activates the Combined Full Graph window
+
+@anchor _scheduling_graphs
+@image html conflict_graph.png "Scheduling Graphs" width=10cm
+@image latex conflict_graph.png "Scheduling Graphs" width=10cm
+
+@section _workstation_fspec_tcl_commands_ Tcl Commands 
+
+This section discribes Tcl commands which will be available from the command
+line of the @ref _workstation_fspec_main_window_.
+
+@subsection _tcl_commands_project_man_ Project manipulation commands
+
+This section provides detailed description of Tcl commands used to manipulate
+with projects.
+
+@anchor _tcl_commands_project_man_new_ <b> Create new project </b> 
+
+Syntax: 
+        @c new_project @c \<project_name\> [-location \<project_path>] [-paths
+        \<location\>{:\<location\>}*]
+
+Synopsis : Creates new project with given path and search paths for packages.
+
+Parameters:
+        - \<project_name\> - Specifies the name of the project.
+        - location - Specifies the location of project. If this argument is not
+        specified then the project will be created in the current
+        directory ($ENV) 
+        - paths - Specifies search paths for .bsv files
+
+Detailed Description:
+
+Execution of this command will close the current project. If the current
+project is modified after last save/open, then an error message will be
+reported and a new project will not be created. The appropriate Tcl procedure
+will throw an error/exception. GUI will handle it and generate pop-up message
+with description of error.
+
+The principle used here is that TCL commands should not generate any GUI
+dialogs with questions, because it should be possible to replay the log and get
+the same result without user-intervention (and re-hitting buttons on dialogs).
+Therefore either the opened project has to be automatically saved, or an error
+should be reported (user must save first and then invoke "new").
+
+As a consequence, the GUI Menu/Toolbar Item "new" cannot be simply mapped to
+this TCL command. If user chooses "Project->New" menu item, the handler of that
+action should first check if the project was saved, and ask user whether it
+should be saved, and only then generate the new_project command (proceeded by
+"save_project" command invocation).  In this case the journalized TCL file can
+be replayed.
+
+
+@anchor _tcl_commands_project_man_open_ <b> Open existing project </b> 
+
+Syntax: 
+        open_project \<project_file\>
+
+Synopsis: Opens existing project.
+
+Parameters: 
+        - \<project_file\> - Specifies URL of the project which should be
+        processed(*.bspec file)
+
+Detailed Description:
+
+Upon this command execution current project will be closed and specified one
+will be opened.
+
+Following is the list of errors for described command:
+        - no project is found in given location
+        - current project is not saved
+
+
+@anchor _tcl_commands_project_man_save_ <b> Save current project </b> 
+
+Syntax: 
+        save_project
+
+Synopsis: Save all information related to the current project.
+
+Detailed Description:
+
+Saves all changes on current project done after last open/save command.
+
+Following is the list of errors for described command:
+        - there are no write permissions to this directory
+        - there is no enough space on hard drive 
+
+
+@anchor _tcl_commands_project_man_save_as_ <b> Save current project  with specified name </b> 
+
+Syntax: 
+        save_project_as \<project_name\> [-path \<location\>]
+
+Synopsis: Saves current project in another location. 
+
+Parameters: 
+        - \<project_name\> - Specifies name of the project.
+        - path - Specifies path where the project should be located. 
+        Default value : "$(HOME)/Bluespec/Projects"
+
+Detailed Description:
+
+Error cases described for save_project command will be also handled for this
+command.
+
+In addition to those following errors will be handled:
+        - project with specified name already exists
+
+
+@anchor _tcl_commands_project_man_close_ <b> Close current project </b> 
+
+Syntax:
+        close_project
+
+Synopsis: Closes the project without saving changes done after last open/save.
+
+Detailed Description:
+
+As result of execution of this command all active files of current project will
+be closed without saving. This command is used to open new project without
+saving the current one.
+
+
+@anchor _tcl_commands_project_man_set_editor_ <b> Specify editor for current project </b> 
+
+Syntax: 
+        set_project_editor  \<editor_name\> [-path  \<location\>] [-options
+        \<options\>]
+
+Synopsis: Specifies editor for current project. 
+
+Parameters: 
+        - \<editor_name\> - Specifies name of editor. This option is mandatory.  
+        - path - Specifies path to editor. Required only when editor is user specific.
+        - options - Specifies options for current editor.
+
+Detailed Description:
+
+As result of this command editor will be specified, which will be used to edit
+all files of current project. The editor for current project can be chosen from
+default list of editors(gvim/emacs) or defined by user. If only parameter
+"name" is specified then the editor is searched in standard paths(/usr/bin,
+/usr/local/bin). If the parameter "path" is also given, then the editor will be
+searched only in specified location.
+
+Following is the list of errors for described command:
+        - editor is not found in specified location
+        - specified options are invalid for given editor
+
+
+@anchor _tcl_commands_project_man_get_editor_ <b> Get editor specific information for current project </b> 
+
+Syntax: 
+        get_project_editor
+
+Synopsis: Returns editor specific information for current project.
+
+Detailed Description:
+
+Returns structure which contains information which is set by set_project_editor
+command.
+
+
+
+@anchor _tcl_commands_project_man_set_comp_res_loc_ <b> Specify path where the results of compilation should be located </b> 
+
+Syntax: 
+        set_compilation_results_location [-vdir \<location\>] [-bdir \<location\>]
+        [-simdir \<location\>]
+
+Synopsis: Specifies path of directory where the results of
+compilation(.v/.bi/.bo files) should be located for current project.   
+
+Parameters : 
+        - vdir - Specifies directory where generated Verilog files should be
+        located
+        - bdir - Specifies directory where generated .bo,.bi and .ba files
+        should be located
+        - simdir - Specifies directory where Bluesim intermediate files should
+        be located
+
+Detailed Description:
+
+Before execution of this command the path to compilation results location is
+current project's directory. This command is used to save compilation outputs
+as "clean" removes output files placed in project's directory.
+
+Following is the list of errors for described command:
+        - output directory for verilog files doesn't exist
+        - output directory .bo/.bi/.ba files doesn't exist
+        - output directory for Bluesim intermediate files doesn't exist
+        - there is no write permission to directory where
+        verilog/.bi,.bo,.ba/Bluesim files should be located
+
+
+@anchor _tcl_commands_project_man_get_comp_res_ <b> Get compilation results location </b> 
+
+Syntax: 
+        get_compilation_results_location
+
+Synopsis: Returns paths where compilation results are located.
+
+Detailed Description:
+
+Returns structure which contains information set by
+set_compilation_results_location command.
+
+
+@anchor _tcl_commands_project_man_set_comp_type_ <b> Specify compilation type for current project </b> 
+
+Syntax: 
+        set_compilation_type \<compilation_type\> 
+
+Synopsis: Specifies the type of compilation for current project. Option type is
+mandatory.
+
+Parameters: 
+        - \<compilation_type\> - either "make" or "bsc" .
+
+Specifies either make should be called or Verilog/BlueSim specification should
+be generated for current project.
+
+
+@anchor _tcl_commands_project_man_get_comp_type_ <b> Get compilation type for current project </b> 
+
+Syntax: 
+        get_compilation_type
+
+Synopsis: Returns compilation type for current project.
+
+Detailed Description:
+
+Returns  information set by set_compilation_type command.
+
+
+@anchor _tcl_commands_project_man_set_bsc_opt_ <b> Specify bsc options for current project </b> 
+
+Syntax:
+        set_bsc_options -bluesim/-verilog [-options \<options\>]
+
+Synopsis: Specifies bsc options for the current project.
+
+Parameters:
+        - bluesim/verilog - specifies -sim/-verilog option to pass to bsc.
+        - options - specifies additional options to pass to bsc.
+        
+Detailed Description:
+
+Specifies either Bluesim specification should be created or Verilog should be
+generated for the current project. Also additional options can be passed to the
+compiler via this command.
+
+
+@anchor _tcl_commands_project_man_get_bsc_opt_ <b> Get bsc options for current project </b> 
+
+Syntax:
+        get_bsc_options
+
+Synopsis: Returns bsc options for the current project.
+
+Detailed Description:
+
+Returns structure which contains information set by set_bsc_options command.
+
+
+@anchor _tcl_commands_project_man_set_make_opt_ <b> Specify make options for current project </b> 
+
+Syntax:
+        set_make_options -makefile \<file\> -target \<target\> [clean \<target\>]
+        [fullclean \<target\>]
+
+Synopsis: Specifies make options for the current project.
+
+Parameters:
+        - makefile - specifies makefile for the current project 
+        - target - specifies makefile target
+        - clean - specifies optional target which will be called upon "clean"
+        command execution
+        - fullclean - specifies optional target which will be called upon
+        "full_clean" command execution
+
+Detailed Description:
+Specifies makefile and target which will be called to build the current
+project. Also additional targets  (clean, full clean) can be specified via this
+command.
+
+
+@anchor _tcl_commands_project_man_get_make_opt_ <b> Get make options for current project </b> 
+
+Sintax:
+        get_make_options
+
+Synopsis: Returns make options for the current project.
+
+Detailed Description:
+
+Returns structure which contains information set by set_make_options command.
+
+
+@anchor _tcl_commands_project_man_set_top_module_ <b> Specify top module/file in hierarchy ... </b> 
+
+Syntax:
+        set_top_module -file \<file\> -module \<module_name\>
+
+Synopsis: Specifies top file and module for current project.
+
+Parameters:
+        - file - specifies full name of top file.
+        - module - specifies name of top module.
+
+Detailed Description:
+
+Following is the list of errors for described command:
+        - specified file doesn't exist
+        - specified file doesn't belong to the current project
+
+
+@anchor _tcl_commands_project_man_get_top_module_ <b> Get top module/file in hierarchy </b> 
+
+Syntax: 
+        get_top_module
+
+Synopsis: Returns top file and module for current project.
+
+Detailed Description:
+Returns structure which contains information set by set_top_module command.
+
+
+@anchor _tcl_commands_project_man_set_verilog_simulator_ <b> Specify simulator for the current project </b> 
+
+Syntax:
+        set_verilog_simulator  \<simulator_name> [-path \<location\>] 
+
+Synopsis: Specifies verilog simulator for current project.  
+
+Parameters: 
+        - <simulator_name\> - Specifies name of simulation tool. This option is
+        mandatory.
+        - path - Specifies URL to simulator. Required only for user specific
+        simulators.
+  
+Detailed Description:
+
+If path is not specified then simulator will be searched in standard paths and in $PATH/$path. Otherwise it will be searched only in path specified by user.
+
+Following is the list of errors for described command:
+        - parameter "path" is not specified and simulator can not be found in
+        standard paths(/usr/bin /usr/local/bin) and in $PATH/$path.
+        - parameter "path" is specified but simulator can not be found in that
+        path
+
+
+@anchor _tcl_commands_project_man_get_verilog_simulator_ <b> Get simulator for the current project </b> 
+
+Syntax: 
+        get_verilog_simulator
+
+Synopsis: Returns verilog simulator for current project.
+
+Detailed Description:
+Returns structure which contains information set by set_verilog_simulator
+command.
+
+
+@anchor _tcl_commands_project_man_set_sim_res_loc_ <b> Specify path where simulation results should be located </b> 
+
+Syntax:
+        set_sim_results_location \<location\>
+
+Synopsis: Specifies path where the simulation results should be located for
+current project.
+
+Parameters: 
+        \<location\> - Specifies URL where simulation results should be located.
+        This option is mandatory.
+
+Detailed Description:
+
+This command sets the location where simulation results (log files, vcd
+outputs) should be saved.  This command is used to save simulation outputs as
+"clean" removes output files placed in project's directory. 
+
+Following is the list of errors for described command:
+        - specified folder doesn't exist
+        - there is no write permission in specified locations
+
+
+@anchor _tcl_commands_project_man_get_sim_res_loc_ <b> Get path where simulation results should be located </b> 
+
+Syntax: 
+        get_sim_results_location
+
+Synopsis: Returns paths where simulation results should be located.
+
+Detailed Description:
+
+Returns structure which contains information set by set_sim_results_location
+command.  Note that bluespec specific flags are maintained in the bluetcl
+engine (flags set and flags show commands),  hence duplicate tcl state should
+not be used.
+
+
+@anchor _tcl_commands_project_man_set_waveform_viwer_ <b> Specify waveform viewer for current project </b> 
+
+Syntax:
+        set_waveform_viewer  \<viewer_name\> [-path \<location\>] 
+
+Synopsis: Specifies waveform viewer for current project.  
+
+Parameters: 
+        - \<viewer_name\> - Specifies name of waveform viewer. This option is
+        mandatory.
+        - path - Specifies URL to waveform viewer. Required only for user
+        specific viewers.
+
+Detailed Description:
+
+If path is not specified then the viewer will be searched in standard paths and
+in $PATH/$path. Otherwise it will be searched only in path specified by user.
+
+Following is the list of errors for described command:
+        - parameter "path" is not specified and the viewer can not be found in
+        standard paths(/usr/bin /usr/local/bin) and in $PATH/$path.
+        - parameter "path" is specified but the viewer can not be found in that
+        path
+
+
+@anchor _tcl_commands_project_man_get_wavwform_viwer_ <b> Get waveform viewer for current project </b> 
+
+Syntax: 
+        get_waveform_viewer
+
+Synopsis: Returns the waveform viewer for current project.
+
+Detailed Description:
+
+Returns structure which contains information set by set_waveform_viewer command.
+
+
+@anchor _tcl_commands_project_man_refresh_ @b Refresh
+
+Syntax:
+        refresh [\<file_name\>]
+
+Synopsis: Refresh information about current project or particular file.
+
+Parameters:
+        - \<file_name\> - Specifies file which will be refreshed
+
+Detailed Description:
+
+If no file name is given current project will be refreshed. Otherwise
+information for given file will be refreshed.
+
+Following is the list of errors for described command:
+        - specified file doesn't belong to current project
+
+
+@anchor _tcl_commands_project_man_compile_ @b Compile @b file
+
+Syntax:
+        compile_file  \<file_name\> [-with-deps]
+
+Synopsis: Compiles the files.
+
+Parameters:
+        - \<file_name\> - Specifies name of file which should be compiled
+        - with-deps - If this option is set then dependencies will be considered
+
+Detailed Description:
+
+Following is the list of errors for described command:
+        - specified file is not belong to current project
+
+
+@subsection _tcl_commands_file_ Commands for operations with files
+
+This section provides detailed description of Tcl commands used for manipulations with files.
+
+
+@anchor _tcl_commands_file_new_ @b New @b file
+
+Syntax:
+        new_file \<file_name\> [-path \<location\>]
+
+Synopsis: Creates file and launches editor on it.
+
+Parameters:
+        - \<file_name\> - Specifies name of the file.
+        - path - Specifies path to the file. By default current project
+        location will be taken.
+
+Detailed Description:
+
+Following is the list of errors for described command:
+        - file with specified name already exists in defined location
+        - currently processing file has not been saved since last open/save
+        - user has no write permission in specified location
+
+
+@anchor _tcl_commands_file_open_ @b Open @b file
+
+Syntax: 
+        open_file \<location\> [-line \<number\>] [-column \<number\>]
+
+Synopsis: Launches editor in the given line and column of the file. 
+
+Parameters:
+        - \<location\> - Specifies path to the file
+        - line - Specifies line number which to start
+        - column - Specifies column number which to start
+
+Detailed Description:
+
+This command launches editor on the given file.
+
+Following is the list of errors for described command:
+        - currently processing file has not been saved since last open/save
+        - specified file doesn't exist
+        - there is no read permission
+
+
+@anchor _tcl_commands_file_save_ <b> Save current file </b> 
+
+Syntax: 
+        save_file
+
+Synopsis: Save currently processing file.
+
+Detailed Description:
+
+If by any reason file can not be saved (eg there is no write permission) then
+appropriate error message will be reported and no action will take effect.
+
+
+@anchor _tcl_commands_file_save_as_ <b> Save current file in another location</b> 
+
+Syntax: 
+        save_file_as \<location\>
+
+Synopsis: Save currently processing file in specified location.
+
+Parameters: 
+        - \<location\> - Specifies URL where file should be saved
+
+Detailed Description:
+
+If file with specified path already exists then it will be overwritten.
+All error cases described for save_file command should be handled for this one.
+
+
+@anchor _tcl_commands_file_save_all_ <b> Save all open files </b> 
+
+Syntax: 
+        save_all
+
+Synopsis: Save all active files.
+
+Detailed Description:
+
+If some files can not be saved then names of those files will be reported and
+others will be saved.
+
+@subsection _tcl_commands_build_ Build commands
+
+This section provides description of Tcl commands used for building project.
+
+
+@anchor _tcl_commands_build_compile_ <b> Compile current project </b> 
+
+Syntax: 
+        compile
+
+Synopsis: Calls "make" if makefile is specified for project. Otherwise calls
+bsc with already defined options.
+
+Detailed Description:
+
+Compiles current project with already defined options. Compilation log will be
+represented in status window.
+
+
+@anchor _tcl_commands_build_simulate_ <b> Simulate current project </b> 
+
+Syntax: 
+        simulate
+
+Synopsis: Calls simulation for current project with already defined options.
+
+Detailed Description:
+
+Simulates current project with already defined options. Simulation log will be
+represented in status window.
+
+
+@anchor _tcl_commands_build_waveform_ <b> Launch waveform viewer for current project </b> 
+
+Syntax:
+        waveform
+
+Synopsis: Launches waveform viewer on VCD of current project.
+
+Detailed Description:
+
+Upon execution of this command waveform viewer will be launched in separate
+window.
+
+
+@anchor _tcl_commands_build_clean_ <b> Clean build results </b> 
+
+Syntax: 
+        clean
+
+Synopsis: Removes files generated after compilation.
+
+Detailed Description:
+
+Removes result files (*.bo, *.bi, *ba, *.o) created during compilation. Saves last compilation log
+with date specification. If user specified compilation via makefile then this
+command will execute appropriate target.
+
+
+@anchor _tcl_commands_build_full_clean_ <b> Full clean </b> 
+
+Syntax:
+        full_clean
+
+Synopsis: Removes all files generated after compilation/simulation.
+
+Detailed Description:
+
+Removes result (*.bo, *.bi, *ba, *.o, *.info, *.exe, *.v, *.c, *.h,)files
+created during compilation/simulation. Saves last simulation/compilation log
+with date specification. If user specified compilation via makefile then this
+command will execute appropriate target.
+
+
+@subsection _tcl_commands_windows_ Commands for manipulating windows 
+
+In this section commands are described for operations with windows.
+
+
+@anchor _tcl_commands_windows_show_ @b Show
+
+Syntax:
+        show -project|-editor|-schedule_analyzer|-module_browser|-type_browser
+        |-package_window
+
+Synopsis:  Activates specified window. If the window is already active then
+focus will be set on it.
+
+Parameters:
+        -project|-editor|-schedule_analyzer|-module_browser|-type_browser|-package_window - specifies window to be activated
+
+Q: Tying this command to a fixed set of windows is generally a bad idea, as
+windows will certainly be added in the future.
+
+
+@anchor _tcl_commands_windows_minimize_all_ @b Minimize @b all
+
+Syntax:
+        minimize_all
+
+Synopsis: Minimizes all windows except the main window.
+
+
+@subsection _tcl_commands_help_ Help
+
+This command is used to get help information for any Tcl command.
+
+Syntax:
+        help [-content|-index|-about] [-command \<command_name\>]
+
+Synopsis: Displays help information for particular command or activates general
+help window.
+
+Parameters:
+        - content|-index|-about - specifies help window to be activated
+        - command - specifies command for which help information should be displayed
+
+Detailed Description:
+
+If no option is specified then general help information will be displayed.
+
+
+@subsection _workstation_fspec_tcl_commands_analysis_ Analysis commands
+
+In this section Tcl commands are described which are used for Bluespec specific
+analysis.
+
+
+@anchor _tcl_commands_analysis_load_package_ @b Load @b package
+
+Syntax:
+        load_package \<package_name\>
+
+Synopsis: Loads a package with given name.
+
+Parameters:
+        - \<package_name\> - the name of package to be loaded
+
+Detailed Description:
+
+Upon this action specified package will be loaded and package specific
+information will be shown in Package Window.
+
+Following is the list of errors for described command:
+        - there is no .bo file for specified package
+
+
+@anchor _tcl_commands_analysis_reload_packages_ <b> Reload all packages </b> 
+
+Syntax:
+        reload_packages
+
+Synopsis: Reloads all loaded packages.
+
+Detailed Description:
+
+Upon this action all loaded packages will be reloaded.
+
+Following is the list of errors for described command:
+        - there is no .bo file for specified package
+
+
+
+@anchor _tcl_commands_analysis_import_hierarchy_ <b> Import hierarchy </b> 
+
+Syntax:
+        import_hierarchy
+
+Synopsis: Imports hierarchy in a separate window.
+
+Detailed Description:
+
+Upon this action a separate window will be created with representation of
+import hierarchy. It will include tree-view of loaded packages starting from
+top package.
+
+
+@anchor _tcl_commands_analysis_search_ @b Search
+
+Syntax:
+        search_in_packages \<string\>
+
+Synopsis: Search for a string in all loaded packages.
+
+Detailed Description:
+This command returns list of occurrences of specified string in all loaded
+packages.
+
+
+@anchor _tcl_commands_analysis_get_package_comp_info_ <b> Get information related to package component </b> 
+
+Syntax:
+        get_package_comp_info \<key\> 
+
+Synopsis: Show information related to selected component in the right pane of Package Browser window.
+
+Parameters:
+         - \<key\> - the unique id of construct
+
+Detailed Description:
+  
+As a result of this action the specific information for specified node will be
+shown in the right pane of Package Browser window.
+
+Following is the list of errors for described command:
+        - There is no node with specified key in the package tree-view.
+
+
+@anchor _tcl_commands_analysis_package_collapse_all_ <b> Collapse Package Browser tree-view </b> 
+
+Syntax:
+        package_collapse_all 
+
+Synopsis: Collapse the hierarchical view to show only package list.Detailed
+Description:
+
+As a result of this action the hierarchical view will be narrowed to the
+package list.
+
+
+@anchor _tcl_commands_analysis_type_collapse_all_ <b> Collapse Type Browser tree-view </b> 
+
+Syntax:
+        type_collapse_all 
+
+Synopsis: Collapse the hierarchical view to show only type list.
+
+Detailed Description:
+
+As a result of this action the hierarchical view will be narrowed to the type
+list.
+
+
+@anchor _tcl_commands_analysis_module_collapse_all_ <b> Collapse Module Browser tree-view </b> 
+
+Syntax:
+        module_collapse_all 
+
+Synopsis: Collapse the hierarchical view to show only module list.
+
+Detailed Description:
+
+As a result of this action the hierarchical view will be narrowed to the module
+list.
+
+
+@anchor _tcl_commands_analysis_view_type_ @b View @b type
+
+Syntax:
+        view_type  <key\>
+
+Synopsis: Represents information for specified type in the Type Browser window.
+
+Parameters:
+        - <key\> - a unique key for specified type
+Detailed Description:
+  
+As a result of this action the Type Browser window will be opened for the
+specified type. If it is already opened then the specified type will be added
+to its hierarchy view.
+
+Following is the list of errors for described command:
+        - there is no type with specified key
+
+
+@anchor _tcl_commands_analysis_remove_type_ <b> Remove type from type viewer </b> 
+
+Syntax:
+        remove_type  <key\>
+
+Synopsis: Removes information for specified type from the Type Browser window.
+
+Parameters:
+        - \<key\> - a unique key for selected type
+
+Detailed Description:
+
+As a result of this action the information for specified type will be removed
+from Type Browser window.
+
+Following is the list of errors for described command:
+        -there is no type with specified key in the hierarchy tree-view
+
+
+@anchor _tcl_commands_analysis_get_type_info_ <b> Get information about selected type </b> 
+
+Syntax:
+        get_type_info  \<key\>
+
+Synopsis: Shows information for specified type in the right pane of Type Browser window.
+
+Parameters:
+        - \<key\> -  a unique key for specified type
+
+Detailed Description:
+
+As a result of this action the information for specified type will be shown in
+the right pane of Type Browser window.
+
+Following is the list of errors for described command:
+        - there is no type with specified key in the hierarchy tree-view
+
+
+@anchor _tcl_commands_analysis_view_source_ @b View @b source
+
+Syntax:
+        view_source -module|-function|-rule|-interface|-type \<name\>
+
+Synopsis: Launch the editor on the definition of specified construct.
+
+Parameters:
+        -module|-function|-rule|-interface|-type - the type of construct 
+        - \<name\> - the name of construct
+
+Detailed Description:
+    
+As a result of this action the editor will be launched on the part of source
+code where the specified  construct is defined.
+
+Following is the list of errors for described command:
+        - the specified construct can not be found
+
+
+@anchor _tcl_commands_analysis_module_load_ @b Load @b module
+
+Syntax:
+        load_module \<module_name\>
+
+Synopsis: Loads the specified module.
+
+Parameters:
+        - \<module_name\> - the name of module to be loaded
+
+Detailed Description:
+
+As a result of this action the information for specified module will become
+available from the Module Browser window.
+
+Following is the list of errors for described command:
+        - there is no module with specified name
+
+
+@anchor _tcl_commands_analysis_show_schedule_ @b Show @b schedule
+
+Syntax:
+        show_schedule \<module_name\>
+
+Synopsis: Show schedule for specified module in the Schedule Analysis window.
+
+Parameters:
+        - \<module_name\> - the name of module.
+
+Detailed Description:
+
+As a result of this action the Schedule Analysis window will be opened for the
+selected module.
+
+Following is the list of errors for described command:
+        - there is no loaded module with specified name
+
+
+@anchor _tcl_commands_analysis_get_schedule_warnings_ <b> Get schedule warnings </b> 
+
+Syntax:
+        get_schedule_warnings \<module_name\>
+
+Synopsis:  Displays warnings occurred during scheduling in the Schedule
+Analysis window.
+
+Parameters:
+        - \<module_name\> - the module which schedule warnings should be
+        considered
+
+Detailed Description:
+
+As a result of this action the schedule warnings for specified module will be
+represented in the Schedule Analysis window.
+
+Following is the list of errors for described command:
+        -there is no loaded module with specified name
+
+
+@anchor _tcl_commands_analysis_get_schedule_ @b Get @b schedule
+
+Syntax:
+        get_schedule \<module_name\>
+
+Synopsis:  Displays schedule information for specified module in the Schedule
+Analysis window.
+
+Parameters:
+        - \<module_name\> - the module which schedule should be considered
+
+Detailed Description:
+
+As a result of this action the schedule information for specified module will
+be represented in the Schedule Analysis window.
+
+Following is the list of errors for described command:
+        -there is no loaded module with specified name
+
+
+@anchor _tcl_commands_analysis_get_rule_info_ <b> Get rule info </b> 
+
+Syntax:
+        get_info \<rule_name\>
+
+Synopsis: Displays information about specified rule in the right pane of "Rule
+order" perspective of Schedule Analysis window.
+
+Parameters:
+        -\<rule_name\> - full name of the rule which predicate should be displayed
+
+Detailed Description:
+
+As a result of this action the detailed information about specified rule will
+be represented in the right pane of "Rule order" perspective of Schedule
+Analysis window.
+
+Following is the list of errors for described command:
+        - there is no such rule in the loaded modules hierarchy
+
+
+@anchor _tcl_commands_analysis_get_rul_rel_ <b> Get rule relations </b> 
+
+Syntax:
+        get_rule_rel_ \<rule1_name\> \<rule2_name\>
+
+Synopsis:  Displays list of relationship between the specified rules in the
+right pane of "Rule order" perspective of Schedule Analysis window.
+
+Parameters:
+        - \<rule1_name\> - full name of the rule
+        - \<rule2_name\> - full name of the rule
+
+Detailed Description:
+
+As a result of this action the relationship between the specified rules will be
+represented in the "Rule Relations" perspective of Schedule Analysis window.
+
+Following is the list of errors for described command:
+        - there is no such rule in the loaded modules hierarchy
+
+
+@section _workstation_fspec_dependencies_ Dependencies, Assumptions, Risks
+
+The main dependency from Bluespec is documentation of TCL commands of the
+tools, and the BlueTCL interpreter availability.  Documentation of the BSV
+tools (compilers/simulators) is also required. To minimize debugging effort, a
+set of TCL tests should be created that will run on the BlueTCL and will detect
+changes in the TCL commands/options which are used by the Bluespec
+Workstation. \n
+The functional and development specifications should be reviewed in time to
+avoid major rework. 
+
+@section _workstation_fspec_effort_estimations_ Effort estimations
+
+The detailed effort estimation can be found in the Workstation Schedule (see @ref _workstation_fspec_schedule_ "[5]").
+
+*/
+
+// vim:syntax=doxygen:et:shiftwidth=8:tabstop=8:

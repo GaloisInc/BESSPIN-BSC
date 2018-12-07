@@ -1,0 +1,59 @@
+README for Tuba version 2.5.b1
+
+---------------------------------------------------------------------
+MAIN WEBSITE: http://www.geocities.com/SiliconValley/Ridge/2549/tuba/
+ ALT WEBSITE: http://comanche.com.dtu.dk/john/tuba
+mailto:johnstump@iname.com
+---------------------------------------------------------------------
+
+Tuba is a visual Tcl debugger, requiring Tcl/Tk 8.0 to run. Tuba should
+work on any Tcl-supported platform, but it has only been tested on Linux,
+SunOS, and Windows 95. As of release 2.5.b1, Tuba now supports debugging
+[incr tcl] scripts.
+
+Please find more extensive documentation in the doc directory:
+
+doc/index.html  - an overview and introduction to the Tuba debugger. Currently,
+                  this also serves as the web page for Tuba.
+doc/USERS.html  - detailed users guide.
+
+
+INSTALLATION
+============
+
+Tuba has a simple installation. Unpack the tuba tar or zip file somewhere. Ta
+da! It's installed! Actually, there can be more:
+
+  1) By default, you get the Tcl-based parser. If you want a faster parser,
+     you can install one of the prebuilt shared libraries. Get the proper 
+     shared library from the distribution site and unpack it in the same 
+     directory as Tuba:
+     
+          tar xzvf tuba-2.5.b1-Linux.tar.gz
+
+     When you start Tuba the next time, it will detect the shared library 
+     and use it. Prebuilts are currently available for Linux and SunOS.
+     
+     If you have a system other than these, you can build your own shared
+     library. Go into the src directory and start with the README file there.
+     
+  2) On Unix systems, you can set the first line in the tuba to point to
+     your wish8.0 executable. The default may not be correct for your 
+     environment.
+
+  3) On Unix systems, you may want to create a symbolic link to the tuba
+     program to somewhere in your path:
+     
+       ln -s $PWD/tuba somewhere/bin/tuba
+
+
+If you would like to build or rebuild the shared libraries, go into the
+src directory and start with the README file there.
+
+
+
+Please send questions, bug reports, and feature requests to: 
+johnstump@iname.com
+
+John Stump
+

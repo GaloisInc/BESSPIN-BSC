@@ -1,0 +1,674 @@
+#!/bin/env wish
+#
+# Copyright © 1996, Christopher Jay Cox, All rights reserved.
+# 
+
+option add *borderWidth					2
+option add *highlightThickness			1
+option add *highlightColor				red
+option add *highlightBackground			gray85
+option add *background					gray85
+option add *troughcolor					gray
+option add *Message*background			white
+option add *Entry*background			oldlace
+option add *wr_middle.page*background	oldlace
+option add *Scale.activeForeground		#A4C8F0
+option add *Menubutton*activeBackground	#A4C8F0
+option add *Scrollbar*activeBackground	#A4C8F0
+option add *Button*activeBackground		#A4C8F0
+option add *Entry*selectBackground		#A4C8F0
+option add *Listbox*selectBackground	#A4C8F0
+option add *font					-*-helvetica-medium-r-*-*-*-120-*-*-p-*-*-*
+option add *Entry*font				-*-courier-medium-r-*-*-*-120-*-*-m-*-*-*
+option add *Listbox*font			-*-courier-medium-r-*-*-*-120-*-*-m-*-*-*
+option add *dirlb*font				-*-helvetica-bold-r-*-*-*-100-*-*-p-*-*-*
+
+proc setTags {w reqName} {
+	global windowtag reqtag CjNames
+
+	if {[info exists CjNames($w)]} {
+		set windowtag $CjNames($w)
+	}
+	set reqtag "$reqName"
+}
+
+proc bindEntry {entry type} {
+	global CjNames CjWindows reqName
+	
+	set name $CjNames($entry)
+	switch [string tolower $type] {
+		hex {
+		bind $entry <Key> {
+			if {[expr [string length [%W get]] + 1] > [%W cget -width] &&\
+				"%A" != "{}" && "%A" >= " " && "%A" <= "~" } {
+				if {[%W selection present]} {
+					%W icursor sel.first
+					%W delete sel.first sel.last
+				} else {
+					break
+				}
+			}
+			set a [string toupper "%A"]
+			if { ("%A" < "0" || "%A" > "9") && ("$a" < "A" || "$a" > "F") } {
+				if { "%A" != "{}" && "%A" >= " " && "%A" <= "~" } {
+					if {[%W selection present]} {
+						%W icursor sel.first
+						%W delete sel.first sel.last
+					} else {
+						break
+					}
+				}
+			}
+		}
+		proc set_$name { val } "
+			set width \[$entry cget -width\]
+			$entry delete 0 end
+			$entry insert 0 \[format \"%0\${width}X\" \$val\]
+		"
+		proc get_$name {} "
+			set val \[$entry get\]
+			scan \${val} %x tvalue
+			return \$tvalue
+		"
+		}
+		unit {
+		bind $entry <Key> {
+			if {[expr [string length [%W get]] + 1] > [%W cget -width] &&\
+				"%A" != "{}" && "%A" >= " " && "%A" <= "~" } {
+				break
+			}
+			if { "%A" < "0" || "%A" > "9" } {
+				if { "%A" == "." } {
+					if {[string first "." "[%W get]"] != -1} {
+						break
+					}
+				} else if { "%A" == "m" } {
+					if {[string first "m" "[%W get]"] != -1} {
+						break
+					}
+				} else if { "%A" == "c" } {
+					if {[string first "c" "[%W get]"] != -1} {
+						break
+					}
+				} else if { "%A" == "i" } {
+					if {[string first "i" "[%W get]"] != -1} {
+						break
+					}
+				} else if { "%A" == "p" } {
+					if {[string first "p" "[%W get]"] != -1} {
+						break
+					}
+				} elseif { "%A" != "{}" && "%A" >= " " && "%A" <= "~" } {
+					break
+				}
+			}
+		}
+		proc set_$name { val } "
+			$entry delete 0 end
+			$entry insert 0 \[format \$val\]
+		"
+		proc get_$name {} "
+			set val \[$entry get\]
+			return \$val
+		"
+		}
+		float {
+		bind $entry <Key> {
+			if {[expr [string length [%W get]] + 1] > [%W cget -width] &&\
+				"%A" != "{}" && "%A" >= " " && "%A" <= "~" } {
+				break
+			}
+			if { "%A" < "0" || "%A" > "9" } {
+				if { "%A" == "." } {
+					if {[string first "." "[%W get]"] != -1} {
+						break
+					}
+				} elseif { "%A" != "{}" && "%A" >= " " && "%A" <= "~" } {
+					break
+				}
+			}
+		}
+		proc set_$name { val } "
+			$entry delete 0 end
+			$entry insert 0 \[format \$val\]
+		"
+		proc get_$name {} "
+			set val \[$entry get\]
+			return \$val
+		"
+		}
+		int {
+		bind $entry <Key> {
+			if {[expr [string length [%W get]] + 1] > [%W cget -width] &&\
+				"%A" != "{}" && "%A" >= " " && "%A" <= "~" } {
+				break
+			}
+			if { "%A" < "0" || "%A" > "9" } {
+				if { "%A" != "{}" && "%A" >= " " && "%A" <= "~" } {
+					break
+				}
+			}
+		}
+		proc set_$name { val } "
+			$entry delete 0 end
+			$entry insert 0 \$val
+		"
+		proc get_$name {} "
+			set val \[$entry get\]
+			return \$val
+		"
+		}
+		text -
+		default {
+		proc set_$name { val } "
+			$entry delete 0 end
+			$entry insert 0 \$val
+		"
+		proc get_$name {} "
+			set val \[$entry get\]
+			return \$val
+		"
+		}
+	}
+	bind $entry <Key-Return> "
+		setTags %W $reqName
+	"
+}
+
+proc createEntry {w name type args} {
+	global CjNames CjWindows
+	set e [eval entry $w.${name}_e $args]
+	set CjNames($e) $name
+	set CjWindows($name) $e
+	bindEntry $w.${name}_e $type
+	return $e
+}
+
+proc createComboScale {w name label scale entry} {
+	global CjNames CjWindows
+
+	frame $w.${name}_f -highlightthickness 0
+	frame $w.${name}_f.top -highlightthickness 0
+	frame $w.${name}_f.bottom -highlightthickness 0
+	set l [label $w.${name}_l -text "$label" -highlightthickness 0]
+	raise $scale
+	raise $entry
+	
+	pack $l -in $w.${name}_f.top -anchor sw -side left
+	pack $scale -in $w.${name}_f.bottom -anchor nw -side left \
+		-fill x -expand true
+	pack $entry -in $w.${name}_f.bottom -anchor sw -side right 
+	pack $w.${name}_f.top $w.${name}_f.bottom -in $w.${name}_f -side top \
+		-fill x -expand true
+
+	set ename $CjNames($entry)
+	$scale configure -command set_${ename}
+	bind $entry <Key-Return> "
+		set_${ename} \[get_${ename}\]
+		$scale set \[get_${ename}\]
+	"
+	bind $entry <FocusOut> "
+		if {\[$entry get\] == \"\"} {
+			set_${ename} \[$scale get\]
+		} else {
+			set_${ename} \[get_${ename}\]
+			$scale set \[get_${ename}\]
+		}
+	"
+	set CjNames($w.${name}_f) $name
+	set CjWindows($name) $w.${name}_f
+	return $w.${name}_f
+}
+
+proc createButton {w name default args} {
+	global CjNames CjWindows reqName
+
+	set b [eval button $w.${name}_b -highlightbackground black $args]
+	if {"$default" == 1} {
+		bind $w <Key-Return> "
+			$b invoke
+			setTags %W $reqName
+		"
+		focus $b
+	}
+	bind $b <ButtonRelease-1> "
+		setTags %W $reqName
+	"
+
+	set CjNames($b) $name
+	set CjWindows($name) $b
+	return $b
+}
+
+proc deleteComboBox {combobox} {
+	global CjNames CjWindows
+
+	eval .$CjNames($combobox)_tflb.lb delete 0 end
+}
+proc insertComboBox {combobox pos args} {
+	global CjNames CjWindows
+
+	eval .$CjNames($combobox)_tflb.lb insert $pos $args
+}
+
+proc createComboBox {w name label entry button height} {
+	global CjNames CjWindows reqName
+
+	frame $w.${name}_fcb -highlightthickness 0
+	frame $w.${name}_fcbe -highlightthickness 0
+	frame $w.${name}_dummy -highlightthickness 0
+	set d $w.${name}_dummy
+	if { "$label" != "" } {
+		set l [label $w.${name}_l -text "$label" -highlightthickness 0]
+		pack $l -in $w.${name}_fcb -side top -anchor w
+	}
+	$button configure -command "
+		set rhght \[winfo reqheight .${name}_tflb.lb\]
+		set rwdth \[expr \[winfo reqwidth .${name}_tflb.lb\] + \
+			\[winfo reqwidth $button\]\]
+		raise .${name}_tflb
+		set rx \[winfo rootx $d\]
+		if {\$rx < 0} {
+			set rx 0
+		} elseif {\$rx > [winfo screenwidth .]} {
+			set rx \[eval expr [winfo screenwidth .] - \$rwdth\]
+		}
+		set rx \"+\$rx\"
+		
+		set ry \[winfo rooty $d\]
+		if {\$ry < 0} {
+			set ry 0
+		} elseif {\[eval expr \$ry + \$rhght\] > [winfo screenheight .]} {
+			set ry \[eval expr [winfo screenheight .] - \$rhght\]
+		}
+		set ry \"+\$ry\"
+
+		wm geometry .${name}_tflb \
+			\${rwdth}x\${rhght}\${rx}\${ry}
+		wm deiconify .${name}_tflb
+		focus .${name}_tflb.lb
+		set CjPriv(background) \[.${name}_tflb.lb cget -selectbackground\]
+	"
+	pack $entry -in $w.${name}_fcbe -side left -fill x -expand true -anchor w
+	pack $button -in $w.${name}_fcbe -side right -fill both -anchor w -padx .05c
+	pack $w.${name}_fcbe $d -in $w.${name}_fcb -side top -anchor w
+	raise $entry
+	raise $button
+	
+	toplevel .${name}_tflb -bd 1 -relief raised -class ComboBox \
+		-highlightthickness 0 -cursor top_left_arrow
+	wm overrideredirect .${name}_tflb 1
+	
+	listbox .${name}_tflb.lb -height $height -width [$entry cget -width] \
+		-yscrollcommand ".${name}_tflb.sb set" -relief flat
+	scrollbar .${name}_tflb.sb -command ".${name}_tflb.lb yview" -relief ridge
+	pack .${name}_tflb.lb -in .${name}_tflb -side left -pady 2 -ipadx 1
+	pack .${name}_tflb.sb -in .${name}_tflb -side right -fill y -pady 2 
+	wm withdraw .${name}_tflb
+
+	bind .${name}_tflb <Key-Escape> "
+		grab release \[grab current\]
+		.${name}_tflb.lb configure -selectbackground \$CjPriv(background)
+		wm withdraw .${name}_tflb
+		if {\[info exists tkPriv(relief)\]} {
+			$button configure -relief \$tkPriv(relief)
+		}
+		$button configure -state normal
+		if {\"$w\" != \"\"} {
+			focus -lastfor $w
+		} else {
+			focus [focus -lastfor .]
+		}
+		set tkPriv(buttonWindow) \"\"
+		tkCancelRepeat
+		focus [focus -lastfor $w]
+	"
+	bind .${name}_tflb.lb <Key-Return> "
+		set ${name}_e_val [$entry cget -textvariable]
+		setTags %W $reqName
+		set current \[.${name}_tflb.lb curselection\]
+		if {\"\$current\" != \"\"} {
+			set \$${name}_e_val \[.${name}_tflb.lb get \
+				\$current\] 
+		}
+		eval \[bind .${name}_tflb <Key-Escape>\]
+	"
+	bind .${name}_tflb <ButtonRelease-1> "
+		if {\"%W\" != \".${name}_tflb.sb\"} {
+			eval \[bind .${name}_tflb <Key-Escape>\]
+			focus [focus -lastfor $w]
+			break
+		}
+	"
+	bind .${name}_tflb.lb <ButtonRelease-1> "
+		setTags %W $reqName
+		eval \[bind .${name}_tflb.lb <Key-Return>\]
+		set tkPriv(buttonWindow) \"\"
+	"
+	bind .${name}_tflb.lb <Leave> "
+		if {\$tkPriv(buttonWindow) != \"\"} {
+			.${name}_tflb.lb configure -selectbackground \
+				\[.${name}_tflb.lb cget -background\]
+		}
+		focus .${name}_tflb
+	"
+	bind .${name}_tflb.lb <Enter> "
+		.${name}_tflb.lb configure -selectbackground \
+			\$CjPriv(background)
+	"
+	bind .${name}_tflb.lb <Any-Key> "
+		.${name}_tflb.lb configure -selectbackground \$CjPriv(background)
+	"
+	bind $button <Key-Return> "
+		tkButtonUp %W
+		%W invoke
+		focus .${name}_tflb.lb
+		grab -global .${name}_tflb
+		update
+	"
+	bind $button <ButtonRelease-1> {
+		break
+	}
+	bind $button <Button-1> {
+		tkButtonUp %W
+		%W invoke
+	}
+	bind $button <Leave> "
+		if {\[wm state .${name}_tflb\] == \"normal\"} {
+			focus .${name}_tflb
+			grab -global .${name}_tflb
+			update
+			break
+		}
+	"
+
+	set CjNames($w.${name}_fcb) $name
+	set CjNames(.${name}_tflb.lb) $name
+	set CjNames(.${name}_tflb) $name
+	set CjWindows($name) $w.${name}_fcb
+	return $w.${name}_fcb
+}
+
+proc initFonts {} {
+	global fndry fmly wght slant sWdth adstyl pxlsz ptSz resx resy \
+			spc avgWdth rgstry encdng fonts 
+
+	set fndry *
+	set fndry *
+	set fmly *
+	set wght *
+	set slant *
+	set sWdth *
+	set adstyl *
+	set pxlsz *
+	set ptSz *
+	set resx *
+	set resy *
+	set spc *
+	set avgWdth *
+	set rgstry *
+	set encdng *
+
+	append pattern "^-$fndry-$fmly-$wght-$slant-$sWdth-$adstyl-$pxlsz-$ptSz-"
+	append pattern "$resx-$resy-$spc-$avgWdth-$rgstry-$encdng"
+	regsub -all {\*} "$pattern" {[^-]*} pattern
+	set fonts ""
+	catch {set fonts \
+		[exec xlsfonts | egrep "$pattern" | sed -e "s/\$/ \}/" -e "s/^/\{/"]}
+}
+
+proc updateFontEntrys {name fields} {
+	global fndry fmly wght slant sWdth adstyl pxlsz ptSz resx resy \
+			spc avgWdth rgstry encdng fonts tempfont \
+			xorig yorig ${name}_flabel
+
+	set xorig 0
+	set yorig 0
+	set fndry_opt -ascii
+	set fmly_opt -ascii
+	set wght_opt -ascii
+	set slant_opt -ascii
+	set sWdth_opt -ascii
+	set adstyl_opt -ascii
+	set pxlsz_opt -integer
+	set ptSz_opt -integer
+	set resx_opt -integer
+	set resy_opt -integer
+	set spc_opt -ascii
+	set avgWdth_opt -integer
+	set rgstry_opt -ascii
+	set encdng_opt -ascii
+
+	foreach field $fields {
+		eval set lbv f${field}_cb
+		eval set ev f${field}_e
+		upvar #0 $ev e
+		upvar #0 $lbv lb
+ 
+		eval set value \$${field}
+		set ${field}_save $value
+		set $field *
+		eval set opt \$${field}_opt
+
+		set pattern ""
+		append pattern "-$fndry-$fmly-$wght-$slant-$sWdth-$adstyl-$pxlsz-"
+		append pattern "($ptSz|0)-$resx-$resy-$spc-$avgWdth-$rgstry-$encdng"
+		regsub -all {\*} "$pattern" {[^-]*} pattern
+		regsub -all {[(]nil[)]} "$pattern" "" pattern
+
+		set pattern1 ""
+		append pattern1 {^-([^-]*)-([^-]*)-([^-]*)-([^-]*)-([^-]*)-([^-]*)-}
+		append pattern1 {([^-]*)-([^-]*)-([^-]*)-[^-]*-[^-]*-[^-]*-[^-]*-[^-]*}
+
+		set pattern2 ""
+		append pattern2 {^-[^-]*-[^-]*-[^-]*-[^-]*-[^-]*-[^-]*-[^-]*-[^-]*}
+		append pattern2 {-[^-]*-([^-]*)-([^-]*)-([^-]*)-([^-]*)-([^-]*)}
+
+		set match ""
+		set l ""
+		set fontlist ""
+		catch {set fontlist [exec echo "$fonts" | egrep "{$pattern }"]}
+		foreach font $fontlist {
+			regexp "$pattern1"\
+				"$font" match \
+				fndry_v fmly_v wght_v slant_v sWdth_v adstyl_v pxlsz_v \
+				ptSz_v resx_v
+			regexp "$pattern2"\
+				"$font" match \
+				resy_v spc_v avgWdth_v rgstry_v encdng_v
+			eval set value \$${field}_v
+			if {"$value" == ""} {
+				set value "(nil)"
+			}
+			if {[lsearch $l $value] == -1} {
+				lappend l ${value}
+			}
+		}
+		eval set $field \$${field}_save
+		if { "$fontlist" != "" } {
+			deleteComboBox ${lb}
+			eval set value \$${field}_save
+			if {$field == "ptSz" && "$value" != ""} {
+				if {[lsearch -exact "$l" 0] != -1} {
+					$e configure -state normal
+					if {[lsearch $l $value] == -1} {
+						lappend l ${value}
+					}
+				} else {
+					$e configure -state disabled
+					eval set value \$${field}_save
+					if {$field != "*" && [lsearch -exact "$l" $value] == -1} {
+						set $field *
+					}
+				}
+			} else {
+				if {$field != "*" && [lsearch -exact "$l" $value] == -1} {
+					set $field *
+				}
+			}
+			eval insertComboBox ${lb} end "* [lsort $opt $l]"
+		}
+	}
+	set pattern "-$fndry-$fmly-$wght-$slant-$sWdth-$adstyl-$pxlsz-$ptSz-$resx-$resy-$spc-$avgWdth-$rgstry-$encdng"
+	regsub -all {\[\^\-\]\*} "$pattern" "*" fontpattern
+	regsub -all {[(]nil[)]} "$fontpattern" "" fontpattern
+	
+	eval set label \$${name}_flabel
+    if {[catch "
+		.${name}Req.fontcanvas itemconfigure ${label} -font \"$fontpattern\"
+		"]} {
+		set ptSz *
+		set pattern "-$fndry-$fmly-$wght-$slant-$sWdth-$adstyl-$pxlsz-$ptSz-$resx-$resy-$spc-$avgWdth-$rgstry-$encdng"
+		regsub -all {\[\^\-\]\*} "$pattern" "*" fontpattern
+		regsub -all {[(]nil[)]} "$fontpattern" "" fontpattern
+    	.${name}Req.fontcanvas itemconfigure $label -font "$fontpattern"
+	}
+	$tempfont configure -font "$fontpattern"
+	set height [winfo reqheight $tempfont]
+	.${name}Req.fontcanvas configure -height $height
+	update idletasks
+}
+
+proc fontRequestor {name title} {
+	global tempfont
+	global wwindows wnames wfirst
+	global fndry_a fmly_a wght_a slant_a sWdth_a adstyl_a pxlsz_a ptSz_a \
+		resx_a resy_a spc_a avgWdth_a rgstry_a encdng_a
+	global ffmly_cb fwght_cb fslant_cb fptSz_cb
+	global fptSz_e
+	global fmly wght slant ptSz
+	global ${name}_flabel
+	global reqName
+
+	set w .${name}Req
+
+	set reqName font
+	frame $w
+
+	label $w.copyr -text "Copyright © 1996, Christopher Jay Cox, All rights reserved." -relief raised -highlightthickness 0
+	frame $w.fonttop -borderwidth 0 -highlightthickness 0
+	frame $w.fontmiddle -borderwidth 0 -highlightthickness 0
+	frame $w.fontbottom -borderwidth 0 -highlightthickness 0
+
+	set oldFocus [focus]
+	focus $w
+
+	image create bitmap Down -data "
+#define Down_width 16
+#define Down_height 16
+static unsigned char Down_bits[] = {
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x03, 0xc0, 0x03,
+   0xc0, 0x03, 0xc0, 0x03, 0xfc, 0x3f, 0xf8, 0x1f, 0xf0, 0x0f, 0xe0, 0x07,
+   0xc0, 0x03, 0x80, 0x01, 0x00, 0x00, 0x00, 0x00};
+"
+
+	set ffmly_e [createEntry $w fmlye "" -width 20 -state disabled \
+		-textvariable fmly]
+	bindEntry $ffmly_e text
+	set ffmly_b [createButton $w fmlyb ""\
+		-image Down]
+	set ffmly_cb [createComboBox $w fmlycb "Family" $ffmly_e $ffmly_b 10]
+
+	set fwght_e [createEntry $w wghte "" -width 7 -state disabled \
+		-textvariable wght]
+	bindEntry $fwght_e text
+	set fwght_b [createButton $w wghtb ""\
+		-image Down]
+	set fwght_cb [createComboBox $w wghtcb "Weight" $fwght_e $fwght_b 10]
+
+	set fslant_e [createEntry $w slante "" -width 4 -state disabled \
+		-textvariable slant]
+	bindEntry $fslant_e text
+	set fslant_b [createButton $w slantb ""\
+		-image Down]
+	set fslant_cb [createComboBox $w slantcb "Slant" $fslant_e $fslant_b 10]
+
+	set fptSz_e [createEntry $w ptSze "" -width 4 -state disabled \
+		-textvariable ptSz]
+	bindEntry $fptSz_e int
+	set fptSz_b [createButton $w ptSzb ""\
+		-image Down]
+	set fptSz_cb [createComboBox $w ptSzcb "Pt. Size" $fptSz_e $fptSz_b 10]
+
+	set cancel [createButton $w cancel "" -text "Cancel"]
+	set apply [createButton $w apply "" -text "Apply"]
+	set ok [createButton $w ok 1 -text "OK"]
+
+	set tempfont [label $w.fontlabel -text "A"]
+	set fcanvas [canvas $w.fontcanvas -bd 2 -height .5i -width 5i -scrollregion {0 0 12i 50i} -relief sunken]
+	tk_bindForTraversal $fcanvas
+
+	set ${name}_flabel [$fcanvas create text .1i .05i -anchor nw -width 10i -text "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!\"#$%&'()*+,-./@\[\\\]^_'{|}~¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ" -tags flabel ]
+		
+	raise $w.fontcanvas
+
+	bind $fcanvas <ButtonPress-2> {
+		%W scan mark %x %y
+	}
+	bind $fcanvas <B2-Motion> {
+		%W scan dragto %x %y
+	}
+
+	pack $w.fontcanvas -in $w.fontmiddle -fill both -expand true \
+		-padx .1i -pady .1i
+	pack $ffmly_cb $fwght_cb $fslant_cb $fptSz_cb -side left -in $w.fonttop
+	pack $cancel $apply $ok -side left -expand true -in $w.fontbottom \
+		-padx 2m -pady 2m
+	pack $w.copyr -side top -in $w -fill x
+	pack $w.fonttop -side top -in $w
+	pack $w.fontmiddle -side top -in $w -fill both -expand true
+	pack $w.fontbottom -side bottom -in $w
+	pack $w -expand true -fill both
+
+#	wm withdraw $w
+	proc font_events {event} "
+		switch \"\${event}\" {
+		ok {
+			puts \[$w.fontcanvas itemcget flabel -font\]
+			exit
+		}
+		apply -
+		cancel {
+			return \${event}
+		}
+		default {
+			$w configure -cursor watch
+			update
+			updateFontEntrys ${name} {fmly wght slant ptSz}
+			$w configure -cursor \"\"
+			update
+			return 0
+		}
+		}
+	"
+	updateFontEntrys ${name} {fmly wght slant ptSz}
+}
+
+proc raiseRequestor {name} {
+	global windowtag reqtag
+
+	set w .${name}Req
+	focus $w
+	raise $w
+}
+	
+proc QmanageRequestors {} {
+	while {1} {
+	tkwait variable windowtag
+	}
+}
+proc manageRequestors {} {
+	global windowtag reqtag
+
+	while {1} {
+		tkwait variable windowtag
+		if {[info procs ${reqtag}_events] != ""} {
+			${reqtag}_events $windowtag
+		}
+	}
+}
+
+initFonts
+fontRequestor font "Font Requestor"
+raiseRequestor font
+manageRequestors

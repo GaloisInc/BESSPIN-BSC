@@ -1,0 +1,2 @@
+src/lib/board_support/BlueNoC/drivers/* /usr/src/bluespec-modules-dkms/
+src/lib/board_support/BlueNoC/drivers/99-bluespec.rules /lib/udev/rules.d

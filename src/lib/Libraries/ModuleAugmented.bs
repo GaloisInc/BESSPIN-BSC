@@ -1,0 +1,6 @@
+-- Copyright 2000--2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id: ModuleAugmented.bs 7427 2005-09-15 13:07:58Z ravi $
+
+package ModuleAugmented() where
+{}

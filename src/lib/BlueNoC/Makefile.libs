@@ -1,0 +1,164 @@
+# Makefile for BlueNoC library
+# Copyright 2011 Bluespec, Inc. All Rights Reserved
+PWD:=$(shell pwd)
+TOP:=$(PWD)/../../../..
+
+include $(TOP)/platform.mk
+
+INSTALL ?= $(TOP)/util/install
+
+CFLAGS += -Wall \
+	 -Wmissing-prototypes \
+	 -Wstrict-prototypes \
+	 -Wpointer-arith \
+	 -Wshadow \
+	 -Wcast-qual \
+	 -Werror \
+	 -g \
+	 -std=c99 \
+	 -fPIC
+CXXFLAGS += -Wall \
+	   -Wpointer-arith \
+	   -Wshadow \
+	   -Wcast-qual \
+	   -Wno-unused-parameter \
+	   -g \
+	   -D_ISOC99_SOURCE \
+	   -std=gnu++98 \
+	   -fPIC
+
+# Compares two dotted numeric strings (e.g 2.3.16.1) for $1 >= $2
+define version_ge
+$(findstring TRUE,$(shell bash -c 'sort -cu -t. -k1,1nr -k2,2nr -k3,3nr -k4,4nr <(echo -e "$2\n$1") 2>&1 || echo TRUE'))
+endef
+
+glibcversion := $(shell ldd --version | head -1 | awk '{print $$NF}')
+ifeq ($(call version_ge,$(glibcversion),2.20),TRUE)
+CFLAGS += -D_DEFAULT_SOURCE
+CXXFLAGS += -D_DEFAULT_SOURCE
+else
+CFLAGS += -D_BSD_SOURCE
+CXXFLAGS += -D_BSD_SOURCE
+endif
+
+gxx33 := $(shell $(CXX) --version | grep -c "3\.3\.")
+gccversion := $(shell $(CXX) --version | head -1 | egrep -o "[0-9]+\.[0-9]+" | head -1)
+
+ifneq ($(gccversion), 3.3)
+CXXFLAGS += -Werror
+else
+$(warning gcc version is $(gccversion) -Werror supressed)
+endif
+
+# CFLAGS +=  -I $(LM_BSC_DIR)
+CXXFLAGS +=  -I $(LM_BSC_DIR)
+
+ifeq ($(OSTYPE), Darwin)
+SHARED ?= -dynamiclib -undefined dynamic_lookup
+CXXFLAGS += -D_DARWIN_C_SOURCE
+else
+SHARED ?= -shared
+CXXFLAGS += -D_POSIX_SOURCE
+CFLAGS   += -D_POSIX_SOURCE
+endif
+
+COPT ?= -O0
+CDEBUG ?= -g
+CFLAGS += $(PROF) $(COPT) $(CDEBUG) -std=gnu99
+CXXFLAGS += $(PROF) $(COPT) $(CDEBUG)
+
+PREFIX?=$(TOP)/inst
+LIBDIR=$(PREFIX)/lib
+BNOCLIB=$(LIBDIR)/BlueNoC
+DRVLIB=$(LIBDIR)/board_support/bluenoc
+
+CXXFLAGS += -I $(DRVLIB) -I.. -std=gnu++98 
+
+TCPOBJS=bluenoc_tcp.o 
+OBJS=bluenoc_link.o core_link.o bluenoc_parameters.o bluenoc_pipe.o bluenoc_pipes.o DataBufferQ.o bluenoc.o
+
+LINK_OBJS=bluenoc_link.o core_link.o pcie_link.o tcp_link.o
+XACTOR_OBJS=bluenoc_thread.o
+BNOCLIBRARY=$(TOP)/src/lib/BlueNoC/$(BUILDDIR)/libbluenoctcp.a
+
+vpath %.c ../
+
+%.o:%.c
+	$(CC) -E -MM -I $(DRVLIB) $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CC) $(CFLAGS) -I $(DRVLIB) -c -o $@ $<
+
+vpath %.cxx ../
+
+%.o:%.cxx
+	$(CXX) -E -MM -I $(DRVLIB) $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CXX) $(CXXFLAGS) -I $(DRVLIB) -c -o $@ $<
+
+vpath %.cc ../
+
+%.o:%.cc
+	$(CXX) -E -MM -I $(DRVLIB) $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o:xactors/%.cc
+	$(CXX) -E -MM -I.. -I $(DRVLIB) $< > $*.p
+	cp $*.p $*.d; \
+	sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	    -e '/^$$/ d' -e 's/$$/ :/' < $*.p >> $*.d; \
+	rm -f $*.p
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+bluenoc_thread.o: xactors/bluenoc_thread.cc
+
+.PHONY:	all
+all: libbluenoctcp.a libbluenoc.a libbnxtors.a tcplink.so pcielink.so
+
+libbluenoctcp.a: $(TCPOBJS)
+	$(RM) libbluenoctcp.a
+	$(AR) cr libbluenoctcp.a $(TCPOBJS)
+
+libbluenoc.a: $(OBJS)
+	$(RM) libbluenoc.a
+	$(AR) cr libbluenoc.a $(OBJS)
+
+libbnxtors.a: $(XACTOR_OBJS)
+	$(RM) libbnxtors.a
+	$(AR) cr libbnxtors.a $(XACTOR_OBJS)
+
+tcplink.so: bluenoc_link.o core_link.o bluenoc_parameters.o tcp_link.o
+	$(CXX) $(CXXFLAGS) $(SHARED) -fPIC -o $@ $^ $(BNOCLIBRARY)
+
+pcielink.so: bluenoc_link.o core_link.o bluenoc_parameters.o pcie_link.o
+	$(CXX) $(CXXFLAGS) $(SHARED) -fPIC -o $@ $^
+
+install: all
+	$(INSTALL) -m 755 -d $(BNOCLIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 libbluenoctcp.a  $(BNOCLIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 libbluenoc.a  $(BNOCLIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 libbnxtors.a  $(BNOCLIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 tcplink.so $(BNOCLIB)/$(BUILDDIR)
+	$(INSTALL) -m 644 pcielink.so $(BNOCLIB)/$(BUILDDIR)
+clean:
+	$(RM) *.o *.d *.a *.so
+	$(RM) -rf *.so.dSYM
+
+realclean: clean
+
+TAGS:	*.h *.c *.cxx
+	etags *.h *.c *.cxx
+
+# include dependency information
+DEPEND_OBJS = $(OBJS) $(TCPOBJS) $(LINK_OBJS)
+
+-include $(DEPEND_OBJS:.o=.d)

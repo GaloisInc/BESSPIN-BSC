@@ -1,0 +1,102 @@
+Blueview GUI tasks remaining
+
+Functionality
+
+  1) need to be able to follow flattened hierachy - requires InstOf
+     from xref for flattened modules in .bsv files to function like
+     other levels of hiearchy
+
+     Priority: High
+     Work required: 2 days
+
+
+  2) change textarea to multipage textarea - this will allow one or
+     more bsv files and one or more v files to be viewed as related to
+     each other in the text area.  This will simplify cross
+     referencing and allow for easier switching between views, but
+     requires a good chunk of recoding.  Cases where a .bsv line
+     points to multiple .v files (or vice versa) are not handled well
+     now.
+
+     Priority: Medium
+     Work: 10 days.
+
+
+  3) add integration to schematic view - add ability to display
+     signals an or paths in nSchem from blueview.  It would be nice
+     to be able to read in timing information also and relate that
+     to blueview signals
+
+     Priority: enhancement
+     Work: unknown
+
+  4) add structure view - add ability to display structures, signals,
+     an other interesting things in blueview. 
+
+     Priority: enhancement
+     Work: unknown
+
+Quality
+
+  1) vast number of indexed arrays should be changed to named trees
+     i.e. [lindex gTreeInfo 1] is bad
+          $gTreeInfo(vinst) is much better
+     This will make blueview much more resistant to breaking when info
+     is changed and make it much more readable.
+
+     Priority: Medium
+     Work: 2-3 days with testing (can be done incrementally)
+
+  2) Test with Verdi - since this is what we are announcing we work with
+
+     Priority: High
+     Work: 0.5 days
+
+
+  3) performance analysis - it's not fast now and it will get much
+     slower with bigger designs.  I don't have a profiling tool now
+     as we don't have a ActiveState license.
+
+     Priority: High
+     Work: 0.5 days
+     
+
+  4) Regressions - I need to integrate a Tcl/Expect way of testing
+     blueview, which is tricky since it is a GUI program.  This will
+     require some thought and planning.  Tests will have to be written
+     and data snapshots planned.
+
+     Priority: Medium
+     Work: 10 days
+
+Productizing
+
+  1) Should we migrate to C++/libfox?  The current code is 3500 lines
+     of tcl, not written well.  C++ is debuggable, more fragile maybe?,
+     but will allow for static distributions.
+
+     Priority: unknown
+     Work: 45 days
+
+  2) Should we rewrite using more handcoded and structure Tcl code.
+     Tcl is very portable but pretty difficult to debug.  We should
+     add more expect, trace, and debug code as we create routines from
+     the ground up.
+
+     Priority: unknown
+     Work: 30 days
+
+  3) Do we want to get a compiler license so the world doesn't get to
+     see the tcl source code?  We at least should consider obfuscating
+     the code.
+
+     Priority: medium (before we ship to many copies of blueview)
+     Work: 1 day
+
+################################################################################
+wish list?
+
+    Macros for adding probes? - Hard - need real parser to know where to put probe
+
+    arrays - give user option of picking which elements to print out
+

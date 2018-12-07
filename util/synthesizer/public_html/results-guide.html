@@ -1,0 +1,124 @@
+<html><head><title>How to interpret synthesizer results</title></head>
+<body>
+
+<h1>How to interpret synthesizer results</h1>
+
+<table width=100% border=0><tr valign=top><td>
+
+<h2>Graphical representation</h2>
+<p>The <a href="cgi-bin/results">synthesizer results page</a> mainly consists of a large table, showing the period and areas of the synthesized designs. Since we're usually not interested in the actual numbers, but more interested in seeing if the performance is improving or declining, the default view is graphical. The area and CPU time are both represented by plain blue bars, and should be easy to interpret. The period is represented by multi colored bars, as shown in figure 1. </p>
+
+<ul>
+  <li>If the synthesis tool manages to meet timing, the full bar (including both the gray and green fields) represents the requested period, and the green part of it corresponds to the slack. 
+  <li>If the synthesis tool does not manage to meet timing, the gray part of the bar represents the requested period, and the red part corresponds to the negative slack - that is the number of picoseconds that the generated circuit is off of requested timing.
+</ul>
+
+<h2>Numerical representation</h2>
+<p>Figure 1 also shows how the same data is represented numerically. The first number is the requested period. The second number is the negation of the slack. For example, 700+100 means that the requested period is 700ps, but the solution is off by 100ps. Similarly, 700-50 means that the requested period is still 700ps, and the solution meets timing and has 50ps slack.</p>
+
+<h2>Adjusting the period</h2>
+<p>The example in figure 1 shows the kind of development we would like to see. The requested period remains constant in rows 1-6, but the performance improves over time as the compiler becomes more optimized. Since the slack in step 6 is so big, we can expect that the synthesis tool isn't doing any optimization. Therefore we change the requested period, so that the synthesizer tool is forced to do optimizations again. In step 7-9, this new period is used. </p>
+
+
+</td><td>
+  <table border=1><tr><td><center>
+  <table border=0 cellpadding=4>
+    </td></tr><tr><td>1</td><td>
+    <table border=0 cellpadding=0 cellspacing=0><tr><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=70>
+      <tr><td height=14 bgcolor="#a0a0a0"></td></tr></table>
+    </td><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=20>
+      <tr><td height=14 bgcolor="#d00000"></td></tr></table>
+    </td></tr></table>
+    </td><td>700+200
+  
+    </td></tr><tr><td>2</td><td>
+    <table border=0 cellpadding=0 cellspacing=0><tr><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=70>
+      <tr><td height=14 bgcolor="#a0a0a0"></td></tr></table>
+    </td><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=10>
+      <tr><td height=14 bgcolor="#d00000"></td></tr></table>
+    </td></tr></table>
+    </td><td>700+100
+  
+    </td></tr><tr><td>3</td><td>
+    <table border=0 cellpadding=0 cellspacing=0><tr><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=70>
+      <tr><td height=14 bgcolor="#a0a0a0"></td></tr></table>
+    </td><td>
+    </td></tr></table>
+    </td><td>700+0
+  
+    </td></tr><tr><td>4</td><td>
+    <table border=0 cellpadding=0 cellspacing=0><tr><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=65>
+      <tr><td height=14 bgcolor="#a0a0a0"></td></tr></table>
+    </td><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=5>
+      <tr><td height=14 bgcolor="#00d000"></td></tr></table>
+    </td></tr></table>
+    </td><td>700-50
+  
+    </td></tr><tr><td>5</td><td>
+    <table border=0 cellpadding=0 cellspacing=0><tr><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=60>
+      <tr><td height=14 bgcolor="#a0a0a0"></td></tr></table>
+    </td><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=10>
+      <tr><td height=14 bgcolor="#00d000"></td></tr></table>
+    </td></tr></table>
+    </td><td>700-100
+  
+    </td></tr><tr><td>6</td><td>
+    <table border=0 cellpadding=0 cellspacing=0><tr><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=50>
+      <tr><td height=14 bgcolor="#a0a0a0"></td></tr></table>
+    </td><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=20>
+      <tr><td height=14 bgcolor="#00d000"></td></tr></table>
+    </td></tr></table>
+    </td><td>700-200
+  
+    </td></tr><tr><td>7</td><td>
+    <table border=0 cellpadding=0 cellspacing=0><tr><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=45>
+      <tr><td height=14 bgcolor="#a0a0a0"></td></tr></table>
+    </td><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=8>
+      <tr><td height=14 bgcolor="#d00000"></td></tr></table>
+    </td></tr></table>
+    </td><td>450+80
+  
+    </td></tr><tr><td>8</td><td>
+    <table border=0 cellpadding=0 cellspacing=0><tr><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=45>
+      <tr><td height=14 bgcolor="#a0a0a0"></td></tr></table>
+    </td><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=2>
+      <tr><td height=14 bgcolor="#d00000"></td></tr></table>
+    </td></tr></table>
+    </td><td>450+20
+  
+    </td></tr><tr><td>9</td><td>
+    <table border=0 cellpadding=0 cellspacing=0><tr><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=43>
+      <tr><td height=14 bgcolor="#a0a0a0"></td></tr></table>
+    </td><td>
+      <table border=0 cellpadding=0 cellspacing=0 width=2>
+      <tr><td height=14 bgcolor="#00d000"></td></tr></table>
+    </td></tr></table>
+    </td><td>450-20
+  </td></tr></table>
+  <b>Fig 1.</b></center>
+  </td></tr></table>
+</td></tr></table>
+
+<br>
+<a href="cgi-bin/results">To the results page</a>
+<br><br>
+<a href="index.html">To the main page</a>
+
+</body>
+</html>

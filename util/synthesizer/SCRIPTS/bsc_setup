@@ -1,0 +1,4 @@
+export BLUESPECDIR=~/bsc/src/lib
+export PATH=$PATH:~/bsc/src
+
+export LM_LICENSE_FILE=27000@indigo

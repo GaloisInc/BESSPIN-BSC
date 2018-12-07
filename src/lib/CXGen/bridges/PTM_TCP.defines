@@ -1,0 +1,60 @@
+/// -*-bsv-*-
+
+`define PTM_XTOR_CLOCK_RATIO 12
+
+import Vector::*;
+import PTMClocks::*;
+
+`define SceMiParamsDcl Vector#(0,Clock)cv
+`define SceMiParams cv
+
+`define BridgeParamsDcl Clock xtor_clk
+`define BridgeParams xtor_clk
+
+typedef Empty ToLink;
+
+(* synthesize *)
+module [Module] ptm_bridge #(`BridgeParamsDcl)(SceMiBridge);
+   let uclk <- exposeCurrentClock();
+   let urst <- exposeCurrentReset();
+
+   let ed   <- mkEdgeDetectorSim(xtor_clk);
+   let cclk_en = ed.b;
+
+   (*hide*)
+   Bridge _m <- buildSceMi(scemi_bridge(uclk,urst, cclk_en), TCP_NOCLOCK);
+
+   // =================
+
+   interface toDut = _m;
+   interface ToLink toLink; endinterface  // can this be omitted?
+endmodule: ptm_bridge
+
+
+module mkPTMXtorClock(Clock);
+   Reg#(UInt#(4)) cnt <- mkRegU;
+   let ug <- mkUngatedClock(False);
+   rule oscillate;
+      let new_cnt = cnt-1;
+      if (new_cnt == 0) begin
+	 new_cnt = (`PTM_XTOR_CLOCK_RATIO)/2;
+	 ug.setClockValue(!ug.getClockValue);
+      end
+      cnt <= new_cnt;
+   endrule
+   return ug.new_clk;
+endmodule
+
+(*synthesize*)
+module [Module] mkFPGA_top #(`SceMiParamsDcl) (ToLink);
+   let c <- exposeCurrentClock;
+
+   let xtor_clk  <- mkPTMXtorClock;
+
+   MakeResetIfc r <- mkReset(20, True, c);
+   let   dut_rstn  = r.new_rst;
+
+   let ptmtop <- ptm_top(`BridgeParams, reset_by dut_rstn);
+
+   return ptmtop.toLink;
+endmodule: mkFPGA_top

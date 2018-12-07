@@ -1,0 +1,47 @@
+#!/bin/sh
+
+set -e
+
+RELEASE_NUM=$1
+UPSTREAM_VERSION=$2
+
+if [ ! "${RELEASE_NUM}" -o ! "${UPSTREAM_VERSION}" ]; then
+    echo
+    echo "usage: export <release_num> <upstream_version>"
+    echo
+    exit
+fi
+
+tmpdir=`mktemp -d`
+
+if [ ! -d ${dir} ]; then
+    echo "ERROR: could not create temporary directory"
+    exit 1
+fi
+
+dir=${tmpdir}/bluespec-${RELEASE_NUM}
+gitdir=/raid/git
+svnroot=https://svn.bluespec.com:8080/bs/
+
+mkdir ${dir}
+GIT_DIR=${gitdir}/bsc.git git archive master | (cd ${dir} && tar xf -)
+
+vendor="boost cudd debian eve iverilog libftdi Parsec sha1 stp systemc tcltk usb-driver verific yices"
+for v in ${vendor}; do
+    mkdir -p ${dir}/vendor/${v}
+    GIT_DIR=${gitdir}/vendor-${v}.git git archive master | (cd ${dir}/vendor/${v} && tar xf -)
+done
+
+mkdir -p ${dir}/vendor/flexlm
+GIT_DIR=${gitdir}/flexlm-external.git git archive master | (cd ${dir}/vendor/flexlm && tar xf -)
+
+mkdir -p ${dir}/doc
+GIT_DIR=${gitdir}/bsc-doc.git git archive master | (cd ${dir}/doc && tar xf -)
+
+svn export ${svnroot}/training/trunk/slides/Released_Slides ${dir}/slides
+svn export ${svnroot}/marketing/trunk/WhitePapers ${dir}/whitepapers
+svn export ${svnroot}/marketing/trunk/Conferences ${dir}/conferences
+
+tar -C ${tmpdir} -c -J -f ../../bluespec-${RELEASE_NUM}_${UPSTREAM_VERSION}.orig.tar.xz bluespec-${RELEASE_NUM}
+
+rm -rf ${tmpdir}

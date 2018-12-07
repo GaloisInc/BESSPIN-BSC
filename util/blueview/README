@@ -1,0 +1,11 @@
+
+This directory includes support files for Blueview:
+
+wave.menu                - a configuration file for Debussy that adds a 
+			   "blueview menu" to nWave 
+	                    (see the blueview user guide).
+
+blueview-preferences.tcl - a sample .tcl file showing how to
+                           personalize fonts, colors, and accellerator
+                           key bindings.
+

@@ -1,0 +1,88 @@
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <META NAME="Author" CONTENT="John Stump">
+   <META NAME="GENERATOR" CONTENT="Mozilla/4.04 [en] (X11; I; Linux 1.2.13 i586) [Netscape]">
+   <TITLE>Tuba</TITLE>
+</HEAD>
+<BODY>
+
+<H2>
+NAME</H2>
+tuba - Tcl/Tk source code debugger, version 2.4
+<H2>
+SYNOPSIS</H2>
+<B>tuba</B> [<I>options</I>] <I>application</I> [<I>application</I> <I>arguments</I>]
+<H2>
+DESCRIPTION</H2>
+The <B>tuba</B> tool allows the user to debug Tcl and Tk programs without
+having to make any modifications to the application source code. Code is
+instrumented on the fly when it is sourced; the instrumentation makes calls
+back to the debugger so the user can perform basic debugging tasks such
+as setting breakpoints and single statement stepping.
+
+<P>This reference only covers the command line options. For a more detailed
+description of how to use <B>tuba</B>, please see the <A HREF="USERS.html">user's
+guide</A>.
+<H2>
+OPTIONS</H2>
+
+<UL>-version | -V
+<UL>Prints out the <B>tuba</B> version and exits.
+<BR>&nbsp;</UL>
+-T
+<UL>Use the Tcl-based parser.</UL>
+-C
+<UL>Use the C++-based parser if available. If not, use the Tcl-based parser.
+This is the default.
+<BR>&nbsp;</UL>
+-X
+<UL>Use the experimental parser. Use this in conjunction with the -C or
+-T options. The experimental parser is slightly faster and will eventually
+replace the default parser.
+<BR>&nbsp;</UL>
+-R
+<UL>Specifies run-time instrumentation. Although slower, run-time instrumenting
+is very handy for Tcl/Tk code that uses a lot of dynamic code creation,
+code that cannot easily be parsed at load-time. If <B>tuba</B> croaks on
+your application due to a parsing error, then try the -R option.
+<BR>&nbsp;</UL>
+-i <I>interp</I>
+<UL>Sets the interpreter to <I>interp</I>. Default is tclsh8.0 (tclsh80
+on Windows). This does not have to have a path if the command is in your
+PATH environment.
+<BR>&nbsp;</UL>
+-p <I>port</I>
+<UL>Use port <I>port</I> for the socket. The default is 1090.
+<BR>&nbsp;</UL>
+-c <I>cachedir</I>
+<UL>Sets the directory for caching instrumented source files. The default
+is <I>tubadir</I>/cache, where <I>tubadir</I> is the directory <B>tuba</B>
+is installed in.
+<BR>&nbsp;</UL>
+-nc
+<UL>No caching. This turns off reading and writing caches instrument files.
+<BR>&nbsp;</UL>
+-purge
+<UL>Purges the cache directory before continuing.
+<BR>&nbsp;</UL>
+-w <I>workingdir</I>
+<UL>Sets the working directory to be in when debugging your application.
+If <I>workingdir</I> is set to "", then it will default to the same directory
+the application resides in.
+<BR>&nbsp;</UL>
+-e <I>exclusionfile</I>
+<UL>Specifies a file that contains proc exclusion expressions.
+<BR>&nbsp;</UL>
+-s <I>sessionfile</I>
+<UL>Open the specified session file.
+<BR>&nbsp;</UL>
+-help
+<UL>Prints out brief help on options and exits.</UL>
+</UL>
+
+<H2>
+SEE ALSO</H2>
+<A HREF="testinstrumenter.man.html">testinstrumenter</A> , <A HREF="USERS.html">USERS</A>
+</BODY>
+</HTML>

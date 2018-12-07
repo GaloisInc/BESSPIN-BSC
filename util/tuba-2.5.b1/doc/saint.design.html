@@ -1,0 +1,438 @@
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <META NAME="Author" CONTENT="John Stump">
+   <META NAME="GENERATOR" CONTENT="Mozilla/4.04 [en] (X11; I; Linux 1.2.13 i586) [Netscape]">
+   <META NAME="Description" CONTENT="Design document for saint tuba feature">
+   <TITLE>SAINT Design</TITLE>
+</HEAD>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#0000EE" VLINK="#551A8B" ALINK="#FF0000">
+
+<H1>
+Saint:: Stand Alone Instrumenter</H1>
+This is the design documentation for the <U>saint</U> or Stand Alone Instrumenter
+package for Tuba and other Tcl tools.
+<BR>&nbsp;
+<H2>
+Background</H2>
+In Tuba, the instrumenter is tightly integrated in the debugger code. This
+makes a tool like testinstrumenter very difficult. And any other non-Tuba
+use of the instrumenter (such as Tea) is next to impossible.
+<H2>
+Goals</H2>
+I want to decouple the instrumenter from the debugger so that it can be
+used as a general code instrumenter. Tools that can use this could be a
+proc lister, line-of-code counter, a profiler, code documentors, etc.
+
+<P>Another advantage to this decoupling is to be able to swap in different
+parsers for Tuba.
+<H2>
+Interfaces</H2>
+In order for the instrumenter to have some smarts, there needs to be a
+two-way communication between the instrumenter and the client. This interface
+will be in terms of procs (a Tea class version will be available later).
+<BR>&nbsp;
+<H3>
+Instrumenter Interface</H3>
+All procs of the instrumenter should be defined in a namespace called <TT>instrumenter</TT>.
+This namespace should be relative so that the client can stick it anywhere
+it wants.
+<BR>&nbsp;
+<H4>
+Namespace</H4>
+All instrumenting implementations must adhere to the following interface.
+This allows the client to talk to the instrumenter in an abstract fashion.
+
+<P>The namespace definition should look something like this:
+<UL>
+<PRE>namespace eval instrumenter {
+&nbsp;&nbsp; ...
+}</PRE>
+</UL>
+
+<H4>
+The procs</H4>
+The following procs must be defined by the instrumenter. Clients should
+not assume that these will be exported.
+<H5>
+instrumenter::init {libdir clientns options}</H5>
+
+<UL>This initializes the instrumenter.
+
+<P><U>Inputs</U>
+<UL><TT>libdir</TT>
+<UL>The full path pointing to the lib directory where the instrumenter
+source came from. Useful for loading auxliary files.</UL>
+<TT>clientns</TT>
+<UL>The namespace where the client callback procs are defined. The callback
+procs are discussed in the <A HREF="#Client Interface">Client Interface</A>.</UL>
+<TT>options</TT>
+<UL>Options for the instrumenter in <TT>array get</TT> format. These can
+be dependent on the instrumenter. The following are standard across all
+instrumenters:</UL>
+</UL>
+</UL>
+
+<UL>
+<UL>
+<UL>
+<UL>
+<LI>
+<B>parser</B>. Possible values:</LI>
+
+<UL>
+<LI>
+T use Tcl code</LI>
+
+<LI>
+C use C/C++ version of code, if available.</LI>
+</UL>
+
+<LI>
+<B>cachedir</B>. Sets the directory of where cached files are stored and
+read from. If empty, then do no caching.</LI>
+
+<LI>
+Instrumentation Actions. A fine degree of control of the instrumentation
+can be achieved with the action options. These consist of a two-digit number.
+The first digit designates the action to perform on the toplevel command.
+The second digit is the action to perform on any embedded code bodies,
+such that is found in commands like if, proc, while, etc. Another possible
+value for the action is a question mark, which means ask the client via
+a callback for the action to take.</LI>
+
+
+<P>Each digit can have the following values, with their meanings associated
+with it:
+<BR>&nbsp;
+<CENTER><TABLE BORDER NOSAVE >
+<TR>
+<TD>0</TD>
+
+<TD>ignore</TD>
+</TR>
+
+<TR>
+<TD>1</TD>
+
+<TD>as is</TD>
+</TR>
+
+<TR>
+<TD>2</TD>
+
+<TD>instrument at load time</TD>
+</TR>
+
+<TR>
+<TD>3</TD>
+
+<TD>instrument at run time</TD>
+</TR>
+
+<TR>
+<TD>?</TD>
+
+<TD>ask client via callback</TD>
+</TR>
+
+<CAPTION ALIGN=BOTTOM>&nbsp;</CAPTION>
+</TABLE></CENTER>
+&nbsp;
+<UL>
+<LI>
+ignore - do not save the command in the instrument buffer.</LI>
+
+<LI>
+as is - save the command, but do not instrument.</LI>
+
+<LI>
+instrument at load time - instrument the command at load time.</LI>
+
+<LI>
+instrument at run time - instrument the command such that it is really
+instrumented at run time.</LI>
+</UL>
+
+<LI>
+Examples:</LI>
+
+<UL>
+<LI>
+11 - save the top level command and its code bodies as is</LI>
+
+<LI>
+12 - save the top level command without instrumentation, but instrument
+any code bodies.</LI>
+
+<LI>
+13 - save the top level command without instrumentation, but have any code
+bodies instrumented at run time.</LI>
+
+<LI>
+31 - save the top level command, instrumented at run time, but save any
+code bodies as is.</LI>
+</UL>
+
+<LI>
+<B>commentaction</B>. Configures what to do about comments. Possible values
+(second digit ignored):</LI>
+
+<UL>
+<LI>
+0x ignore comments</LI>
+
+<LI>
+1x put comments into instrumented buffer as is</LI>
+
+<LI>
+2x put comments into instrumented buffer instrumented</LI>
+
+<LI>
+3x instrument comments at run time</LI>
+
+<LI>
+? ask via callback</LI>
+</UL>
+
+<LI>
+<B>commandaction</B>. Configures what to do with commands.</LI>
+
+<LI>
+<B>procaction</B>. Configures what to do about proc definitions.</LI>
+
+<LI>
+Proc Entry and Exit Actions. The client can configure if it wants notification
+of proc entry and exit events when the instrumented code is executed (these
+are run-time events). For each action, the following values are possible:</LI>
+
+<BR>&nbsp;
+<CENTER><TABLE BORDER NOSAVE >
+<TR>
+<TD>0</TD>
+
+<TD>do not notify on event</TD>
+</TR>
+
+<TR>
+<TD>1</TD>
+
+<TD>notify on event</TD>
+</TR>
+
+<CAPTION ALIGN=BOTTOM>&nbsp;</CAPTION>
+</TABLE></CENTER>
+
+<LI>
+<B>procentryaction</B>. Configures whether to make callbacks when a proc
+is entered (at run-time).</LI>
+
+<LI>
+<B>procexitaction</B>. Configures whether to make callbacks when a proc
+is exited (at run-time).</LI>
+</UL>
+</UL>
+</UL>
+<U>Outputs</U>
+<UL>Nothing.</UL>
+</UL>
+
+<H5>
+instrumenter::instrument {file}</H5>
+
+<UL>This instruments a file. Can be called many times.
+
+<P><U>Inputs</U>
+<UL><TT>file</TT>
+<UL>The file to instrument.</UL>
+</UL>
+<U>Outputs</U>
+<UL>Return the instrumented code contained in <TT>file</TT>.</UL>
+</UL>
+
+<H5>
+instrumenter::purgeCache {}</H5>
+
+<UL>Purges the cache directory of all files.
+
+<P><U>Inputs</U>
+<UL>None
+<BR>&nbsp;</UL>
+<U>Outputs</U>
+<UL>None</UL>
+</UL>
+
+<H5>
+instrumenter::getLevel {}</H5>
+
+<UL>This is for retrieving the current block level. The instrumenter needs
+to keep track of what level it is parsing. The value is maintained only
+at load time, <B>not</B> run time.
+
+<P><U>Inputs</U>
+<UL>None</UL>
+<U>Outputs</U>
+<UL>An integer value of the current block level. 0 signifies the top level.</UL>
+</UL>
+
+<H3>
+<A NAME="Client Interface"></A>Client Interface</H3>
+The client must also provide an interface for the instrumenter. There are
+two types of callbacks the instrumenter will make back to the client: those
+at instrument time, and those at runtime.
+<H4>
+Namespace</H4>
+The client tells the instrumented the namespace to use for the callbacks
+when he calls the <TT>instrumenter::init</TT> proc; therefore, there is
+no special namespace requirements for the client.
+<H4>
+Instrument-time procs</H4>
+Instrument time callbacks are mostly for statistics to inform the client
+when various Tcl entities crop up, like procs or statements.
+<H5>
+foundCommand{file line commandvar}</H5>
+
+<UL>Called for every command found during instrumentation. This callback
+is only called if the <B>commandaction</B> initialization variable is set
+to ? (ask).
+
+<P><U>Inputs</U>
+<UL><TT>file</TT>
+<UL>Name of the source file the command was found in.</UL>
+<TT>line</TT>
+<UL>Beginning line number of the command.</UL>
+<TT>commandvar</TT>
+<UL>The name of the variable containing the command. To read and possibly
+modify the command, you must use <TT>upvar</TT>.</UL>
+
+<UL>&nbsp;</UL>
+</UL>
+<U>Outputs</U>
+<UL>The command value in commandvar can be modified. This allows the client
+to do some extra processing on the command.
+
+<P>The following return codes have meaning to the instrumenter:
+
+<P>0 - ignore the command
+<BR>1 - put the command into the instrumented buffer, but don't instrument
+it
+<BR>2 - put the command into the instrumented buffer, and instrument it</UL>
+</UL>
+
+<H5>
+foundComment {file begline commentvar}</H5>
+
+<UL>Called for every comment found. For this to be called, the initializer
+variable <B>commentaction</B> must be set to ? (ask).
+
+<P><U>Inputs</U>
+<UL><TT>file</TT>
+<UL>Name of the source file the comment was found in.</UL>
+<TT>begline</TT>
+<UL>Beginning line number of the comment.</UL>
+<TT>commentvar</TT>
+<UL>Name of the variable containing the text of the comment, including
+the # character. The client needs to use <TT>upvar</TT> to access this,
+and the client can modify the comment text.
+<BR>&nbsp;</UL>
+</UL>
+<U>Outputs</U>
+<UL>The following return codes have meaning to the instrumenter:
+
+<P>0 - ignore the comment
+<BR>1 - put the comment into the instrumented buffer</UL>
+</UL>
+
+<H5>
+&nbsp;foundProc {file line commandvar procnamevar dynamicflag}</H5>
+
+<UL>Called for every proc found. This callback is only called if the initialization
+variable procaction is set to ? (ask).
+
+<P><U>Inputs</U>
+<UL><TT>file</TT>
+<UL>Name of the source file the proc was defined in.</UL>
+<TT>line</TT>
+<UL>Line number proc begins on.</UL>
+commandvar
+<UL>The name of the variable containing the proc command. This is so the
+client can change the proc command to something else. Client needs to use
+upvar to access variable.</UL>
+<TT>procnamevar</TT>
+<UL>Name of the variable holding the name of the proc. The client can modify
+the procname. Client needs to use upvar to access variable.</UL>
+<TT>dynamicflag</TT>
+<UL>This flag is true (1) if the proc has been deemed a dynamic proc; false
+(0) otherwise.
+<BR>&nbsp;</UL>
+</UL>
+<U>Outputs</U>
+<UL>The command value in commandvar can be modified. This allows the client
+to do some extra processing on the command. The proc name can be modified
+in the same manner.
+
+<P>The following return codes have meaning to the instrumenter:
+
+<P>0 - ignore the proc definition
+<BR>1 - put the proc into the instrumented buffer, but don't instrument
+it
+<BR>2 - put the proc into the instrumented buffer, and instrument it
+<BR>&nbsp;</UL>
+</UL>
+
+<H4>
+Run-time procs</H4>
+Runtime callbacks are invoked if the instrumented code is ever run.
+<H5>
+statement {file line stmt}</H5>
+
+<UL>This is the main callback the instrumentation inserts. Each statement
+in the file is wrapped with this callback.
+
+<P>Inputs
+<UL>file
+<UL>The name of the source file this statement lives in.</UL>
+line
+<UL>Line number of the statement.</UL>
+stmt
+<UL>The original statement. Statement may contain nested instrumentation
+if it is a composite statement like if or while.</UL>
+</UL>
+Outputs
+<UL>This should return whatever the statement returns, both error codes
+and return text.</UL>
+</UL>
+
+<H5>
+procEntry {procname}</H5>
+
+<UL>Called at the beginning of each proc. This callback is only called
+when the initialization variable <B>procentryaction</B> is set to 1.
+
+<P><U>Inputs</U>
+<UL><TT>procname</TT>
+<UL>The name of the procedure just entered. <I>Should this be fully qualified
+with namespace?</I></UL>
+</UL>
+<U>Outputs</U>
+<UL>Nothing</UL>
+</UL>
+
+<H5>
+procExit {procname}</H5>
+
+<UL>Called when a proc exits. This callback is only called when the initialization
+variable <B>procexitaction</B> is set to 1.
+
+<P><U>Inputs</U>
+<UL><TT>procname</TT>
+<UL>The name of the procedure just exited. <I>Should this be fully qualified
+with namespace?</I></UL>
+&nbsp;</UL>
+<U>Outputs</U>
+<UL>Nothing
+<BR>&nbsp;</UL>
+</UL>
+
+</BODY>
+</HTML>

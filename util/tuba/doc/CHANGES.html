@@ -1,0 +1,449 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <META NAME="Author" CONTENT="John Stump">
+   <META NAME="GENERATOR" CONTENT="Mozilla/4.06 [en] (X11; I; Linux 2.0.34 i586) [Netscape]">
+   <TITLE>Tuba Changes</TITLE>
+<!-- Author: john -->
+</HEAD>
+<BODY>
+<!--#geoguide-->
+<H2>
+<A NAME="25b1"></A>Changes between 2.4.p1 and 2.5.b1</H2>
+
+<UL>
+<LI>
+Feature: preliminary [incr tcl] support. Tuba now instruments the code
+in <TT>body</TT>,
+<TT>configbody</TT>, constructors, destructors, and <TT>method</TT>
+code bodies. Breakpoints can be set on these and inside them. Tuba is still
+not very itcl-aware, as it will refer to all of these as "procedures".</LI>
+
+<LI>
+One big bug still outstanding is that Tuba cannot see the variables of
+an object in the Variable browser, but if you highlight a variable and
+show it, it displays fine.</LI>
+</UL>
+
+<H2>
+<A NAME="24p1"></A>Changes between 2.4 and 2.4.p1</H2>
+
+<UL>
+<LI>
+Bug Fix: Some proc breakpoints were not firing if they are defined in a
+namespace.</LI>
+
+<LI>
+Bug Fix: Some command line options were not taking effect.</LI>
+
+<LI>
+Bug Fix: Accelerator keys stopped working (reported by Sanjay Shanker)</LI>
+
+<LI>
+Bug Fix: Users were unable to load any source file that didn't have a .tcl
+extension (reported by Holger Kanwischer)</LI>
+
+<LI>
+Bug Fix: Tuba wasn't handling more than one level of symlinks to the installation
+directory (reported and fixed by Harald Kirsch)</LI>
+
+<LI>
+Bug Fix: Fixed a very obscure bug in the runtime instrumentation of dynamic
+procs (apparently not obscure enough) (reported by Harald Kirsch)</LI>
+
+<LI>
+Bug Fix: More fixes to the run time instrumenter.</LI>
+
+<LI>
+Bug Fix for Windows: made wish80 the default interpreter (suggested by
+Ronald J. Maddalena)</LI>
+
+<LI>
+Bug Fix for Windows: the Show Console and Hide Console menu options under
+Debugger now show and hide the console of the <B>application</B> being
+debugged, <B>not</B> the Tuba GUI. (reported by Uwe Dierolf)</LI>
+
+<LI>
+Administration: Tuba has moved to a new web site: http://www.geocities.com/SiliconValley/Ridge/2549/tuba/.
+Made all the appropriate documentation changes.</LI>
+
+<LI>
+Documentation Change: The main web page for Tuba underwent a small facelift.
+Also, I included instructions on how to set up an association for session
+files to bring up Tuba on Windows platforms.</LI>
+</UL>
+
+<H2>
+<A NAME="24"></A>Changes between 2.3 and 2.4</H2>
+
+<UL>
+<LI>
+Internal Change: tuba GUI was moved into a namespace so it would work better
+with other external libraries</LI>
+
+<LI>
+Bug Fix: the caching of instrumented files and the logic of when to use
+a cached file is now more intelligent. This fixes these bugs:</LI>
+
+<UL>
+<LI>
+the proc list and list of valid breakpoint lines were empty when using
+a cached file.</LI>
+
+<LI>
+any option change that would result in a different instrumentation was
+ignored and an old cache file pulled up.</LI>
+</UL>
+
+<LI>
+Bug Fix: a state model was introduced and commands are activated and deactivated
+according to the state. This will prevent, for instance, you from running
+the "step into" command when there is no program loaded.</LI>
+
+<LI>
+New Feature: You can enter proc exclusion expressions. Any proc that matches
+any of the expressions (using <TT>[string match]</TT>), then that proc
+is not instrumented and is effectively disabled from being stepped into
+or setting a breakpoint inside. These exclusions are saved in your session
+files. External changes:</LI>
+
+<UL>
+<LI>
+Added command line option <B><TT>-e &lt;<I>excl_file</I>></TT></B> which
+tells tuba to look in the file <I>excl_file</I> to get a list of proc exclusions
+expressions.</LI>
+
+<LI>
+Added entry in Options menu <B><TT>Proc Exclusions... </TT></B>This brings
+up a dialog box to interactively edit the proc exclusion expressions.</LI>
+
+<LI>
+Added section in user's guide discussing exclusions.</LI>
+</UL>
+
+<LI>
+New Feature: Sessions. You can now save your debug sessions, and load them
+back up, retaining the following pieces of information:</LI>
+
+<UL>
+<LI>
+the program being debugged</LI>
+
+<LI>
+program arguments</LI>
+
+<LI>
+working directory</LI>
+
+<LI>
+the interpreter</LI>
+
+<LI>
+line breakpoints</LI>
+
+<LI>
+proc breakpoints</LI>
+
+<LI>
+proc exclusions</LI>
+
+<LI>
+all options from the options menu</LI>
+</UL>
+
+<LI>
+Session external changes:</LI>
+
+<UL>
+<LI>
+New menu entries in the Debugger menu button:</LI>
+
+<UL>
+<LI>
+Open Session</LI>
+
+<LI>
+Save Session</LI>
+
+<LI>
+Save Session As</LI>
+</UL>
+
+<LI>
+New command line option <B><TT>-s &lt;sessionfile></TT></B> to start the
+debugger with the given session.</LI>
+
+<LI>
+Added section in user's guide discussing sessions.</LI>
+</UL>
+
+<LI>
+Bug Fix: Tuba now asks you if it's okay to kill a running app via the Exit,
+Load program, Restart, and Open Session menu commands.</LI>
+
+<LI>
+Internal Change: I redesigned the format of the .tubarc startup file. Tuba
+will detect the old version and convert it for you, but it will ask you
+if you want to save the conversion. If you don't you'll get that message
+every time you start up Tuba. Once you convert, the old tuba versions won't
+be able to read it. A backup will be made if you save the converted startup
+file.</LI>
+
+<LI>
+New Feature: The Options menu has a <B><TT>Locations... </TT></B>entry.
+This brings up a dialog box for entering default directories. Currently,
+this includes:</LI>
+
+<UL>
+<LI>
+cache directory</LI>
+
+<LI>
+sessions directory</LI>
+</UL>
+
+<LI>
+Bug Fix: I redesigned the status line (now two lines). Here are some new
+behaviors:</LI>
+
+<UL>
+<LI>
+Those loooong filenames now sit in a scrollable entry field so the window
+doesn't keep growing and shrinking when the file changes</LI>
+
+<LI>
+I added the current line number (finally)</LI>
+
+<LI>
+I added a second line which contains the currently displayed file. This
+should end the confusion about the original file entry, which is the current
+debugger position, not necessarily what the file is in the window currently</LI>
+
+<LI>
+The second line also contains the current session name, if there is one.</LI>
+
+<LI>
+I removed the source level field. I needed more space and I'm not sure
+anyone really cares what source level they're at. It might come back when
+I revamp the whole GUI.</LI>
+</UL>
+
+<LI>
+New Feature: You now have the option to keep existing breakpoints when
+you restart a program.</LI>
+
+<LI>
+Bug Fix: Made the breakpoint toggling logic smarter. Can now set breakpoints
+on procs inside a namespace, and tuba now handles cases where a statement
+and a proc appear on the same line; tuba brings up a dialog to ask exactly
+you want done. There's an example of this in examples/example0.tcl</LI>
+
+<LI>
+Bug Fix: Error interception changes:</LI>
+
+<UL>
+<LI>
+The status line is now updated with the information when Tuba intercepts
+an error</LI>
+
+<LI>
+Tuba will <B>NOT</B> intercept an error if there is a <TT>catch</TT> somewhere
+in the call stack. It assumes that the app will handle the error. This
+behavior is configurable under the Options menu.</LI>
+</UL>
+
+<LI>
+Bug Fix: Some Tk applications just drop off the end and let the implicit
+event loop in wish's main() to wait for all the windows to be destroyed.
+Tuba now detects this situation and will display a message that the app
+has finished and is in an event loop.</LI>
+
+<LI>
+Bug Fix: The current line (the source line highlighted in yellow) now goes
+away while the app is running and comes back when the app is stopped. This
+makes it easier for the user to tell who is running: the app or the debugger
+GUI.</LI>
+
+<LI>
+Bug Fix: Restarting and loading a new app will now kill all extra windows
+like the proc list, stack, etc.</LI>
+
+<LI>
+Bug Fix: Another parser bug fixed; the parsers were not properly handling
+the token&nbsp; "<TT>\{".</TT></LI>
+</UL>
+
+<H2>
+<A NAME="23"></A>Changes between 2.2 and 2.3</H2>
+
+<UL>
+<LI>
+All changes from 2.2.p1, p2, and p3 added</LI>
+
+<LI>
+Split out the instrumenter and made it a general purpose utility. This
+will eventually be available as a separate package.</LI>
+
+<LI>
+Instrumenter now supports caching of instrumented files. This dramatically
+speeds up repeated debugging on files that don't change. Interface changes:</LI>
+
+<UL>
+<LI>
+Added command line option <B><TT>-nc</TT></B> to do no caching</LI>
+
+<LI>
+Added command line option <B><TT>-c &lt;<I>dir</I>></TT></B> to set <I><TT>dir</TT></I>
+as the cache dir instead of default <TT>tuba/cache</TT></LI>
+
+<LI>
+Added command line option <B><TT>-purge</TT></B> to purge cache directory
+before starting</LI>
+
+<LI>
+Added entry in Options menu <B><TT>Caching</TT></B> to turn on/off instrumented
+file caching</LI>
+</UL>
+
+<LI>
+Now supports run-time instrumentation which provides superior parsing for
+"tricky" Tcl code. Will slow down execution, though. Interface changes:</LI>
+
+<UL>
+<LI>
+Added entries in Options menu to choose load-time or run-time instrumenting.
+Changes to this will not take effect until the next load or restart.</LI>
+
+<LI>
+Added command line option <B><TT>-R </TT></B>to choose run-time instrumenting
+(load-time is the default)</LI>
+</UL>
+
+<LI>
+The <TT>testinstrumenter.tcl</TT> script has been rewritten to be a generic
+driver of the new instrumenter package. See the man page <A HREF="testinstrumenter.man.html">testinstrumenter.man.html</A>
+for the complete poop.</LI>
+
+<LI>
+Parser language (Tcl or C) is now an option in the Options menu. Changes
+to this do not take effect until the next load or restart.</LI>
+
+<LI>
+Made the debugger source window taller.</LI>
+
+<LI>
+More parser bug fixes.</LI>
+
+<LI>
+Added an experimental replacement parser. This parser has the same interface,
+and is slightly faster and much easier to maintain. It will be the standard
+parser after it gets some "stick" time. The default is still the old parser.
+Interface changes:</LI>
+
+<UL>
+<LI>
+added new option -X to access the new parser</LI>
+
+<LI>
+added new Option menu entry "Experimental parser" to turn on/off the use
+of the experimental parser</LI>
+</UL>
+
+<LI>
+Can set the working directory from command line using <B><TT>-w &lt;<I>dir</I>></TT></B>
+option. If <B><TT>&lt;<I>dir</I>></TT></B> is "", then Tuba will use the
+directory of the program being debugged.</LI>
+
+<LI>
+Added a Tuba man page <A HREF="tuba.man.html">tuba.man.html</A>.</LI>
+
+<LI>
+Updated the Users Guide to reflect all changes in versions 2.2 and 2.3.</LI>
+</UL>
+
+<H2>
+<A NAME="22p3"></A>Changes between Tuba 2.2.p2 and 2.2.p3</H2>
+
+<UL>
+<LI>
+Escaped newline parser fix was not put into the C++ parser. This patch
+rectifies this.</LI>
+</UL>
+
+<H2>
+<A NAME="22p2"></A>Changes between Tuba 2.2.p1 and 2.2.p2</H2>
+
+<UL>
+<LI>
+Removed advupdate.tcl and advupdate.so from the distribution as it is no
+longer needed.</LI>
+
+<LI>
+Fixed a parser bug regarding ending brackets inside a quote when beginning
+bracket is outside quotes.</LI>
+
+<LI>
+Fixed referenced directory name in toplevel README.</LI>
+</UL>
+
+<H2>
+<A NAME="22p1"></A>Changes between 2.2 and 2.2.p1</H2>
+
+<UL>
+<LI>
+Bug Fix: balloonhelp windows were coming up in upper left corner on Windows.</LI>
+
+<LI>
+New Feature: The windows version now has show/hide console menu options
+under the Debugger menu button (provided by Scott Beasley)</LI>
+
+<LI>
+New Feature: Tuba now remembers your last working directory and arguments
+entries when you loaded the program. The restart dialog will reflect these
+(provided by Scott Beasley).</LI>
+
+<LI>
+New Feature: Key accelerators for the stepping commands (provided by Scott
+Beasley). Currently these are hardcoded; they will be easily configurable
+in a future release. Here are the mappings:</LI>
+
+<UL>
+<LI>
+F5 - Continue</LI>
+
+<LI>
+F6 - Step Into</LI>
+
+<LI>
+F7 - Step Over</LI>
+
+<LI>
+F8 - Stop</LI>
+</UL>
+
+<LI>
+Bug Fix: Couldn't load programs from paths with spaces in them, or use
+an interpreter that lived in a path with a space.</LI>
+
+<LI>
+Bug Fix: Tuba was interfering with applications that had file event handlers.
+Had to redesign the mechanism of getting the STOP command. Now uses an
+extra port (uses original port + 1).</LI>
+
+<LI>
+Bug Fix: The instrumenter sometimes was not properly handling an escaped
+newline. Fixed both the Tcl and C++ parsers.</LI>
+
+<LI>
+New Feature: After selecting a program in the load program dialog via the
+browse button, the working directory field is automatically filled in with
+the directory of the program (provided by Scott Beasley).</LI>
+
+<LI>
+New Feature: The load program and restart dialogs now have Browse buttons
+for the interpreter field.</LI>
+</UL>
+
+</BODY>
+</HTML>

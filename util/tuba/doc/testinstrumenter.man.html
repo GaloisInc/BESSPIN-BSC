@@ -1,0 +1,83 @@
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <META NAME="Author" CONTENT="John Stump">
+   <META NAME="GENERATOR" CONTENT="Mozilla/4.04 [en] (X11; I; Linux 1.2.13 i586) [Netscape]">
+   <TITLE>Testinstrumenter</TITLE>
+</HEAD>
+<BODY>
+
+<H2>
+NAME</H2>
+<B>testinstrumenter</B> - Simple instrumenter frontend, version 2.3
+<H2>
+SYNOPSIS</H2>
+<B>testinstrumenter</B> [<I>options</I>] <I>source_file</I>
+<H2>
+DESCRIPTION</H2>
+&nbsp;
+<H2>
+OPTIONS</H2>
+
+<UL>-version | -V
+<UL>Prints out the <B>testinstrumenter</B> version and exits.
+<BR>&nbsp;</UL>
+-T
+<UL>Use the Tcl-based parser.</UL>
+
+
+<P>-C
+<UL>Use the C++-based parser if available. If not, use the Tcl-based parser.
+This is the default.
+<BR>&nbsp;</UL>
+-X
+<UL>Use the experimental parser. Use this in conjunction with the -C or
+-T options. The experimental parser is slightly faster and will eventually
+replace the default parser.
+<BR>&nbsp;</UL>
+-x
+<UL>Execute the instrumented Tcl/Tk code immediately. This is a good way
+to test the instrumentation and parsing. The progam should run exactly
+the same as if run by tclsh or wish, only slower.
+<BR>&nbsp;</UL>
+-ca <I>action</I>
+<UL>Specifies the command action value. This determines how commands will
+be instrumented. See the saint design documentation for more details.
+<BR>&nbsp;</UL>
+-pa <I>action</I>
+<UL>Specifies the proc action value. This determines how to instrument
+procedures.
+<BR>&nbsp;</UL>
+-coa <I>action</I>
+<UL>Specifies the comment action value. This determines how to instrument
+comments.
+<BR>&nbsp;</UL>
+-rca <I>action</I>
+<UL>Specifies the command action value for the run-time instrumentation
+option.
+<BR>&nbsp;</UL>
+-rpa <I>action</I>
+<UL>Specifies the proc action value for the run-time instrumentation option.
+<BR>&nbsp;</UL>
+-rcoa <I>action</I>
+<UL>Specifies the comment action value for the run-time instrumentation
+option.
+<BR>&nbsp;</UL>
+-purge
+<UL>Purges the cache directory before continuing.
+<BR>&nbsp;</UL>
+-pna <I>boolean</I>
+<UL>Specifies whether or not to put in proc entry notifications.
+<BR>&nbsp;</UL>
+-pxa <I>boolean</I>
+<UL>Specifies whether or not to put in proc exit notifications.
+<BR>&nbsp;</UL>
+-help
+<UL>Prints out brief help on options and exits.</UL>
+</UL>
+
+<H2>
+SEE ALSO</H2>
+<A HREF="tuba.man.html">tuba</A> , <A HREF="saint.design.html">saint.design.html</A>
+</BODY>
+</HTML>

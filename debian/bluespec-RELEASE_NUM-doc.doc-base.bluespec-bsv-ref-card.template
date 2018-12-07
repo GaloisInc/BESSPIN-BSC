@@ -1,0 +1,8 @@
+Document: bluespec-bsv-ref-card
+Title: Bluespec SystemVerilog Reference Card
+Author: Bluespec, Inc.
+Abstract: Quick reference for Bluespec SystemVerilog
+Section: Programming
+
+Format: PDF
+Files: /usr/share/doc/bluespec-__RELEASE_NUM__-doc/BSV_ref_card.pdf.gz

@@ -1,0 +1,309 @@
+
+/**
+
+@page tcl_commands  TCL commands
+
+
+@section _tcl_commands_usage_ TCL commands
+
+The full list of supported commands with their explanations is below.
+
+        - @b new_project - creates a new project\n
+                - Synopsis\n
+                new_project \<project_name\> [-location \<project_dir\>]
+                [-paths \<search_path\>{:\<search_path\>}*]\n
+                - Options descriptions\n
+                        -location The directory where the @ref  _project_ file
+                        should be located. By default the current directory 
+                        is taken\n
+                        -paths Path(s) where .bsv files are located\n
+
+        - @b open_project - opens the specified project\n
+                - Synopsis\n
+                open_project \<project_name\>\n
+
+        - @b set_search_paths - adds @ref _search_paths_ to the 
+        current project\n
+                - Synopsis\n
+                set_search_paths \<path\>[{:\<path\>}*] 
+
+        - @b save_project - saves changes done to current project\n
+                - Synopsis\n
+                save_project
+
+        - @b save_project_as - saves the current project in another location\n
+                - Synopsis\n
+                save_project_as \<project_name\> [-path \<location\>]
+                - Options descriptions\n
+                        -path Path where the created project should be located\n
+
+        - @b close_project - closes the current project without saving\n
+                - Synopsis\n
+                close_project
+
+        - @b set_project_editor - specifies editor for the current project\n
+                - Synopsis\n
+                set_project_editor \<editor_name\> [-path \<location\>]
+                [-options \<options\>]
+                - Options descriptions\n
+                        \<editor_name\> Either @b gvim or @b emacs \n
+                        -path Path to editor. Required only when 
+                        editor is user specific.\n
+                        -options Options to pass to the editor\n
+
+        - @b get_project_editor - returns editor specific information for 
+        the current project\n
+                - Synopsis\n
+                get_project_editor
+
+        - @b set_compilation_results_location - specifies directories where 
+        the compilation results should be located\n
+                - Synopsis\n
+                set_compilation_results_location [-simdir \<location\>]
+                [-vdir \<location\>] [-bdir \<location\>]\n
+                - Options descriptions\n
+                        -simdir Directory where Bluesim files should be 
+                        located\n
+                        -vdir Directory where Verilog files should be located\n
+                        -bdir Directory where .bo/.bi/.baes files
+                        should be located\n
+
+        - @b get_compilation_results_location - returns paths where 
+        compilation results are located\n
+                - Synopsis\n
+                get_compilation_results_location\n
+
+        - @b set_compilation_type specifies the compilation type for 
+        the current project\n
+                - Synopsis\n
+                set_compilation_type \<compilation_type\>\n
+                - Options descriptions\n
+                        \<compilation_type\> Either @b bsc or @b make \n
+
+        - @b get_compilation_type - returns the compilation type for 
+        the current project\n
+                - Synopsis\n
+                get_compilation_type\n
+
+        - @b set_bsc_options - specifies options to pass to @ref _bsc_\n
+                - Synopsis\n
+                set_bsc_options \<bsc_type\> [-options \<options\>]\n
+                - Options descriptions\n
+                        \<bsc_type\> Either @b -bluesim or @b -verilog \n
+                        -options _bsc_ options\n
+
+        - @b get_bsc_options - returns @ref _bsc_ options for the current
+        project\n
+                - Synopsis\n
+                get_bsc_options\n
+
+        - @b set_make_options - specifies make options for the current project\n
+                - Synopsis\n
+                set_make_options \<makefile\> [-target \<target\>]
+                [-clean \<target\>] [-fullclean \<target\>]\n
+                - Options descriptions\n
+                        \<makefile\> Makefile for the current projectn\n
+                        -target The makefile target\n
+                        -clean Optional target which will be called under 
+                        Build->Clean command execution\n
+                        -fullclean Optional target which will be called under 
+                        Build->Full Clean command execution\n
+
+
+        - @b get_make_options - returns make options for the current project\n 
+                - Synopsis\n
+                get_make_options\n
+
+        - @b set_top_file - specifies top file and top module 
+        for the current project\n
+                - Synopsis\n
+                set_top_file \<file_name\> [-module \<module_name\>]\n
+                - Options descriptions\n
+                        -module The name of the module\n
+
+        - @b get_top_file - returns the top file and the top module 
+        for the current project\n
+                - Synopsis\n
+                get_top_file\n
+
+        - @b set_verilog_simulator - specifies verilog simulator for 
+        the current project\n
+                - Synopsis\n
+                set_verilog_simulator \<simulator_name\> \n
+                [-path \<location\>]\n
+                - Options descriptions\n
+                        \<simulator_name\> One of iverilog|modelsim\|ncsim \n
+                        -path URL to the simulator\n
+
+        - @b get_verilog_simulator - returns the verilog simulator 
+        for the current project\n
+                - Synopsis\n
+                get_verilog_simulator\n
+
+        - @b set_sim_results_location - specifies path where the 
+        simulation results should be located\n
+                - Synopsis\n
+                set_sim_results_location \<location\>\n
+
+        - @b get_sim_results_location - returns path where the simulation 
+        results are located\n
+                - Synopsis\n
+                get_sim_results_location\n
+
+        - @b refresh - refreshes the project or the specified file\n
+                - Synopsis\n
+                refresh [\<file_name\>]\n
+
+        - @b compile_file - compiles the specified file
+                - Synopsis\n
+                compile_file \<file_name\> [-withdeps]\n
+                - Options descriptions\n
+                        -withdeps If specified then the dependencies will 
+                        be considered\n
+
+        - @b new_file - creates a new file and launches the editor on it\n
+                - Synopsis\n
+                new_file \<file_name\> [-path \<location\>]\n
+                - Options descriptions\n
+                        -path Path where the file should be located. By default
+                        the project directory is taken\n
+
+        - @b open_file - launches editor on the specified file\n
+                - Synopsis\n
+                open_file \<file_name\> [-line \<number\>]\n
+                - Options descriptions\n
+                        -line If specified then the editor will be launched 
+                        on the specified line of the file\n
+
+        - @b compile - compiles the entire project\n
+                - Synopsis\n
+                compile\n
+
+        - @b link - links the entire project\n
+                - Synopsis\n
+                link\n
+
+        - @b simulate - calls simulation for the entire project\n
+                - Synopsis\n
+                simulate\n
+
+        - @b clean - removes compilation/link result files\n 
+                - Synopsis\n
+                clean\n
+
+        - @b full_clean - removes compilation/link/simulation results and 
+        all log files\n
+                - Synopsis\n
+                full_clean\n
+
+        - @b show - opens/unminimizes the specified window and brings 
+        up to the top\n
+                - Synopsis\n
+                show -project|-package|-type_browser|-module_browser|
+                -schedule_analysis\n
+
+        - @b minimize_all - minimizes all currently open windows\n
+                - Synopsis\n
+                minimize_all\n
+
+        - @b load_package - loads the specified package\n
+                - Synopsis\n
+                load_package \<package_name\>\n
+
+        - @b reload_packages - reloads all currently loaded packages\n
+                - Synopsis\n
+                reload_packages\n
+
+        - @b package_refresh - refreshes the package hierarchy\n 
+                - Synopsis\n
+                package_refresh\n
+
+        - @b import_hierarchy - shows the import hierarchy for the specified 
+        package or the top package in a separate window\n
+                - Synopsis\n
+                import_hierarchy [\<package_name\>]\n
+
+        - @b search_in_packages - searches for a string through definitions 
+        of loaded packages\n
+                - Synopsis\n
+                search_in_packages \<string\>\n
+
+        - @b package_collapse_all - collapses the package hierarchy\n
+                - Synopsis\n
+                package_collapse_all\n
+
+        - @b add_type - adds the specified type to the type hierarchy\n
+                - Synopsis\n
+                add_type \<type_name\>\n
+
+        - @b remove_type - removes the specified type from the type hierarchy\n 
+                - Synopsis\n
+                remove_type \<type_name\>\n
+
+        - @b type_collapse_all - collapses the type hierarchy\n
+                - Synopsis\n
+                type_collapse_all\n
+
+        - @b load_module - loads the specified module\n
+                - Synopsis\n
+                load_module \<module_name\>
+
+        - @b reload_module - reloads the currently loaded module\n
+                - Synopsis\n
+                reload_module\n
+
+        - @b module_collapse_all - collapses the module hierarchy\n
+                - Synopsis\n
+                module_collapse_all\n
+
+        - @b show_schedule - Opens the Schedule Analysis Window\n
+                - Synopsis\n
+                show_schedule [\<module_name\>]\n
+                - Options descriptions\n
+                \<module_name\> If specified then first the module is loaded 
+                and then only shown in the Schedule Analysis Window\n
+
+        - @b get_schedule_warnings - opens the Warnings tab of 
+        the Schedule Analysis Window\n
+                - Synopsis\n
+                get_schedule_warnings [\<module_name\>]\n
+                - Options descriptions\n
+                \<module_name\> If specified then first the specified module 
+                is loaded \n
+
+        - @b get_execution_order - opens the Rule Order tab of 
+        the Schedule Analysis Window\n
+                - Synopsis\n
+                get_execution_order [\<module_name\>]
+                - Options descriptions\n
+                \<module_name\> If specified then first the specified module 
+                is loaded \n
+
+        - @b get_rule_relations - displays relations for the given pair of rules 
+        in the Rule Relations tab of the Schedule Analysis Window\n
+                - Synopsis\n
+                get_rule_relations \<rule1\> \<rule2\>\n
+                
+        - @b get_method_call - opens the Method Call tab of the 
+        Schedule Analysis Window\n
+                - Synopsis\n
+                get_method_call [\<module_name\>]
+                - Options descriptions\n
+                \<module_name\> If specified then first the specified module 
+                is loaded \n
+
+        - @b get_rule_info - displays information for the specified rule 
+        in the Rule Order tab of the Schedule Analysis window\n
+                - Synopsis\n
+                get_rule_info \<rule_name\>\n
+
+        - @b help - displays the Workstation help
+                - Synopsis\n
+                help [-list|-content|-about|-command \<command_name\>]\n
+                - Options descriptions\n
+                        -list Displays all commands\n
+                        -command Displays help for the specified command\n
+                        -content Activates the Help->Content window\n
+                        -about Activates the Help->About window\n
+
+*/

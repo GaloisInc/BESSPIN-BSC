@@ -1,0 +1,339 @@
+                ========================================
+                SCE-MI over PCIE Address Map - Version 2
+                ========================================
+
+==============================================================================
+Legend
+
+   R      Full register is readable
+   r      Part of register is readable
+   W      Full register is writable
+   w      Part of register is writable
+   0      Read as 0, read-only
+   1      Read as 1, read-only
+Reserved  Read-only field -- write with 0 when updating register
+
+Addresses are byte-addresses, but each register is aligned on an
+8-byte boundary.
+
+==============================================================================
+Overview
+
+BAR1  (Configuration and Status Register Base Address)
+  +--- Identification and Version Info
+         +--- 0x0000 "Bluespec"
+         +--- 0x0008 Address map version
+         +--- 0x0010 SCE-MI implementation version
+         +--- 0x0018 Build revision
+         +--- 0x0020 Build timestamp
+  +--- SCE-MI Configuration
+         +--- 0x0100 Input channel count  (N_in)
+         +--- 0x0108 Output channel count (N_out)
+  +--- Control
+         +--- 0x0200 System command
+  +--- Status
+         +--- 0x0300 System status
+         +--- 0x0308 Total BAR1 packets processed
+         +--- 0x0310 Total BAR2 packets processed
+         +--- 0x0318 Total error packets
+         +--- 0x0320 Cycle stamp
+         +--- 0x0328 Next Output Channel
+
+BAR2  (SCE-MI Data Channel Base Address)
+  +--- Input channels (n = 0..N_in-1)
+         +--- 16*n   Space available indicator
+         +--- 16*n+8 Input data port
+  +--- Output channels (n = 0..N_out-1)
+         +--- 0x4000 + 8*n Output data port
+
+
+==============================================================================
+Identification and Version Info
+
+
+BAR1: 0x0000 - Bluespec ID Register
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |01000010 01101100 01110101 01100101 01110011 01110000 01100101 01100011|
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access    Reset Value           Description
+  -----        ------    -----------           -----------
+  Magic          R       0x426C756573706563    Magic Cookie "Bluespec"
+
+
+
+BAR1: 0x0008 - Address Map Version Register
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |                          Reserved                            |Version |
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  Version        R         0x02        Version of the address map in use
+
+
+
+BAR1: 0x0010 - SCE-MI Implementation Version
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |                       Reserved                      | Major  | Minor  |
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  Major          R        (major)      Major version of SCE-MI implementation
+  Minor          R        (minor)      Minor version of SCE-MI implementation
+
+
+
+BAR1: 0x0018 - Build Revision
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |              Reserved             |              Revision             |
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  Revision       R        (value)      Revision number of the source
+                                       used to generate this module
+
+
+
+BAR1: 0x0020 - Build Timestamp
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |              Reserved             |             Timestamp             |
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  Timestamp      R        (value)      Time when the source module was
+                                       compiled, expressed in Epoch
+                                       time (seconds since 00:00:00 on
+                                       Jan 1, 1970 UTC).
+
+
+==============================================================================
+SCE-MI Configuration
+
+
+BAR1: 0x0100 - Input Channel Count
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 543210 9876543210 
+ +--------+--------+--------+--------+--------+--------+------+----------+
+ |                            Reserved                        | InChans  |  
+ +--------+--------+--------+--------+--------+--------+------+----------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  InChans        R        (value)      Number of input channels
+
+
+
+BAR1: 0x0108 - Output Channel Count
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 543210 9876543210 
+ +--------+--------+--------+--------+--------+--------+------+----------+
+ |                            Reserved                        | OutChans |  
+ +--------+--------+--------+--------+--------+--------+------+----------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  OutChans       R        (value)      Number of output channels
+
+
+==============================================================================
+Control
+
+
+BAR1: 0x0200 - System Command
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |                                Command                                |  
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  Command        W          N/A        0xFFFF_FFFF = Perform a soft reset
+
+Note: Performing a soft reset will assert the uncontrolled SCE-MI
+      reset as well as all controlled SCE-MI resets.  It will reset
+      both the DUT and the transactors.
+
+
+==============================================================================
+Status
+
+
+BAR1: 0x0300 - System Status
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 7654321 0 
+ +--------+--------+--------+--------+--------+--------+--------+-------+-+
+ |                                Reserved                              |R|  
+ +--------+--------+--------+--------+--------+--------+--------+-------+-+
+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  R              R           1         1 = Device is in reset
+                                       0 = Device is out of reset
+
+Note: The device is considered to be in reset as long as the
+      uncontrolled and controlled resets are asserted.  The reset
+      length is controlled by particular SCE-MI clock definitions
+      in the transactor code.
+
+
+
+BAR1: 0x0308 - Total BAR1 Packets Processed
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |              Reserved             |              PacketCnt            |  
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  PacketCnt      R           0         Number of requests to BAR1
+                                       handled since coming out of
+                                       reset
+
+
+
+BAR1: 0x0310 - Total BAR2 Packets Processed
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |              Reserved             |              PacketCnt            |  
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  PacketCnt      R           0         Number of requests to BAR2
+                                       handled since coming out of
+                                       reset
+
+
+
+BAR1: 0x0318 - Total Error Packets
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |              Reserved             |              PacketCnt            |  
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  PacketCnt      R           0         Number of invalid packets
+                                       handled since coming out of
+                                       reset
+
+
+
+BAR1: 0x0320 - Cycle Stamp
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |                                 Count                                 |  
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  Count          R           0         64-bit cycle stamp counter
+                                       (records cycles with controlled
+                                        clock edges)
+
+
+
+BAR1: 0x0328 - Next Output Channel
+
+     6          5          4           3          2           1
+  32109876 54321098 76543210 98765432 10987654 32109876 54321 0 9876543210
+ +--------+--------+--------+--------+--------+--------+-----+-+----------+
+ |                         Reserved                          |V|   Chan   |
+ +--------+--------+--------+--------+--------+--------+-----+-+----------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  V              R           0         True if there is output data available
+  Chan           R          N/A        Output channel number
+
+
+==============================================================================
+Input Channel  (Channel # = CN)
+
+
+BAR2: 0x0000 + 0x10*CN - Space Available
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 7654321 0 
+ +--------+--------+--------+--------+--------+--------+--------+-------+-+
+ |                                Reserved                              |A|  
+ +--------+--------+--------+--------+--------+--------+--------+-------+-+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  A              R           0         0 = No space to send on this channel
+                                       1 = OK to send one message
+
+
+
+BAR2: 0x0008 + 0x10*CN - Input Data Port
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |                                  Data                                 |  
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  Data           W          N/A        Input data for this channel
+
+Note: For a channel narrower than 64-bits, the input data should
+      occupy the low bits and the upper bits should be padded with
+      zeros.  For a channel wider than 64-bits, multiple writes
+      to this address will be required to transmit a full value.
+
+
+==============================================================================
+Output Channel  (Channel # = CN)
+
+
+BAR2: 0x4008 + 0x8*CN - Output Data Port
+
+     6          5          4           3          2          1                    
+  32109876 54321098 76543210 98765432 10987654 32109876 54321098 76543210 
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+ |                                  Data                                 |  
+ +--------+--------+--------+--------+--------+--------+--------+--------+
+
+  Field        Access   Reset Value    Description
+  -----        ------   -----------    -----------
+  Data           R           0         Output data for this channel
+
+Note: For a channel narrower than 64-bits, the output data will
+      occupy the low bits and the upper bits will be padded with
+      zeros.  For a channel wider than 64-bits, multiple reads
+      from this address will be required to retrieve a full value.

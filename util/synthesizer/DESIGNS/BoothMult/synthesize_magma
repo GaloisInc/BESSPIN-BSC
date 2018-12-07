@@ -1,0 +1,33 @@
+#!/bin/bash
+
+PERIOD=$1
+UTIL=$2
+VOLCANO=$3
+TEMPDIR=$4
+RSLTFILE=$5
+
+./make_mantle_script -period $PERIOD -util $UTIL -root=$TEMPDIR -lib=$VOLCANO mkDesign
+
+pushd $TEMPDIR
+./mntl < run.tcl &> mantle_output.txt
+popd
+
+if [ -n "`grep "ERROR:" $TEMPDIR/*.rpt`" ]; then
+  echo "FAIL: synthesis" >> $RSLTFILE
+  cat $TEMPDIR/mantle_output.txt >> $RSLTFILE
+  exit 1
+elif [ -n "`grep "ERROR:" $TEMPDIR/mantle_output.txt`" ]; then
+  echo "FAIL: synthesis" >> $RSLTFILE
+  cat $TEMPDIR/mantle_output.txt >> $RSLTFILE
+  exit 1
+elif [ -z "`grep "RSLT-123" $TEMPDIR/mantle_output.txt`" ]; then
+  echo "FAIL: synthesis" >> $RSLTFILE
+  echo "synthesize_magma script cannot find line beginning with RSLT-123 in mantle output:" >> $RSLTFILE 
+  cat $TEMPDIR/mantle_output.txt >> $RSLTFILE
+  exit 1
+else
+  ./dropfirstarg `grep "RSLT-123" $TEMPDIR/mantle_output.txt` >> $RSLTFILE
+fi
+
+
+

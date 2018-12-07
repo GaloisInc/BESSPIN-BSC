@@ -1,0 +1,99 @@
+# UNIX SETTINGS
+#
+TCLSH=tclsh8.0
+SO=.so
+O=.o
+EXE=
+CP=cp
+RM=rm
+
+# Linux
+# PREFIX=/usr/local
+# CPP=g++
+# LIBS=-L$(PREFIX)/lib -ltcl8.0 -ldl -lieee -lm -lg++
+# INCS=-I$(PREFIX)/include
+# SCFLAGS=-c -g -fPIC $(INCS) -fhandle-exceptions
+# SHLIB_LD = cc -shared
+# PLATFORM=Linux
+
+#
+# Sunos/Solaris
+PLATFORM=SunOS
+PREFIX=/tmp_impl
+CPP=CC
+LIBS=-R$(PREFIX)/lib -ltcl8.0 -lm -lC
+INCS=-I$(PREFIX)/include
+CFLAGS=-c -g $(INCS)
+SCFLAGS=$(CFLAGS) -KPIC
+SHLIB_LD = CC -G -z text
+
+# WINDOWS SETTINGS
+# PLATFORM=Windows
+# INCS=
+# TCLSH=tclsh80
+# CPP=???
+# SCFLAGS=???
+# SO=.dll
+# O=.obj
+# EXE=.exe
+# CP=copy
+# RM=del
+
+all: Tclparser$(SO) TclparserX$(SO) tclextest$(EXE)
+
+tclextest$(EXE): tclextest$(O) Tclparser$(SO)
+	$(CPP) -o tclextest$(EXE) tclextest$(O) Tclparser$(SO)
+
+tclextest$(O): tclextest.cc Tclparser.h
+	$(CPP) $(CFLAGS) tclextest.cc
+
+Tclparser$(O): Tclparser.cc Tclparser.h
+	$(CPP) $(SCFLAGS) Tclparser.cc
+
+TclparserX$(O): TclparserX.cc TclparserX.h
+	$(CPP) $(SCFLAGS) TclparserX.cc
+
+Tstring$(O): Tstring.cc Tstring.h
+	$(CPP) $(SCFLAGS) Tstring.cc
+
+stringtest$(EXE): stringtest.cc
+	$(CPP) -o stringtest$(EXE) $(INCS) -fhandle-exceptions stringtest.cc Tstring$(O) $(LIBS)
+
+Tclparser$(SO): Tclparser$(O) Tclparser_tni$(O) Tstring$(O) tni$(O)
+	$(SHLIB_LD) -o Tclparser$(SO) Tclparser$(O) Tclparser_tni$(O) tni$(O) Tstring$(O) $(LIBS)
+
+TclparserX$(SO): TclparserX$(O) TclparserX_tni$(O) Tstring$(O) tni$(O)
+	$(SHLIB_LD) -o TclparserX$(SO) TclparserX$(O) TclparserX_tni$(O) tni$(O) Tstring$(O) $(LIBS)
+
+tni$(O): tni.cc
+	$(CPP) $(SCFLAGS) -I. tni.cc
+
+Tclparser_tni$(O): Tclparser_tni.cc
+	$(CPP) $(SCFLAGS) -I. Tclparser_tni.cc
+
+TclparserX_tni$(O): TclparserX_tni.cc
+	$(CPP) $(SCFLAGS) -I. TclparserX_tni.cc
+
+Tclparser_tni.cc: Tclparser_tni.i
+	$(TCLSH) tni Tclparser_tni.i
+
+TclparserX_tni.cc: TclparserX_tni.i
+	$(TCLSH) tni TclparserX_tni.i
+
+installdistr: Tclparser$(SO) TclparserX$(SO)
+	$(CP) Tclparser$(SO) ../lib/$(PLATFORM)
+	$(CP) TclparserX$(SO) ../lib/$(PLATFORM)
+
+install: Tclparser$(SO) TclparserX$(SO)
+	$(CP) Tclparser$(SO) ..
+	$(CP) Tclparser.tcl ..
+	$(CP) TclparserX$(SO) ..
+	$(CP) TclparserX.tcl ..
+	$(CP) Tclparser_instrumenter.tcl ..
+
+clean: 
+	-$(RM) *$(O) 
+	-$(RM) *$(SO) 
+	-$(RM) Tclparser_tni.cc 
+	-$(RM) stringtest$(EXE) 
+	-$(RM) tclextest$(EXE) 

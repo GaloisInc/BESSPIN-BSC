@@ -1,0 +1,18 @@
+Document: bluespec-verification-guide
+Title: Verification with Bluespec SystemVerilog
+Author: Bluespec, Inc.
+Abstract: Bluespec SystemVerilogTM (BSV) is an advanced high­level
+ Hardware Description Language that can increase design productivity
+ by 2x or more because of its powerful support for abstraction, static
+ elaboration and static checking.  In this document we describe how
+ verification is performed with BSV designs, both standalone and in
+ the context of existing blocks and verification IP that may exist in
+ Verilog, SystemVerilog, VHDL, e or SystemC.  Topics include:
+ execution options for BSV, why BSV improves Verification, executing
+ BSV along with non­ BSV blocks, interfacing non­BSV to BSV in the
+ testbench and in the DUT, using BSV in testbenches, observing
+ execution and debugging BSV blocks, using assertions with BSV blocks.
+Section: Programming
+
+Format: PDF
+Files: /usr/share/doc/bluespec-__RELEASE_NUM__-doc/verification-guide.pdf.gz

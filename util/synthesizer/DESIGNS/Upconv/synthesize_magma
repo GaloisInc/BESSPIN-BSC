@@ -1,0 +1,58 @@
+#!/bin/bash
+
+PERIOD=$1
+UTIL=$2
+VOLCANO=$3
+TEMPDIR=$4
+RSLTFILE=$5
+
+if [ "$UTIL" = "100" ] ; then
+  echo "FAIL: synthesis" >> $RSLTFILE
+  echo "~synthesizer/DESIGNS/Upconv/synthesize_magma: Cannot handle 100% utilization (poor man's pretty printing then creates the instruction 'set utilization 0.100', which is just wrong)." >> $RSLTFILE
+  exit 1
+fi
+
+
+# This designs uses some special constraints, so we can't use the ordinary
+# make_mantle_script script. Instead we copy a ready run.tcl, and just prepend
+# the rows that sets the period, utilization, and volcano. 
+
+#make run.tcl
+echo set utilization 0.$UTIL > upcvnt_4/run.tcl
+echo set volcano "$VOLCANO" >> upcvnt_4/run.tcl
+echo set period $PERIOD >> upcvnt_4/run.tcl
+cat run.tcl.partial >> upcvnt_4/run.tcl
+
+#copy tcl scripts with constraints
+cp processor_constraints.tcl upcvnt_4/
+cp constraints.tcl upcvnt_4/
+
+#get verilog files from bluespec standard library
+for F in "RegN.v" "SizedFIFO.v" "SizedFIFO0.v" "FIFOL1.v"; do
+  cp $BLUESPECDIR/Verilog/$F upcvnt_4/
+done
+
+#run magma
+cd upcvnt_4
+LM_LICENSE_FILE=27000@indigo
+PATH=.:/tools/magma/current/common/bin:${PATH}
+mantle < run.tcl &> mantle_output.txt
+
+if [ -n "`grep "ERROR:" *.rpt`" ]; then
+  echo "FAIL: synthesis" >> $RSLTFILE
+  cat mantle_output.txt >> $RSLTFILE
+  exit 1
+elif [ -n "`grep "ERROR:" mantle_output.txt`" ]; then
+  echo "FAIL: synthesis" >> $RSLTFILE
+  cat mantle_output.txt >> $RSLTFILE
+  exit 1
+elif [ -z "`grep "RSLT-123" mantle_output.txt`" ]; then
+  echo "FAIL: synthesis" >> $RSLTFILE
+  echo "synthesize_magma script cannot find line beginning with RSLT-123 in mantle output:" >> $RSLTFILE 
+  cat mantle_output.txt >> $RSLTFILE
+  exit 1
+else
+  ../dropfirstarg `grep "RSLT-123" mantle_output.txt` >> $RSLTFILE
+fi
+
+

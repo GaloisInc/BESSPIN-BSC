@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+
+#
+# Analyze a Quartus II synthesis area for timing closure success.
+#
+# Copyright Bluespec, Inc. 2009
+#
+
+import os
+import os.path
+import sys
+import optparse
+import subprocess
+import glob
+import re
+
+
+# ################################################################
+# Option parsing
+
+# Used for generating error messages due to incorrect option usage
+class Usage(Exception):
+  def __init__(self, status=0, msg=None):
+    self.status = status
+    self.msg = msg
+
+# Subclass optparse.OptionParser to make it throw an exception
+# instead of calling sys.exit()
+class MyOptionParser(optparse.OptionParser):
+  def exit(self, status=0, msg=None):
+    raise Usage(status, msg)
+
+# Create an option parser for this script
+def mkOptionParser():
+  parser = MyOptionParser(usage='usage: %prog [options] <timing report file>',
+                          version='%prog 1.0',
+                          description='Analyze a Quartus II synthesis area for timing closure success.'
+                         );
+
+  return parser
+
+
+# ##################################################################
+# Top-level program sequencing
+
+# The main entry point for the program
+def main(argv=None):
+  if argv is None:
+    argv = sys.argv
+
+  try:
+    # process command line arguments
+    parser = mkOptionParser()
+    opts, args = parser.parse_args()
+
+    # ensure that all required arguments were given
+    if len(args) != 2:
+      raise Usage(1,"Requires 2 argument(s): <timing report file> <implementation log file>")
+    timing_report = args[0]
+    impl_report = args[1]
+
+    # verify the file exists
+    try:
+      f = open(timing_report, 'r')
+      f.close()
+    except IOError as e:
+      print >>sys.stderr, 'Timing Report: %s  does not exist' % timing_report
+      return -1
+      
+    # process a timequest timing report
+    cmd = '''grep -c 'Slack \: \-' %s''' % timing_report
+    timing_errors = int(subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0].strip())
+    if (timing_errors > 0):
+      print """WARNING:  **********  TIMING ERRORS DETECTED  **********"""
+      timing_detail = re.sub('\.summary$', '.rpt', timing_report)
+      print """Timing errors exist.  Please consult %s for details.""" % timing_detail
+    else:
+      print """No timing errors exist."""
+
+    # check to see if there are unconstrained paths
+    cmd = '''grep -c 'Design is not fully constrained' %s''' % impl_report
+    constraint_errors = int(subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0].strip())
+    if (constraint_errors > 0):
+      print """WARNING:  **********  NOT ALL PATHS CONSTRAINED  **********"""
+      print """Please consult the program quartus_staw to learn what paths are unconstrained!"""
+
+    # a successful return code
+    return 0
+
+  # Handle command-line option errors
+  except Usage, usage:
+    if usage.msg:
+      print >>sys.stderr, usage.msg
+      print >>sys.stderr, 'for help use --help'
+    return usage.status
+
+# For non-interactive invocations, call main() and use its return value
+# as the exit code.
+if __name__ == '__main__':
+  sys.exit(main())

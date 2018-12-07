@@ -1,0 +1,135 @@
+#!/bin/bash
+set -x
+###################################################################
+#								  #
+# Checks out the bluespec compiler (by invoking "svn update" in	  #
+# /export/home/synthesizer/bsc) and builds it (by invoking "make" #
+# in the same directory)					  #
+#								  #
+# Arguments							  #
+#   $1: file to store result in (see below) when finished 	  #
+#	(will not be created until end of script)		  #
+#   $2: file to store progress reports in continuously		  #
+#       (leave blank for /dev/null)				  #
+#   $3: revision number (leave blank for head)                    #
+#								  #
+# Note! Include paths in arguments.				  #
+#								  #
+# The following will be appended to result file:		  #
+#    - On failure						  #
+#        FAIL: [short error message]				  #
+#        [output from failing program]	    	                  #
+#    - On success:						  #
+#        OK							  #
+###################################################################
+
+########################################################
+# Initialize variables
+
+HOMEDIR=/export/home/synthesizer
+TEMPFILE=$HOMEDIR/TEMP/ch-bsc-`date +%F-%H-%M-%S`.tmp
+
+if [ -z "$1" ]; then
+  RSLTFILE=/dev/null
+else
+  RSLTFILE=$1
+fi
+
+if [ -z "$2" ]; then
+  PROGFILE=/dev/null
+else
+  PROGFILE=$2
+fi
+
+if [ -z "$3" ]; then
+  REVISION=""
+else
+  REVISION="-r$3"
+fi
+
+#echo RSLTFILE = $RSLTFILE
+#echo PROGFILE = $PROGFILE
+#echo REVISION = $REVISION
+#echo TEMPFILE = $TEMPFILE
+
+#######################################################
+# Check out compiler
+
+echo `date` "Checking out compiler" >> $PROGFILE
+
+# Change directory to $HOMEDIR/bsc
+if cd $HOMEDIR/bsc/ ; then
+  echo > /dev/null
+else
+  if mkdir $HOMEDIR/bsc/ ; then
+    cd $HOMEDIR/bsc/
+  else
+    echo `date` "Error: Could neither change directory to $HOMEDIR/bsc/ nor create it" >> $PROGFILE
+    echo "FAIL: could not access or create $HOMEDIR/bsc/" >> $RSLTFILE
+    exit 1
+  fi
+fi
+
+# Try svn update
+# note that svn update succeeds(!) on a totally empty directory, thus the check
+# for .svn, which is a hack.
+if [ -d .svn ] && /usr/bin/svn update --non-interactive $REVISION &> $TEMPFILE ; then
+  echo `date` "Successfully updated compiler source from svn repository" >> $PROGFILE
+
+  ## Do a make clean
+  # This step has been removed to save time. If you get problems because of old stuff, then do a make clean yourself (or start a batch manually, and request a full checkout)
+  #echo `date` "Doing a make clean" >> $PROGFILE
+  #if make clean &> $TEMPFILE ; then
+  #  echo `date` "Done with make clean" >> $PROGFILE
+  #else
+  #  echo `date` "Make clean failed." >> $PROGFILE
+  #  echo "FAIL: make clean" >> $RSLTFILE
+  #  cat $TEMPFILE >> $RSLTFILE
+  #  exit 1
+  #fi
+
+else
+  # Failed to update compiler, try cvs checkout instead
+  echo `date` "Failed to update compiler from svn repository. This can happen after an old revision has been checked out, or the user has requested a checkout instead of an update. I will now attempt to delete the entire bsc directory and use svn checkout instead." >> $PROGFILE
+
+  cd $HOMEDIR
+  if rm -rf bsc ; then
+    echo `date` "Old bsc deleted, checking out from scratch" >> $PROGFILE
+  else
+    echo `date` "Cannot remove old bsc directory. Giving up." >> $PROGFILE
+    echo "FAIL: svn update" >> $RSLTFILE
+    echo `date` "First svn update failed. Then, I tried to remove the old copy of bsc and check it out from scratch, but I failed to remove it. I give up." >> $RSLTFILE
+    rm $TEMPFILE
+    exit 1
+  fi
+
+  if /usr/bin/svn checkout --non-interactive https://svn.bluespec.com:8080/bs/bsc/trunk ./bsc $REVISION &> $TEMPFILE ; then
+    echo `date` "Successfully checked out compiler from svn repository" >> $PROGFILE
+    cd $HOMEDIR/bsc/
+  else
+    echo `date` "Even svn checkout failed. I'm giving up." >> $PROGFILE
+    echo "FAIL: svn update" >> $RSLTFILE
+    echo `date` "Both svn update and svn checkout failed. Here are the output from svn checkout: " >> $RSLTFILE
+    cat $TEMPFILE >> $RSLTFILE
+    rm $TEMPFILE
+    exit 1
+  fi
+fi
+
+#######################################################
+# Build compiler
+
+echo `date` "Building compiler" >> $PROGFILE
+if make &> $TEMPFILE ; then
+  echo `date` "Successfully built compiler" >> $PROGFILE
+  echo OK >> $RSLTFILE
+  rm $TEMPFILE
+  exit 0
+else  # If make failed
+  echo `date` "Couldn't build compiler" >> $PROGFILE
+  echo "FAIL: make" >> $RSLTFILE
+  cat $TEMPFILE >> $RSLTFILE
+  rm $TEMPFILE
+  exit 1
+fi
+

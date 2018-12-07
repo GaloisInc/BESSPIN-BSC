@@ -1,0 +1,25 @@
+----------
+TAG POLICY
+----------
+
+Each release is tagged and branched; each patchlevel is also tagged.
+
+BRANCHES
+--------
+Tag is uppercase release name with spaces replaced by underscores,
+e.g., `VAN_GOLU_EXPRESS'.
+
+RELEASES
+--------
+Tag is uppercase release name followed by version number and the word
+`RELEASE', with spaces and periods replaced by underscores,
+e.g., `VAN_GOLU_EXPRESS_2_73_RELEASE'.
+
+EXAMPLE
+-------
+$ bsc -v 
+Bluespec Compiler, Van Golu Express release (2.73p3, 2001-03-01)
+
+- the release name is "Van Golu Express"
+- the branch tag is "VAN_GOLU_EXPRESS"
+- the release tag is "VAN_GOLU_EXPRESS_2_73p3_RELEASE"

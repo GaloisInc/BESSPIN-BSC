@@ -1,0 +1,489 @@
+package LBus (
+  LBSItem, LbReq,
+  LbAddr, ILBus(..), LbRWop(..), lbB2W,
+  mkLbRegRW, mkLbRegRO, mkLbWdRW, mkLbWdRO, mkLbRegW1tC, mkLbAccum,
+  mkLbInterrupt, {- mkLbPunch, -} mkLbClient,
+  mkLbLeaf, mkLbBranch, mkLbOffset,
+  mkLbFanout, mkLbTop,
+  LBSModule, Accum, Interrupt, ILbLeaf, ILbNode, LbAModule, RegHandler
+	     ) where
+
+import ModuleCollect
+import Counter
+import qualified ListN
+import List
+import ConfigReg
+import Monad
+import GetPut
+import ClientServer
+import Connectable
+import FIFO
+import IVec
+import StringUtil
+
+--@
+--@ XXX THIS PACKAGE STILL NEEDS DOCUMENTING
+--@
+
+--import PiTypes
+--import AmIfc
+
+-- VARIATIONS OF BLUESPEC LIBRARY DEFINITIONS
+
+foldt :: (a -> a -> a) -> a -> List a -> a
+foldt _ x Nil = x
+foldt f _ xs = fold f xs
+
+-- -----
+
+interface LBSReg sa sd =
+    lbsAddr :: LbAddr sa             -- address of the register
+    lbsSet  :: Bit sd -> Action      -- set method
+    lbsGet  :: ActionValue (Bit sd)  -- get method
+
+interface IntFlag sd =
+    flag :: Bit 1
+
+data LBSItem sa sd = Rg (LBSReg sa sd) | Flg (IntFlag sd)
+
+data LbAddr sa = LbAddr (Bit sa)
+    deriving (Literal, Eq, Bits)
+
+unLbAddr :: LbAddr sa -> Bit sa
+unLbAddr (LbAddr a) = a
+
+lbB2W :: LbAddr sa -> LbAddr sa
+lbB2W (LbAddr a) = (LbAddr (a>>2))
+
+type LBSModule sa sd i = ModuleCollect (LBSItem sa sd) i
+
+type LBReg sa sd i = (LBSReg sa sd, i)
+
+lbs :: Module (LBReg sa sd i) -> LBSModule sa sd i
+lbs m = do
+    (lbr, r) :: (LBReg sa sd i) <- liftModule m
+    addToCollection (Rg lbr)
+    return r
+
+lbsInt :: LBSModule sa sd (IntFlag sd, i) -> LBSModule sa sd i
+lbsInt m = do
+    (f, r) :: (IntFlag sd, i) <- m
+    addToCollection (Flg f)
+    return r
+
+-- -----
+
+--
+--  CONTROL-STATUS REGISTERS
+--
+
+regRW :: (Bits r sr, Add k sr sd) => (LbAddr sa, Integer) -> r -> Module (LBReg sa sd (Reg r))
+regRW (addr,n) x =
+  module
+    r :: Reg r <- mkReg x
+    let vsr = valueOf sr
+        vsd = valueOf sd
+        _ = if vsr + n > vsd then error "regRW: field wont fit" else _
+    interface -- Pair
+       (interface LBSReg
+		lbsAddr  = addr
+		lbsSet v = r := (unpack (truncate (v>>(fromInteger n))))
+		lbsGet   = return ((0++(pack r))<<(fromInteger n))
+	,
+	asReg r
+       )
+
+mkLbRegRW :: (Bits r sr, Add k sr sd) => (LbAddr sa, Integer) -> r -> LBSModule sa sd (Reg r)
+mkLbRegRW (a,n) x = lbs (regRW (a,n) x)
+
+mkLbWdRW :: LbAddr sa -> Bit sd -> LBSModule sa sd (Reg (Bit sd))
+mkLbWdRW a x = lbs (regRW (a,0) x)
+
+-- -----
+
+regW1tC :: (Add k 1 sd) => (LbAddr sa, Integer) -> (Bit 1) -> Module (LBReg sa sd (Reg (Bit 1)))
+regW1tC (addr,n) x =
+  module
+    r :: Reg (Bit 1) <- mkReg x
+    let vsd = valueOf sd
+        _ = if 1 + n > vsd then error "regW1tC: field wont fit" else _
+    interface -- Pair
+       (interface LBSReg
+		lbsAddr  = addr
+		lbsSet v = r := unpack ((pack r) & invert (truncate (v>>(fromInteger n))))
+		lbsGet   = return ((0++(pack r))<<(fromInteger n))
+	,
+	asReg r
+       )
+
+mkLbRegW1tC :: (Add k 1 sd) => (LbAddr sa, Integer) -> (Bit 1) -> LBSModule sa sd (Reg (Bit 1))
+mkLbRegW1tC (a,n) x = lbs (regW1tC (a,n) x)
+
+-- -----
+
+regRO :: (Bits r sr, Add k sr sd) => (LbAddr sa, Integer) -> r -> Module (LBReg sa sd (Reg r))
+regRO (addr,n) x =
+  module
+    r :: Reg r <- mkReg x
+    let vsr = valueOf sr
+        vsd = valueOf sd
+        _ = if vsr + n > vsd then error "regRO: field wont fit" else _
+    interface -- Pair
+       (interface LBSReg
+		lbsAddr  = addr
+		lbsSet _ = noAction
+		lbsGet   = return ((0++(pack r))<<(fromInteger n))
+	,
+	asReg r
+       )
+
+mkLbRegRO :: (Bits r sr, Add k sr sd) => (LbAddr sa, Integer) -> r -> LBSModule sa sd (Reg r)
+mkLbRegRO (a,n) x = lbs (regRO (a,n) x)
+
+mkLbWdRO :: LbAddr sa -> Bit sd -> LBSModule sa sd (Reg (Bit sd))
+mkLbWdRO a x = lbs (regRO (a,0) x)
+
+-- -----
+
+interface Accum n =
+    add   :: Bit n -> Action
+    value :: Bit n
+
+accum :: (Add k i sd) => (LbAddr sa, Integer) -> Bit k -> Module (LBReg sa sd (Accum k))
+accum (addr,n) x =
+  module
+    c :: Counter k <- mkCounter x
+    let vk  = valueOf k
+        vsd = valueOf sd
+        _ = if vk + n > vsd then error "regRW: field wont fit" else _
+    interface -- Pair
+       (interface LBSReg
+	      lbsAddr = addr
+	      lbsSet x = c.setF (truncate (x>>(fromInteger n)))
+	      lbsGet = do
+		c.setC 0
+		return (0++((c.value)<<(fromInteger n)))
+	,
+	interface Accum
+	      add   = c.inc
+	      value = c.value
+       )
+
+--@ \index{lbAccum@\te{lbAccum} (function)|textbf}
+--@ # 1
+mkLbAccum :: (Add k i sd) => (LbAddr sa, Integer) -> Bit k -> LBSModule sa sd (Accum k)
+mkLbAccum (a,n) x = lbs (accum (a,n) x)
+
+-- -----
+
+interface Interrupt =
+    set :: Action
+
+-- The following module is for internal use only.  It has a "Reg" interface, but the _write method
+-- ignores its parameter.
+w1tc :: (Add k 1 sd) => (LbAddr sa, Integer) ->  Module (LBReg sa sd (Reg (Bit 1)))
+w1tc (addr,n) =
+  module
+    r :: Reg (Bit 1) <- mkReg 0
+    s :: Reg (Bit 1) <- mkReg 0
+    rules
+      "transfer": when True ==>
+		   action
+		     r := r|s
+		     s := 0
+    interface -- Pair
+       (interface LBSReg
+	      lbsAddr = addr
+	      lbsSet 1 =
+	        action
+	          r := s
+	      lbsSet 0 = noAction
+	      lbsGet = do
+		return ((0++r)<<(fromInteger n))
+	,
+	interface Reg
+	      _read = r
+	      _write _ = s := 1
+       )
+
+mkLbW1tc ::  (Add k 1 sd) => (LbAddr sa, Integer) ->  LBSModule sa sd (Reg (Bit 1))
+mkLbW1tc (a,n) = lbs (w1tc (a,n))
+
+interrupt :: (Add k 1 sd) => (LbAddr sa, Integer) ->  (LbAddr sa, Integer) ->  LBSModule sa sd (IntFlag sd, Interrupt)
+interrupt (regAddr,regN) (maskAddr,maskN) =
+  module
+    r :: Reg (Bit 1) <- mkLbW1tc (regAddr,regN)
+    m :: Reg (Bit 1) <- mkLbRegRW (maskAddr,maskN) 0
+    interface
+      (interface IntFlag
+         flag = r & (invert m)
+       ,
+       interface Interrupt
+         set = r := _
+      )
+
+mkLbInterrupt :: (Add k 1 sd) => (LbAddr sa, Integer) ->  (LbAddr sa, Integer) ->  LBSModule sa sd Interrupt
+mkLbInterrupt (regAddr,regN) (maskAddr,maskN) = lbsInt $ interrupt (regAddr,regN) (maskAddr,maskN)
+
+mkLbOffset :: LbAddr sa -> LBSModule sa sd i -> LBSModule sa sd i
+mkLbOffset (LbAddr o) =
+   let f (Rg r) = Rg (interface LBSReg
+		        lbsAddr = LbAddr (unLbAddr r.lbsAddr + o)
+		        lbsSet = r.lbsSet
+		        lbsGet = r.lbsGet
+		     )
+       f x      = x
+   in mapCollection f
+
+-- LOCAL BUS NODES
+  
+data LbRWop = LbRead | LbWrite  deriving (Bits, Eq)
+
+struct LbReq sa sd =    wr	:: LbRWop
+                        adr	:: (Bit sa)
+                        dat	:: (Bit sd)
+              deriving (Bits, Eq)
+
+interface ILBus sa sd =
+        	-- enqueues a read or write request
+	req :: Bool -> LbRWop -> (Bit sa) -> (Bit sd) -> Action	
+
+        rdDat :: (Bit sd) -- return read data
+        ack :: (Bit 1)  -- Ack a request
+	int :: (Bit 1)  -- sends interrupt to processor interface controller
+
+
+type ILbLeaf sa sd = (
+                      Put (LbReq sa sd, Bool),
+	  	      Get (Bit sd, Bool),
+		      Get (Bit 1)  -- sends interrupt to processor
+		     )
+
+type ILbNode sa sd = (
+                      Get (LbReq sa sd, Bool),
+	  	      Put (Bit sd, Bool),
+		      Put (Bit 1)  -- sends interrupt to processor interface controller
+		     )
+mkLbLeaf :: LBSModule sa sd i -> Module (ILbLeaf sa sd, i)
+mkLbLeaf lm =
+  module
+    (i, lbs) :: (i, List (LBSItem sa sd)) <- getCollection lm
+
+    let isReg   x = case x of Rg  _  -> True
+			      _      -> False
+        isFlag  x = case x of Flg _  -> True
+			      _      -> False
+	theReg  x = case x of Rg  y  -> y
+	theFlag x = case x of Flg y  -> y.flag
+	regs  = map theReg  $ filter isReg  lbs
+        flags = map theFlag $ filter isFlag lbs
+        int   = foldt (|) 0 flags
+
+
+    req      :: Reg (LbReq sa sd) <- mkConfigReg _
+    ack      :: Reg (Bit sd)      <- mkConfigReg _
+    reqFlag  :: Reg Bool          <- mkConfigReg False
+    ackFlag  :: Reg Bool          <- mkConfigReg False
+    reqFlag' :: Reg Bool          <- mkConfigReg False
+    ackFlag' :: Reg Bool          <- mkConfigReg False
+
+    rules
+     {-# ASSERT fire when enabled #-}
+     {-# ASSERT no implicit conditions #-}
+     "Clear ackFlag":
+       when ackFlag  ==> ackFlag := False
+
+     {-# ASSERT fire when enabled #-}
+     {-# ASSERT no implicit conditions #-}
+     "transfer reqFlag":
+       when reqFlag'  ==> reqFlag := True
+
+     "ReadAndWrite":
+       when reqFlag
+         ==>  action
+                  vals :: List (Bit sd) <- mapM (.lbsGet) regs
+                  reqFlag := False
+		  ackFlag := True
+            	  if (req.wr == LbRead)
+                    then
+         	      ack := foldt (|) 0 (zipWith (\ lbi v -> if (unLbAddr lbi.lbsAddr) == req.adr then v else 0) regs vals)
+    		    else
+                      joinActions $ map (\ lbi -> if (unLbAddr lbi.lbsAddr) == req.adr then lbi.lbsSet req.dat else noAction) regs
+
+    interface 
+      (
+       (
+        interface Put { put (r,b) = action { req := r; reqFlag' := b }},
+	interface Get { get = do { return (ack, ackFlag) }},
+	interface Get { get = do { return int }}
+       )
+      , 
+       i
+      )
+
+-- -----
+
+type LbAModule sa sd i = ModuleCollect (ILbLeaf sa sd) i
+
+mkLbBranch :: Module ((ILbLeaf sa sd), i) -> LbAModule sa sd i
+mkLbBranch m =
+  do
+    (lba, ifc) :: ((ILbLeaf sa sd), i) <- liftModule m
+    addToCollection lba
+    return ifc
+
+data LbState = Idle | Req1 | Req2 | Req3 deriving (Eq, Bits)
+
+mkLbTop :: (IVec n iv) => Module (ILBus sa sd, iv (ILbNode sa sd)) -> LbAModule sa sd i 
+                            -> Module (i, ILBus sa sd)
+mkLbTop mkFanout lm =
+  module
+    (i, lbs) :: (i, List (ILbLeaf sa sd)) <- getCollection lm
+    (lb, is) :: (ILBus sa sd, iv (ILbNode sa sd)) <- mkFanout
+    
+    let vc = valueOf n
+	nlbs = length lbs
+	svc = integerToString vc
+	snlbs = integerToString nlbs
+	lbsn = if vc == nlbs then ListN.toListN lbs
+	       else error ("number of PI connections: is " +++ snlbs +++ ", not " +++ svc)
+        fans = fromIVec is
+    lbsn <-> fans
+	
+    interface ( i, lb )
+    
+
+-- --------------------------------------------------------------------------
+
+interface RegHandler a b =
+  getRequest :: a
+  storeResponse :: b -> Action
+
+mkLbClient :: (Add k 1 sd) => (LbAddr sa, Integer) -> (LbAddr sa, Integer) ->
+                LBSModule sa sd (RegHandler a b) -> LBSModule sa sd (Client a b)
+mkLbClient (ra,rb) (aa,ab) mkRH =
+  module
+    rh <- mkRH
+    req :: Reg (Bit 1) <- mkLbRegRW (ra,rb) 0
+    ack :: Reg (Bit 1) <- mkLbRegW1tC (aa,ab) 0
+    prevReq :: Reg (Bit 1) <- mkReg 0
+    reqFlag :: Reg Bool <- mkReg False
+
+    rules
+     "trigger":
+       when True  ==>
+         action
+	   prevReq := req
+	   if ((prevReq == 0) && (req == 1))
+	      then reqFlag := True
+	      else noAction
+
+    interface
+      request = interface Get
+		  get = do
+		    reqFlag := False
+		    return rh.getRequest
+                   when reqFlag
+      response = interface Put
+		  put x = do
+		    rh.storeResponse x
+		    ack := 1
+
+-- --------------------------------------------------------------------------
+
+mkLbFanout  :: (IVec n iv) => Module (ILBus sa sd, iv (ILbNode sa sd))
+mkLbFanout  = ma_am_pi
+
+{-# properties ma_am_pi = {noReady, alwaysEnabled, verilog, bitBlast, scanInsert=7} #-}
+ma_am_pi  :: (IVec n iv) => Module (ILBus sa sd, iv (ILbNode sa sd))
+ma_am_pi  =
+  module
+    let ns = upto 1 (valueOf n)
+
+    state :: Reg LbState <- mkConfigReg Idle
+    requesting  :: Reg Bool <- mkConfigReg False
+    requesting' :: Reg Bool <- mkConfigReg False
+
+    r_rdDat :: Reg (Bit sd) <- mkConfigReg 0
+    r_piReq :: Reg (LbRWop, Bit sa, Bit sd) <- mkConfigReg (LbRead, 0, 0)
+    r_piAck :: Reg (Bit 1)  <- mkConfigReg 0
+    r_piInt :: Reg (Bit 1)  <- mkConfigReg 0
+
+    request  :: Reg (LbReq sa sd) <- mkConfigReg  (LbReq {wr = LbRead ; adr = 0; dat = 0})
+    request' :: Reg (LbReq sa sd) <- mkConfigReg  (LbReq {wr = LbRead ; adr = 0; dat = 0})
+
+    rdDats :: List (Reg (Bit sd))  <- mapM_ (mkConfigReg 0) ns
+    acks   :: List (Reg Bool)    <- mapM_ (mkConfigReg False) ns
+    acks'  :: List (Reg Bool)    <- mapM_ (mkConfigReg False) ns
+    ints   :: List (Reg (Bit 1)) <- mapM_ (mkConfigReg 0) ns
+
+    let leafIfc dat ack int = (interface Get {get = do {return (request, requesting) }},
+              	               interface Put {put (x,a) = do { dat := x; ack := a}},
+	      	               interface Put {put x = do { int := x }} )
+
+        ackFn a a' = rules { "ack": when a'._read  ==> a := True }
+        idleFn a = a := False
+
+        ifcs = toIVec $ ListN.toListN $ zipWith3 leafIfc rdDats acks' ints
+
+        pi = interface ILBus
+              req valid o a d = action
+				  let s = LbReq {wr = o; adr = a; dat = d}
+				  requesting' := valid
+				  request' := s
+
+	      rdDat = r_rdDat
+              ack   = r_piAck
+	      int   = r_piInt
+
+    addRules $ joinRules $ zipWith ackFn acks acks'
+
+    rules
+
+     {-# ASSERT fire when enabled #-}
+     {-# ASSERT no implicit conditions #-}
+     "Interrupt":
+       when True ==> r_piInt := foldt (|) 0 (map (._read) ints)
+
+     -- {-# ASSERT fire when enabled #-}
+     {-# ASSERT no implicit conditions #-}
+     "PiIdle":
+       when state == Idle  ==> 
+         action
+	   joinActions (map idleFn acks)
+	   r_piAck := 0
+           if requesting' then action
+	                        state := Req1
+                                requesting := True
+				request := request'
+			  else noAction
+
+     -- {-# ASSERT fire when enabled #-}
+     {-# ASSERT no implicit conditions #-}
+      "PiReq1":
+       when state == Req1
+         ==>  do
+                state := Req2
+		requesting := False
+
+     -- {-# ASSERT fire when enabled #-}
+     {-# ASSERT no implicit conditions #-}
+     "PiReq2":
+       when state == Req2
+         ==>  do
+                if foldt (&&) True (map (._read) acks)
+                   then do
+                     	  state := Req3
+                     	  r_rdDat := foldt (|) 0 (map (._read) rdDats)
+                   else noAction
+
+     -- {-# ASSERT fire when enabled #-}
+     {-# ASSERT no implicit conditions #-}
+     "PiReq3":
+       when state == Req3
+         ==>  do
+                state   := Idle
+                r_piAck := 1
+
+    interface (pi, ifcs)
+

@@ -1,0 +1,28 @@
+#!/usr/bin/make -f
+
+#LM_LICENSE_FILE ?= @license
+export LM_LICENSE_FILE=$(shell pwd)/debian/tinderbox.lic
+
+%:
+	dh $@ --parallel
+
+override_dh_auto_build:
+	$(MAKE) -f util/release/Makefile.release-native VERSION=__RELEASE_NUM__ BSCSRC=`pwd` build-dirs
+	$(MAKE) -f util/release/Makefile.release-native VERSION=__RELEASE_NUM__ BSCSRC=`pwd` build-tools
+	$(MAKE) -f util/release/Makefile.release-native VERSION=__RELEASE_NUM__ BSCSRC=`pwd` build-extra
+	$(MAKE) -C src/lib/board_support/BlueNoC/bluenoc
+	$(MAKE) -C doc PREFIX=`pwd`/debian/tmp/usr
+	$(MAKE) -C src/manpages
+
+override_dh_auto_install:
+#	dh_auto_install -- PREFIX=`pwd`/debian/tmp/usr
+#	$(MAKE) -C doc PREFIX=`pwd`/debian/tmp/usr install
+	mkdir -p debian/tmp/usr/
+	cp -a /tmp/build-bsc-__RELEASE_NUM__/build/Bluespec-__RELEASE_NUM__/* debian/tmp/usr/
+	find debian/tmp/usr/lib/board_support/ -name \*.sh -exec chmod +x {} \;
+	find debian/tmp/ -name .gitignore -delete
+
+override_dh_auto_test:
+
+override_dh_shlibdeps:
+	dh_shlibdeps -lusr/lib/bluespec-__RELEASE_NUM__/SAT/g++4/:usr/lib/bluespec-__RELEASE_NUM__/SAT/g++4_64/

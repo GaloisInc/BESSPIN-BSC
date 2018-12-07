@@ -1,0 +1,126 @@
+-- Copyright 2000--2003 Bluespec, Inc.  All rights reserved.
+
+-- $Id: Printf.bs,v 1.8 2003/01/10 21:39:16 elf Exp $
+
+package Printf(Printf(..), PArg(..), arg) where
+
+import Environment
+
+fromPrintfAction :: PrimAction -> ActionValue a
+fromPrintfAction a = if genC then fromPrimAction a else error "Printf only supported by C runtime"
+
+--@ \subsection{Printf}
+--@ 
+--@ \index{Printf@\te{Printf} (class)|textbf}
+--@ \index{printf@\te{printf} (method)|textbf}
+--@ {\te{Printf}} defines a class with a method, \te{printf}, that
+--@ behaves soemwhat like the C \te{printf()} function.
+
+--@ 
+--@ The \te{printf} method takes a formatting string and then some
+--@ further arguments.
+--@ \begin{verbatim}
+--@ typeclass Printf #(type a);
+--@     function a printf(String x1);
+--@ endtypeclass
+--@ \end{verbatim}
+class Printf a where
+    printf :: String -> a
+
+--@ 
+--@ The arguments to \te{printf} must be 32 bit numbers.
+--@ \begin{verbatim}
+--@ typedef Bit#(32) PArg;
+--@ \end{verbatim}
+type PArg = Bit 32
+
+--@ 
+--@ The \te{arg} function is a convenient way to make an argument of the right type.
+--@ \begin{verbatim}
+--@ function PArg arg()
+--@   provisos (Add#(k, n, 32));
+--@ \end{verbatim}
+arg :: (Add k n 32) => Bit n -> PArg
+arg = zeroExtend
+
+-----
+
+foreign printf0 :: String -> PrimAction
+
+--@ 
+--@ There are instance declarations for 0 to 7 arguments.
+--@ \begin{verbatim}
+--@ instance Printf #(Action);
+--@ instance Printf #(PArg -> Action);
+--@ instance Printf #(PArg -> PArg -> Action);
+--@ instance Printf #(PArg -> PArg -> PArg -> Action);
+--@ instance Printf #(PArg -> PArg -> PArg -> PArg -> Action);
+--@ instance Printf #(PArg -> PArg -> PArg -> PArg -> PArg -> Action);
+--@ instance Printf #(PArg -> PArg -> PArg -> PArg -> PArg -> PArg -> Action);
+--@ instance Printf #(PArg -> PArg -> PArg -> PArg -> PArg -> PArg -> PArg -> Action);
+--@ \end{verbatim}
+instance Printf Action
+  where
+    printf s = fromPrintfAction $ printf0 s
+
+-----
+
+foreign printf1 :: String -> PArg -> PrimAction
+
+instance Printf (PArg -> Action)
+  where
+    printf s x1 = fromPrintfAction $ printf1 s x1
+
+-----
+
+foreign printf2 :: String -> PArg -> PArg -> PrimAction
+
+instance Printf (PArg -> PArg -> Action)
+  where
+    printf s x1 x2 = fromPrintfAction $ printf2 s x1 x2
+
+
+-----
+
+foreign printf3 :: String -> PArg -> PArg -> PArg -> PrimAction
+
+instance Printf (PArg -> PArg -> PArg -> Action)
+  where
+    printf s x1 x2 x3 = fromPrintfAction $ printf3 s x1 x2 x3
+
+
+-----
+
+foreign printf4 :: String -> PArg -> PArg -> PArg -> PArg -> PrimAction
+
+instance Printf (PArg -> PArg -> PArg -> PArg -> Action)
+  where
+    printf s x1 x2 x3 x4 = fromPrintfAction $ printf4 s x1 x2 x3 x4
+
+
+-----
+
+foreign printf5 :: String -> PArg -> PArg -> PArg -> PArg -> PArg -> PrimAction
+
+instance Printf (PArg -> PArg -> PArg -> PArg -> PArg -> Action)
+  where
+    printf s x1 x2 x3 x4 x5 = fromPrintfAction $ printf5 s x1 x2 x3 x4 x5
+
+
+-----
+
+foreign printf6 :: String -> PArg -> PArg -> PArg -> PArg -> PArg -> PArg -> PrimAction
+
+instance Printf (PArg -> PArg -> PArg -> PArg -> PArg -> PArg -> Action)
+  where
+    printf s x1 x2 x3 x4 x5 x6 = fromPrintfAction $ printf6 s x1 x2 x3 x4 x5 x6
+
+
+-----
+
+foreign printf7 :: String -> PArg -> PArg -> PArg -> PArg -> PArg -> PArg -> PArg -> PrimAction
+
+instance Printf (PArg -> PArg -> PArg -> PArg -> PArg -> PArg -> PArg -> Action)
+  where
+    printf s x1 x2 x3 x4 x5 x6 x7 = fromPrintfAction $ printf7 s x1 x2 x3 x4 x5 x6 x7
+
