@@ -37,6 +37,9 @@ import Data.Time.Clock.POSIX(getPOSIXTime)
 import Data.Maybe(isJust, isNothing, fromMaybe)
 import Numeric(showOct)
 
+import qualified Data.ByteString as BS
+import System.FilePath (takeFileName)
+
 import Control.Monad(when, unless, filterM, liftM, foldM)
 import ErrorTCompat(runErrorT)
 import Control.Concurrent(forkIO)
@@ -184,6 +187,8 @@ import SAL(convAPackageToSAL)
 import VVerilogDollar
 import ISplitIf(iSplitIf)
 import VFileName
+
+import CSyntaxToCbor
 
 --import Debug.Trace
 --import Util(traceM)
@@ -420,6 +425,10 @@ compilePackage
     symt00 <- mkSymTab errh mop
     t <- dump errh flags t DFsymbols dumpnames symt00
 
+    let basename = takeFileName name
+    putStrLn $ "writing " ++ "out/" ++ basename ++ ".cbor"
+    BS.writeFile ("out/" ++ basename ++ ".cbor") $ cPackageToCborBytes mop
+
     -- whether we are doing code generation for modules
     let generating = backend flags /= Nothing
 
@@ -474,6 +483,10 @@ compilePackage
     (mod, tcErrors) <- cTypeCheck errh flags symt minst
     --putStr (ppReadable mod)
     t <- dump errh flags t DFtypecheck dumpnames mod
+
+    let basename = takeFileName name
+    putStrLn $ "writing " ++ "out/tc." ++ basename ++ ".cbor"
+    BS.writeFile ("out/tc." ++ basename ++ ".cbor") $ cPackageToCborBytes mod
 
     --when (early flags) $ return ()
     let prefix = dirName name ++ "/"
