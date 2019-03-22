@@ -152,8 +152,14 @@ instance ToCbor CExpr where
     toCbor (Cattributes _) = node "Expr_Attributes" [ ]
 
 instance ToCbor CRule where
-    toCbor (CRule _ nameExpr _ body) = node "Rule" [ toCbor nameExpr, toCbor body ]
-    toCbor (CRuleNest _ nameExpr _ rules) = node "Rule_Nest" [ toCbor nameExpr, toCbor rules ]
+    toCbor (CRule _ nameExpr quals body) = node "Rule"
+        [ toCbor nameExpr, toCbor quals, toCbor body ]
+    toCbor (CRuleNest _ nameExpr quals rules) = node "Rule_Nest"
+        [ toCbor nameExpr, toCbor quals, toCbor rules ]
+
+instance ToCbor CQual where
+    toCbor (CQGen ty p e) = node "Qual_Gen" [ toCbor ty, toCbor p, toCbor e ]
+    toCbor (CQFilter e) = node "Qual_Filter" [ toCbor e ]
 
 instance ToCbor CLiteral where
     toCbor (CLiteral pos (LString s)) = node "Lit_Str" [ toCbor pos, toCbor $ T.pack s ]
