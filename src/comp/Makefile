@@ -110,7 +110,7 @@ ifneq ($(GHCMINOR),0)
 $(warn GHC versions beyond 8.0.2 have not been tested)
 endif
 
-GHCEXTRAPKGS =-package syb -package integer-gmp
+GHCEXTRAPKGS =-package syb -package integer-gmp -package cborg -package text
 GHCPROFAUTO = -fprof-auto
 
 # end ifeq ($(GHCMAJOR),7)
