@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <limits>
 #include <typeinfo>
+#include <cstring>
 #include "BSVType.h"
 
 /// Class representing an arbitrarily wide bit vector with the ability
