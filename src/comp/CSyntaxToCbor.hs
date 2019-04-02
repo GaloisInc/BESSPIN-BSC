@@ -18,6 +18,7 @@ import qualified FStringCompat as FS
 import Id
 import IntLit
 import Position
+import Pragma
 
 
 class ToCbor a where
@@ -67,7 +68,8 @@ instance ToCbor CDefn where
     toCbor (Cdata _ name tyVars _ _ _) = node "Defn_Data" [ toCbor name, toCbor tyVars ]
     toCbor (Cstruct _ sub name tyVars fields _) = node "Defn_Struct"
         [ toCbor sub, toCbor name, toCbor tyVars, toCbor fields ]
-    toCbor (Cclass _ _ _ is _ _) = node "Defn_Class" [ toCbor is ]
+    toCbor (Cclass _ _ name tyVars _ fields) = node "Defn_Class"
+        [ toCbor name, toCbor tyVars, toCbor fields ]
     toCbor (Cinstance _ _) = node "Defn_Instance" [ ]
     toCbor (CValue _ _) = node "Defn_Value" [ ]
     toCbor (CValueSign def) = node "Defn_ValueSign" [ toCbor def ]
@@ -82,9 +84,9 @@ instance ToCbor CDefn where
 
 instance ToCbor CDef where
     toCbor (CDef name ty clauses) = node "Def"
-        [ toCbor name, toCbor ty, toCbor clauses ]
-    toCbor (CDefT name _ ty clauses) = node "Def"
-        [ toCbor name, toCbor ty, toCbor clauses ]
+        [ toCbor name, CBOR.TList [], toCbor ty, toCbor clauses ]
+    toCbor (CDefT name tyVars ty clauses) = node "Def"
+        [ toCbor name, toCbor tyVars, toCbor ty, toCbor clauses ]
 
 instance ToCbor CClause where
     toCbor (CClause pats _ body) = node "Clause" [ toCbor pats, toCbor body ]
@@ -188,7 +190,12 @@ instance ToCbor CMStmt where
     toCbor (CMTupleInterface _ es) = node "MStmt_TupleInterface" [ toCbor es ]
 
 instance ToCbor CField where
-    toCbor (CField name _ ty _ _) = node "Field" [ toCbor name, toCbor ty ]
+    toCbor (CField name pragmas ty _ _) =
+        node "Field" [ toCbor name, toCbor pragmas, toCbor ty ]
+
+instance ToCbor IfcPragma where
+    toCbor (PIArgNames is) = node "IfcPragma_ArgNames" [ toCbor is ]
+    toCbor _ = node "IfcPragma_Unknown" []
 
 instance ToCbor Type where
     toCbor (TVar (TyVar name num _)) = node "Type_Var" [ toCbor name, toCbor num ]
@@ -198,20 +205,23 @@ instance ToCbor Type where
     toCbor (TGen _ _) = node "Type_Gen" [ ]
     toCbor (TDefMonad _) = node "Type_DefMonad" [ ]
 
+instance ToCbor TyVar where
+    toCbor (TyVar name _num _kind) = toCbor name
+
 instance ToCbor CQType where
     toCbor (CQType _ ty) = toCbor ty
-
-instance ToCbor StructSubType where
-    toCbor SStruct = CBOR.TString "Struct"
-    toCbor SClass = CBOR.TString "Class"
-    toCbor (SDataCon _ _) = CBOR.TString "DataCon"
-    toCbor (SInterface _) = CBOR.TString "Interface"
 
 instance ToCbor TISort where
     toCbor (TItype _ ty) = node "TySort_Type" [ toCbor ty ]
     toCbor (TIdata is) = node "TySort_Data" [ toCbor is ]
-    toCbor (TIstruct _ is) = node "TySort_Struct" [ toCbor is ]
+    toCbor (TIstruct sst is) = node "TySort_Struct" [ toCbor sst, toCbor is ]
     toCbor TIabstract = node "TySort_Abstract" [ ]
+
+instance ToCbor StructSubType where
+    toCbor SStruct = node "StructKind_Struct" [ ]
+    toCbor SClass = node "StructKind_Class" [ ]
+    toCbor (SDataCon _ _) = node "StructKind_Data" [ ]
+    toCbor (SInterface _) = node "StructKind_Ifc" [ ]
 
 instance ToCbor Id where
     toCbor i = node "Id"
