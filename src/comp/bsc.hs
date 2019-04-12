@@ -28,7 +28,7 @@ import System.IO(hFlush, stdout, hPutStr, stderr, hGetContents, hClose, hSetBuff
 import System.IO(hSetEncoding, latin1)
 #endif
 import System.Posix.Files(fileMode,  unionFileModes, ownerExecuteMode, groupExecuteMode, setFileMode, getFileStatus, fileAccess)
-import System.Directory(getDirectoryContents, doesFileExist, getCurrentDirectory)
+import System.Directory(getDirectoryContents, doesFileExist, getCurrentDirectory, createDirectoryIfMissing)
 import System.Time(getClockTime, ClockTime(TOD)) -- XXX: from old-time package
 import Data.Char(isSpace, toLower, ord)
 import Data.List(intersect, nub, partition, intersperse, sort, union,
@@ -425,10 +425,6 @@ compilePackage
     symt00 <- mkSymTab errh mop
     t <- dump errh flags t DFsymbols dumpnames symt00
 
-    let basename = takeFileName name
-    putStrLn $ "writing " ++ "out/" ++ basename ++ ".cbor"
-    BS.writeFile ("out/" ++ basename ++ ".cbor") $ cPackageToCborBytes mop
-
     -- whether we are doing code generation for modules
     let generating = backend flags /= Nothing
 
@@ -485,6 +481,7 @@ compilePackage
     t <- dump errh flags t DFtypecheck dumpnames mod
 
     let basename = takeFileName name
+    createDirectoryIfMissing False "out"
     putStrLn $ "writing " ++ "out/tc." ++ basename ++ ".cbor"
     BS.writeFile ("out/tc." ++ basename ++ ".cbor") $ cPackageToCborBytes mod
 
