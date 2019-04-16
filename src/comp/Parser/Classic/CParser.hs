@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -O0 #-}
 module Parser.Classic.CParser(id_CParser, pPackage, pSignature, pDefnsAndEOF, errSyntax) where
 
 import Data.List(nub)
