@@ -16,35 +16,19 @@ module Main_bsc(id_bsc, main, hmain) where
 -- Haskell libs
 import Prelude
 import System.Environment(getArgs, getProgName)
-import System.Process(runInteractiveProcess, waitForProcess)
-#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ >= 703)
-import System.Process(system)
-#else
-import System.Cmd(system)
-#endif
-import System.Exit(ExitCode(ExitFailure, ExitSuccess))
-import System.IO(hFlush, stdout, hPutStr, stderr, hGetContents, hClose, hSetBuffering, BufferMode(LineBuffering))
+import System.IO(stdout, stderr, hSetBuffering, BufferMode(LineBuffering))
 #ifdef SET_LATIN1_ENCODING
 import System.IO(hSetEncoding, latin1)
 #endif
-import System.Posix.Files(fileMode,  unionFileModes, ownerExecuteMode, groupExecuteMode, setFileMode, getFileStatus, fileAccess)
-import System.Directory(getDirectoryContents, doesFileExist, getCurrentDirectory, createDirectoryIfMissing)
-import System.Time(getClockTime, ClockTime(TOD)) -- XXX: from old-time package
-import Data.Char(isSpace, toLower, ord)
-import Data.List(intersect, nub, partition, intersperse, sort, union,
-            isPrefixOf, isSuffixOf, unzip5, intercalate)
+import System.Directory(getCurrentDirectory, createDirectoryIfMissing)
+import System.Time(getClockTime) -- XXX: from old-time package
+import Data.List(intersect, intersperse, unzip5)
 import Data.Time.Clock.POSIX(getPOSIXTime)
-import Data.Maybe(isJust, isNothing, fromMaybe)
-import Numeric(showOct)
 
 import qualified Data.ByteString as BS
 import System.FilePath (takeFileName)
 
-import Control.Monad(when, unless, filterM, liftM, foldM)
-import ErrorTCompat(runErrorT)
-import Control.Concurrent(forkIO)
-import Control.Concurrent.MVar(newEmptyMVar, putMVar, takeMVar)
-import qualified Control.Exception as CE
+import Control.Monad(when, foldM)
 import qualified Data.Map as M
 
 import ListMap(lookupWithDefault)
@@ -53,22 +37,13 @@ import SCC(scc)
 -- utility libs
 import ParseOp
 import PFPrint
-import Eval(Hyper)
-import Util(headOrErr, fromJustOrErr, joinByFst, quote)
-import FileNameUtil(baseName, hasDotSuf, dropSuf, dirName, mangleFileName,
-                    mkAName, mkVName, mkVPICName, mkVPIArrayCName,
-                    mkNameWithoutSuffix,
-                    mkSoName, mkObjName, mkCxxName, mkMakeName,
+import Util(headOrErr, fromJustOrErr)
+import FileNameUtil(baseName, hasDotSuf, dropSuf, dirName,
                     bscSrcSuffix, bseSrcSuffix, binSuffix,
-                    hSuffix, cSuffix, cxxSuffix, cppSuffix, ccSuffix,
-                    objSuffix, useSuffix,
-                    genFileName, createEncodedFullFilePath,
-                    getFullFilePath, getRelativeFilePath)
-import FileIOUtil(writeFileCatch, readFileMaybe, removeFileCatch,
-                  copyFileCatch)
+                    createEncodedFullFilePath,
+                    getRelativeFilePath)
 import TopUtils
 import SystemCheck(doSystemCheck)
-import BuildSystem
 import IOUtil(getEnvDef)
 
 -- compiler libs
@@ -78,11 +53,10 @@ import Flags(
         Flags(..),
         DumpFlag(..),
         hasDump,
-        verbose, extraVerbose, quiet)
+        verbose, quiet)
 import FlagsDecode(
         Decoded(..),
         decodeArgs,
-        updateFlags,
         showFlags,
         showFlagsRaw,
         exitWithUsage,
@@ -90,103 +64,35 @@ import FlagsDecode(
         exitWithHelpHidden)
 import Error(internalError, ErrMsg(..),
              ErrorHandle, initErrorHandle, setErrorHandleFlags,
-             bsError, bsWarning, bsMessage,
-             exitFail, exitOK, exitFailWith)
-import Position(noPosition, cmdPosition)
+             bsError, bsWarning, exitFail, exitOK)
+import Position(noPosition)
 import CVPrint
 import Id
-import Backend
-import Pragma
-import VModInfo(VPathInfo, VPort)
 import Deriving(derive)
 import SymTab
 import MakeSymTab(mkSymTab, cConvInst)
 import TypeCheck(cCtxReduceIO, cTypeCheck)
-import PoisonUtils(mkPoisonedCDefn)
 import GenSign(genUserSign, genEverythingSign)
 import Simplify(simplify)
-import ISyntax(IPackage(..), IModule(..),
-               IEFace(..), IDef(..), IExpr(..), fdVars, getSizeEstimate)
-import ISyntaxUtil(iMkRealBool, iMkLitSize, iMkString{-, itSplit -}, isTrue)
-import InstNodes(getIStateLocs, flattenInstTree)
-import IConv(iConvPackage, iConvDef)
-import FixupDefs(fixupDefs, updDef)
-import ISyntaxCheck(tCheckIPackage, tCheckIModule)
+import ISyntax(IPackage(..), IDef(..), IExpr(..), fdVars)
+import ISyntaxUtil(iMkRealBool, iMkLitSize, iMkString)
+import IConv(iConvPackage)
+import FixupDefs(fixupDefs)
+import ISyntaxCheck(tCheckIPackage)
 import ISimplify(iSimplify)
 import BinUtil(BinMap, HashMap, readImports, replaceImports)
 import GenBin(genBinFile)
 import GenWrap(genWrap, WrapInfo(..))
 import GenFuncWrap(genFuncWrap, addFuncWrap)
 import GenForeign(genForeign)
-import IExpand(iExpand)
 import IExpandUtils(HeapData)
-import ITransform(iTransform)
-import IInline(iInline, iInlineFmts, splitFmts)
-import Params(iParams)
-import ASyntax(APackage(..), ASPackage(..),
-               ppeAPackage,
-               getAPackageFieldInfos)
-import ASyntaxUtil(getForeignCallNames)
-import ACheck(aMCheck, aSMCheck, aSignalCheck, aSMethCheck)
-import AConv(aConv)
-import IDropRules(iDropRules)
-import ARankMethCalls(aRankMethCalls)
-import AState(aState)
-import ARenameIO(aRenameIO)
-import ASchedule(AScheduleInfo(..), AScheduleErrInfo(..), aSchedule)
-import AAddScheduleDefs(aAddScheduleDefs)
-import APaths(aPathsPreSched, aPathsPostSched)
-import AProofs(aCheckProofs)
-import ADropDefs(aDropDefs)
-import AOpt(aOpt)
-import AVerilog(aVerilog)
-import AVeriQuirks(aVeriQuirks)
-import VIOProps(VIOProps, getIOProps)
-import VFinalCleanup(finalCleanup)
-import Synthesize(aSynthesize)
-import ABin(ABin(..), ABinModInfo(..), ABinForeignFuncInfo(..),
-           ABinModSchedErrInfo(..))
-import ABinUtil(readAndCheckABin, readAndCheckABinPathCatch, getABIHierarchy,
-                assertNoSchedErr)
-import GenABin(genABinFile)
-import SceMi(scemiABinNames, scemiLinkABinNames, scemiTbABinNames,
-             scemiVPIWrapperNames, scemiTbVPIWrapperNames)
-import ForeignFunctions
-import VPIWrappers
-import SimCCBlock
-import SimExpand(simExpand, simCheckPackage)
-import SimPackage(SimSystem(..))
-import SimPackageOpt(simPackageOpt)
-import SimMakeCBlocks(simMakeCBlocks)
-import SimCOpt(simCOpt)
-import SimBlocksToC(simBlocksToC)
-import SystemCWrapper(checkSystemCIfc, wrapSystemC)
-import SimFileUtils(analyzeBluesimDependencies)
-import Verilog(VProgram(..), vGetMainModName, getVeriInsts)
 import Depend
 import Version(version, copyright, buildnum)
-import Authorization(expiry, getReportedBSCFeatures, checkBSCElaborationLimit,
-                     checkoutBSCLicenses, BSCLicMode(..), checkinAllLicenses,
-		     checkBSCModuleGen)
+import Authorization(expiry, getReportedBSCFeatures,
+                     checkoutBSCLicenses, BSCLicMode(..), checkinAllLicenses)
 import Classic
-import ILift(iLift)
-import ACleanup(aCleanup)
-import ATaskSplice(aTaskSplice)
-import ADumpSchedule (MethodDumpInfo, aDumpSchedule, aDumpScheduleErr,
-                      dumpMethodInfo, dumpMethodBVIInfo)
-import ANoInline (aNoInline)
-import AAddSchedAssumps(aAddSchedAssumps,aAddCFConditionWires)
-import ARemoveAssumps(aRemoveAssumps)
-import ADropUndet(aDropUndet)
 import SAT(checkSATFlags)
-import InlineWires(aInlineWires)
-import InlineCReg(aInlineCReg)
-import LambdaCalc(convAPackageToLambdaCalc)
-import SAL(convAPackageToSAL)
 
-import VVerilogDollar
-import ISplitIf(iSplitIf)
-import VFileName
 
 import CSyntaxToCbor
 
@@ -551,8 +457,7 @@ compilePackage
     t <- dump errh flags t DFsymbols dumpnames mint
 
     start flags DFfixup
-    let (imodf, alldefsList) = fixupDefs imod binmods
-    let alldefs = M.fromList [(i, e) | IDef i _ e _ <- alldefsList]
+    let (imodf, _) = fixupDefs imod binmods
     iPCheck flags symt imodf "fixup"
     t <- dump errh flags t DFfixup dumpnames imodf
 
