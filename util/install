@@ -4,19 +4,19 @@
 # removes target when linking
 # if $INSTALL is not set in environment reverts to real install
 
-REALINSTALL=/usr/bin/install
+REALINSTALL=install
 #REALINSTALL=echo
 LINK="ln -s"
 
 ARGS="$@"
 
 if [ x"$BSC_INSTALL" = x ] ; then
-    /usr/bin/install $@
+    install $@
     exit $?
 fi
 if [ x"$BSC_INSTALL" != xLINK ] ; then
     if [ x"$BSC_INSTALL" != xlink ] ; then
-	/usr/bin/install $@
+	install $@
 	exit $?
     fi
 fi
