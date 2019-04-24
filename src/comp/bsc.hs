@@ -382,10 +382,9 @@ compilePackage
     --putStr (ppReadable mod)
     t <- dump errh flags t DFtypecheck dumpnames mod
 
-    let basename = takeFileName name
-    createDirectoryIfMissing False "out"
-    putStrLn $ "writing " ++ "out/tc." ++ basename ++ ".cbor"
-    BS.writeFile ("out/tc." ++ basename ++ ".cbor") $ cPackageToCborBytes mod
+    let cbor_filename = putInDir (bdir flags) name "cbor"
+    putStrLn $ "writing " ++ cbor_filename
+    BS.writeFile cbor_filename $ cPackageToCborBytes mod
 
     --when (early flags) $ return ()
     let prefix = dirName name ++ "/"
