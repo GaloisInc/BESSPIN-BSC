@@ -33,7 +33,7 @@ versiondate = "2017-07-21"
 
 build = if null buildVersion then "" else "build " ++ buildVersion ++ ", "
 buildnum = buildVersionNum
-version = bluespec ++ " Compiler, version " ++ versionnum ++
+version = bluespec ++ " Compiler (BESSPIN BSV exporter), version " ++ versionnum ++
           " (" ++ build ++ versiondate ++ ")"
 
 copyright :: String
@@ -48,5 +48,8 @@ copyrights = ["Copyright 2000-2014 Bluespec, Inc.",
               "Parts copyright 1991, 1999 Free Software Foundation, Inc.",
               "Parts copyright 1995-2014, Regents of the University of Colorado.",
               "Parts copyright 2010, Don Stewart.",
+              "Parts copyright 2015-2017 Duncan Coutts.",
+              "Parts copyright 2015-2017 Well-Typed LLP.",
+              "Parts copyright 2015 IRIS Connect Ltd.",
               "All rights reserved.",
               "See documentation for license details."]
