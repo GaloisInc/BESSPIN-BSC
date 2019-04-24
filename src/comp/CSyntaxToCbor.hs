@@ -61,7 +61,10 @@ instance ToCbor CPackage where
 
 instance ToCbor CImport where
     toCbor (CImpId qual i) = node "Import_Id" [ toCbor qual, toCbor i ]
-    toCbor (CImpSign _ _ _) = node "Import_Sign" [ ]
+    toCbor (CImpSign _objPath _qual sig) = node "Import_Sign" [ toCbor sig ]
+
+instance ToCbor CSignature where
+    toCbor (CSignature name _deps _ _) = node "Signature" [ toCbor name ]
 
 instance ToCbor CDefn where
     toCbor (Ctype _ is ty) = node "Defn_Type" [ toCbor is, toCbor ty ]
