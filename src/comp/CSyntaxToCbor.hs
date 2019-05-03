@@ -67,7 +67,7 @@ instance ToCbor CSignature where
     toCbor (CSignature name _deps _ _) = node "Signature" [ toCbor name ]
 
 instance ToCbor CDefn where
-    toCbor (Ctype _ is ty) = node "Defn_Type" [ toCbor is, toCbor ty ]
+    toCbor (Ctype i is ty) = node "Defn_Type" [ toCbor i, toCbor is, toCbor ty ]
     toCbor (Cdata _ name tyVars _ _ _) = node "Defn_Data" [ toCbor name, toCbor tyVars ]
     toCbor (Cstruct _ sub name tyVars fields _) = node "Defn_Struct"
         [ toCbor sub, toCbor name, toCbor tyVars, toCbor fields ]
