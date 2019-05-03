@@ -93,7 +93,9 @@ import Authorization(expiry, getReportedBSCFeatures,
 import Classic
 import SAT(checkSATFlags)
 
-
+-- Required for BESSPIN AST export
+import qualified MakeSymTab
+import Debug.Trace
 import CSyntaxToCbor
 
 --import Debug.Trace
@@ -382,9 +384,10 @@ compilePackage
     --putStr (ppReadable mod)
     t <- dump errh flags t DFtypecheck dumpnames mod
 
+    modExport <- prepareCborExport errh flags symt mod
     let cbor_filename = putInDir (bdir flags) name "cbor"
     putStrLn $ "writing " ++ cbor_filename
-    BS.writeFile cbor_filename $ cPackageToCborBytes mod
+    BS.writeFile cbor_filename $ cPackageToCborBytes modExport
 
     --when (early flags) $ return ()
     let prefix = dirName name ++ "/"
@@ -531,3 +534,16 @@ iPCheck flags symt ipkg desc = --hyper ipkg $
                 if (verbose flags)
                     then putStrLnF "types OK"
                     else return ()
+
+
+prepareCborExport :: ErrorHandle -> Flags -> SymTab -> CPackage -> IO CPackage
+prepareCborExport errh flags symt (CPackage i ex im fx ds inc) = do
+    ds' <- mapM go ds
+    return (CPackage i ex im fx ds' inc)
+  where
+    go (Ctype idk vs ty) = case MakeSymTab.convCType symt ty of
+        Left msg -> bsError errh [msg]
+        Right ty' -> do
+            traceM $ "fixup " ++ show idk ++ ": " ++ show ty ++ "  =>  " ++ show ty'
+            return (Ctype idk vs ty')
+    go d = return d
