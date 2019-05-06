@@ -92,7 +92,8 @@ instance ToCbor CDef where
         [ toCbor name, toCbor tyVars, toCbor ty, toCbor clauses ]
 
 instance ToCbor CClause where
-    toCbor (CClause pats _ body) = node "Clause" [ toCbor pats, toCbor body ]
+    toCbor (CClause pats quals body) = node "Clause"
+        [ toCbor pats, toCbor quals, toCbor body ]
 
 instance ToCbor CPat where
     toCbor (CPCon name args) = node "Pat_Con" [ toCbor name, toCbor args ]
