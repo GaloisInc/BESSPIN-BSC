@@ -68,7 +68,8 @@ instance ToCbor CSignature where
 
 instance ToCbor CDefn where
     toCbor (Ctype i is ty) = node "Defn_Type" [ toCbor i, toCbor is, toCbor ty ]
-    toCbor (Cdata _ name tyVars _ _ _) = node "Defn_Data" [ toCbor name, toCbor tyVars ]
+    toCbor (Cdata _ name tyVars _ summands _) =
+        node "Defn_Data" [ toCbor name, toCbor tyVars, toCbor summands ]
     toCbor (Cstruct _ sub name tyVars fields _) = node "Defn_Struct"
         [ toCbor sub, toCbor name, toCbor tyVars, toCbor fields ]
     toCbor (Cclass _ _ name tyVars _ fields) = node "Defn_Class"
@@ -226,6 +227,10 @@ instance ToCbor StructSubType where
     toCbor SClass = node "StructKind_Class" [ ]
     toCbor (SDataCon _ _) = node "StructKind_Data" [ ]
     toCbor (SInterface _) = node "StructKind_Ifc" [ ]
+
+instance ToCbor CInternalSummand where
+    toCbor (CInternalSummand names argTy tag) =
+        node "Variant" [ toCbor names, toCbor argTy, toCbor tag ]
 
 instance ToCbor Id where
     toCbor i = node "Id"
