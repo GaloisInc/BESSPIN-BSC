@@ -98,7 +98,7 @@ instance ToCbor CClause where
 
 instance ToCbor CPat where
     toCbor (CPCon name args) = node "Pat_Con" [ toCbor name, toCbor args ]
-    toCbor (CPstruct name _) = node "Pat_Struct" [ toCbor name ]
+    toCbor (CPstruct name fields) = node "Pat_Struct" [ toCbor name, toCbor fields ]
     toCbor (CPVar i) = node "Pat_Var" [ toCbor i ]
     toCbor (CPAs i p) = node "Pat_As" [ toCbor i, toCbor p ]
     toCbor (CPAny _) = node "Pat_Any" [ ]
