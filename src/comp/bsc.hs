@@ -544,6 +544,5 @@ prepareCborExport errh flags symt (CPackage i ex im fx ds inc) = do
     go (Ctype idk vs ty) = case MakeSymTab.convCType symt ty of
         Left msg -> bsError errh [msg]
         Right ty' -> do
-            traceM $ "fixup " ++ show idk ++ ": " ++ show ty ++ "  =>  " ++ show ty'
             return (Ctype idk vs ty')
     go d = return d
